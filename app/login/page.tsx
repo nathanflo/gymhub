@@ -8,6 +8,7 @@ import { runMigrationIfNeeded } from "@/lib/migrate";
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,7 @@ export default function LoginPage() {
         setMode("signin");
         return;
       }
+      await supabase.from("profiles").insert({ id: data.session.user.id, name: name.trim() });
       await runMigrationIfNeeded(data.session.user.id);
       router.push("/");
     }
@@ -51,6 +53,21 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {mode === "signup" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-400">Name</label>
+              <input
+                type="text"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="rounded-xl bg-neutral-800 border border-neutral-700 px-4 py-3
+                           text-sm text-white placeholder:text-neutral-500
+                           focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-neutral-400">Email</label>
             <input
@@ -87,7 +104,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading || (mode === "signup" && password.length > 0 && password.length < 8)}
+            disabled={loading || (mode === "signup" && (name.trim().length === 0 || password.length < 8))}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
                        disabled:opacity-50 transition-all py-3 text-sm font-semibold text-white"
           >
@@ -98,7 +115,7 @@ export default function LoginPage() {
         </form>
 
         <button
-          onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setInfo(null); }}
+          onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setInfo(null); setName(""); }}
           className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors text-center"
         >
           {mode === "signin" ? "No account yet? Create one →" : "Already have an account? Sign in →"}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import { getSessions } from "@/lib/sessions";
 import { getBodyweightEntries } from "@/lib/bodyweight";
 import { getWellnessForDate } from "@/lib/wellness";
@@ -48,6 +49,7 @@ export default function HomePage() {
   const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
   const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -57,6 +59,15 @@ export default function HomePage() {
       const bwEntries = await getBodyweightEntries();
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(await getWellnessForDate(today));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile?.name) setUserName(profile.name);
+      }
     }
     load();
   }, []);
@@ -71,7 +82,9 @@ export default function HomePage() {
     <main className="px-6 py-8 flex flex-col gap-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">GymHub</h1>
+        <h1 className="text-2xl font-bold text-white">
+          {userName ? `Welcome back, ${userName}` : "Welcome back"}
+        </h1>
         <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-1">
           Today · {dateLabel}
         </p>
