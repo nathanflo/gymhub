@@ -412,7 +412,7 @@ export function SessionForm({
           </select>
         </Field>
 
-        <Field label="BW kg" className="w-20 shrink-0">
+        <Field label="BW (kg)" className="w-20 shrink-0">
           <input
             name="bodyweight"
             type="number"
