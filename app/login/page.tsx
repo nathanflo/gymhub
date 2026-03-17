@@ -1,59 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { runMigrationIfNeeded } from "@/lib/migrate";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
-
-  useEffect(() => {
-    setIsStandalone(
-      (window.navigator as any).standalone === true ||
-      window.matchMedia("(display-mode: standalone)").matches
-    );
-  }, []);
+  const [info, setInfo] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: window.location.origin + "/auth/callback",
-      },
-    });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
-    }
-  }
+    setInfo(null);
 
-  if (sent) {
-    return (
-      <main className="flex flex-col items-center justify-center min-h-screen px-6 gap-6">
-        <div className="w-full max-w-sm flex flex-col gap-4 text-center">
-          <h1 className="text-2xl font-bold text-white">Check your email</h1>
-          <p className="text-sm text-neutral-400">
-            We sent a magic link to{" "}
-            <span className="text-white font-medium">{email}</span>.
-            Click it to sign in.
-          </p>
-          <button
-            onClick={() => setSent(false)}
-            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
-          >
-            Use a different email
-          </button>
-        </div>
-      </main>
-    );
+    if (mode === "signin") {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      setLoading(false);
+      if (error) { setError(error.message); return; }
+      await runMigrationIfNeeded(data.session!.user.id);
+      router.push("/");
+    } else {
+      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+      setLoading(false);
+      if (error) { setError(error.message); return; }
+      if (!data.session) {
+        setInfo("Check your email to confirm your account, then sign in.");
+        setMode("signin");
+        return;
+      }
+      await runMigrationIfNeeded(data.session.user.id);
+      router.push("/");
+    }
   }
 
   return (
@@ -62,16 +46,9 @@ export default function LoginPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">GymHub</h1>
           <p className="text-sm text-neutral-400 mt-1">
-            Sign in to sync your data across devices
+            {mode === "signin" ? "Sign in to sync your data across devices" : "Create your account"}
           </p>
         </div>
-
-        {isStandalone && (
-          <p className="text-xs text-neutral-500 bg-neutral-800 rounded-xl px-4 py-3">
-            The sign-in link will open in Safari — that's expected. After clicking it,
-            return to this app and you'll be signed in.
-          </p>
-        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -87,18 +64,45 @@ export default function LoginPage() {
                          focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-neutral-400">Password</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="rounded-xl bg-neutral-800 border border-neutral-700 px-4 py-3
+                         text-sm text-white placeholder:text-neutral-500
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
+          {info && <p className="text-sm text-indigo-400">{info}</p>}
+
+          {mode === "signup" && password.length > 0 && password.length < 8 && (
+            <p className="text-sm text-red-400">Password must be at least 8 characters.</p>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === "signup" && password.length > 0 && password.length < 8)}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
                        disabled:opacity-50 transition-all py-3 text-sm font-semibold text-white"
           >
-            {loading ? "Sending…" : "Send magic link"}
+            {loading
+              ? (mode === "signin" ? "Signing in…" : "Creating account…")
+              : (mode === "signin" ? "Sign in" : "Create account")}
           </button>
         </form>
+
+        <button
+          onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setInfo(null); }}
+          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors text-center"
+        >
+          {mode === "signin" ? "No account yet? Create one →" : "Already have an account? Sign in →"}
+        </button>
       </div>
     </main>
   );
