@@ -15,10 +15,12 @@ import { useEffect, useMemo, useState } from "react";
 import { getWorkouts } from "@/lib/storage";
 import { getSessions } from "@/lib/sessions";
 import { getBodyweightEntries, saveBodyweightEntry, deleteBodyweightEntry } from "@/lib/bodyweight";
+import { getWellnessEntries } from "@/lib/wellness";
 import { getAllPRs, getTimeline } from "@/lib/progress";
 import { Workout } from "@/types/workout";
 import { WorkoutSession } from "@/types/session";
 import { BodyweightEntry } from "@/types/bodyweight";
+import { WellnessEntry } from "@/types/wellness";
 import { TimelineEntry } from "@/types/timeline";
 import { Field, inputClass } from "@/components/Field";
 
@@ -28,6 +30,7 @@ export default function ProgressPage() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [bwEntries, setBwEntries] = useState<BodyweightEntry[]>([]);
+  const [wellnessEntries, setWellnessEntries] = useState<WellnessEntry[]>([]);
   const [weightInput, setWeightInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -35,6 +38,7 @@ export default function ProgressPage() {
     setWorkouts(getWorkouts());
     setSessions(getSessions());
     setBwEntries(getBodyweightEntries());
+    setWellnessEntries(getWellnessEntries());
   }, []);
 
   const prs = useMemo(() => getAllPRs(workouts, sessions), [workouts, sessions]);
@@ -108,6 +112,23 @@ export default function ProgressPage() {
                 >
                   Delete
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Recent Wellness ──────────────────────────────────────────── */}
+      <section className="flex flex-col gap-3">
+        <SectionHeader>Recent Wellness</SectionHeader>
+        {wellnessEntries.length === 0 ? (
+          <EmptyNote>No wellness entries yet.</EmptyNote>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {wellnessEntries.slice(0, 7).map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between rounded-xl bg-neutral-800 px-4 py-3">
+                <span className="text-sm font-medium text-white">{formatWellnessDate(entry.date)}</span>
+                <span className="text-xs text-neutral-400 text-right">{wellnessSummary(entry)}</span>
               </div>
             ))}
           </div>
@@ -231,6 +252,24 @@ function formatDate(iso: string): string {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatWellnessDate(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function wellnessSummary(entry: WellnessEntry): string {
+  const parts: string[] = [];
+  if (entry.sleep != null) parts.push(`💤 ${entry.sleep}h`);
+  if (entry.hydration != null) parts.push(`💧 ${entry.hydration}L`);
+  if (entry.caffeine != null) parts.push(`☕ ${entry.caffeine}`);
+  if (entry.mood != null) parts.push(`Mood ${entry.mood}/5`);
+  if (entry.soreness != null) parts.push(`Soreness ${entry.soreness}/5`);
+  return parts.join(" · ");
 }
 
 function timelineKey(entry: TimelineEntry): string {
