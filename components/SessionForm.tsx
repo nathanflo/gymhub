@@ -747,7 +747,7 @@ function SetRow({
   onRemove: () => void;
 }) {
   const setInputClass =
-    "flex-1 rounded-lg bg-neutral-700 border border-neutral-600 text-white " +
+    "flex-1 min-w-0 rounded-lg bg-neutral-700 border border-neutral-600 text-white " +
     "px-2 py-2 text-sm text-center placeholder:text-neutral-500 focus:outline-none " +
     "focus:ring-1 focus:ring-indigo-500 transition";
 

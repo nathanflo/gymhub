@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -8,6 +8,14 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    setIsStandalone(
+      (window.navigator as any).standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches
+    );
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,6 +65,13 @@ export default function LoginPage() {
             Sign in to sync your data across devices
           </p>
         </div>
+
+        {isStandalone && (
+          <p className="text-xs text-neutral-500 bg-neutral-800 rounded-xl px-4 py-3">
+            The sign-in link will open in Safari — that's expected. After clicking it,
+            return to this app and you'll be signed in.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
