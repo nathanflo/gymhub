@@ -1,0 +1,40 @@
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import Nav from "@/components/Nav";
+
+export const metadata: Metadata = {
+  title: "GymHub",
+  description: "Your personal fitness operating system",
+  // Future: add og:image, twitter card, etc.
+};
+
+export const viewport: Viewport = {
+  // Ensures the app fills the full iPhone screen without zoom
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  // Honor iPhone safe areas (notch, home bar)
+  viewportFit: "cover",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
+        {/*
+         * Shell wrapper – keeps max width iPhone-sized and centered on desktop.
+         * Future: consider bottom nav when tabs grow beyond 5 (Wellness, Music, AI).
+         */}
+        <div className="mx-auto max-w-md min-h-screen flex flex-col">
+          <Nav />
+          {children}
+        </div>
+      </body>
+    </html>
+  );
+}
