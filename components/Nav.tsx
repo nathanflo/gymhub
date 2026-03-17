@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -14,7 +14,9 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -69,12 +71,43 @@ export default function Nav() {
             </Link>
           )}
           {signedIn === true && (
-            <span
-              title="Signed in"
-              className="px-2 py-2 text-sm text-indigo-400 select-none"
-            >
-              ●
-            </span>
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                aria-label="Account menu"
+                className="px-2 py-2 text-sm text-indigo-400 select-none leading-none"
+              >
+                ●
+              </button>
+
+              {menuOpen && (
+                <>
+                  {/* Backdrop — closes menu on outside tap */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMenuOpen(false)}
+                  />
+
+                  {/* Popover */}
+                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px]
+                                  rounded-xl bg-neutral-800 border border-neutral-700
+                                  shadow-lg py-1 flex flex-col">
+                    <span className="px-4 py-2 text-xs text-neutral-500">Signed in</span>
+                    <button
+                      onClick={async () => {
+                        setMenuOpen(false);
+                        await supabase.auth.signOut();
+                        router.push("/");
+                      }}
+                      className="px-4 py-2 text-sm text-left text-red-400 hover:bg-neutral-700
+                                 transition-colors"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </nav>
