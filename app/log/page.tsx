@@ -7,12 +7,12 @@
  * Pass ?from=<sessionId> to pre-fill the form from a previous session (Duplicate flow).
  */
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveSession, getSessions } from "@/lib/sessions";
 import { getTemplates } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
-import { SessionForm, sessionToFormState, templateToFormState } from "@/components/SessionForm";
+import { SessionForm, SessionFormState, sessionToFormState, templateToFormState } from "@/components/SessionForm";
 
 function LogPageInner() {
   const router = useRouter();
@@ -20,24 +20,35 @@ function LogPageInner() {
   const fromId = searchParams.get("from");
   const templateId = searchParams.get("template");
 
-  const initialState = useMemo(() => {
-    if (fromId) {
-      const session = getSessions().find((s) => s.id === fromId);
-      if (!session) return undefined;
-      return { ...sessionToFormState(session), notes: "", bodyweight: "" };
+  const [initialState, setInitialState] = useState<SessionFormState | undefined>(undefined);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      if (fromId) {
+        const sessions = await getSessions();
+        const session = sessions.find((s) => s.id === fromId);
+        if (session) {
+          setInitialState({ ...sessionToFormState(session), notes: "", bodyweight: "" });
+        }
+      } else if (templateId) {
+        const templates = await getTemplates();
+        const template = templates.find((t) => t.id === templateId);
+        if (template) {
+          setInitialState(templateToFormState(template));
+        }
+      }
+      setLoaded(true);
     }
-    if (templateId) {
-      const template = getTemplates().find((t) => t.id === templateId);
-      if (!template) return undefined;
-      return templateToFormState(template);
-    }
-    return undefined;
+    load();
   }, [fromId, templateId]);
 
-  function handleSave(session: WorkoutSession) {
-    saveSession(session);
+  async function handleSave(session: WorkoutSession) {
+    await saveSession(session);
     router.push("/workouts");
   }
+
+  if (!loaded) return null;
 
   return (
     <main className="flex flex-col flex-1 px-6 py-8 gap-6">

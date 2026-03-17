@@ -30,8 +30,11 @@ export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
 
   useEffect(() => {
-    setSessions(getSessions());
-    setWorkouts(getWorkouts());
+    async function load() {
+      setSessions(await getSessions());
+      setWorkouts(await getWorkouts());
+    }
+    load();
   }, []);
 
   const items = useMemo<ListItem[]>(() => {
@@ -44,17 +47,17 @@ export default function WorkoutsPage() {
     );
   }, [sessions, workouts]);
 
-  function handleDeleteSession(id: string) {
-    deleteSession(id);
-    setSessions(getSessions());
+  async function handleDeleteSession(id: string) {
+    await deleteSession(id);
+    setSessions(await getSessions());
   }
 
-  function handleDeleteLegacy(id: string) {
-    deleteWorkout(id);
-    setWorkouts(getWorkouts());
+  async function handleDeleteLegacy(id: string) {
+    await deleteWorkout(id);
+    setWorkouts(await getWorkouts());
   }
 
-  function handleSaveAsTemplate(session: WorkoutSession) {
+  async function handleSaveAsTemplate(session: WorkoutSession) {
     const template: WorkoutTemplate = {
       id: crypto.randomUUID(),
       name: session.title,
@@ -66,7 +69,7 @@ export default function WorkoutsPage() {
         intervals: session.intervals,
       }),
     };
-    saveTemplate(template);
+    await saveTemplate(template);
   }
 
   const totalCount = sessions.length + workouts.length;

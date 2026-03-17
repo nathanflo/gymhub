@@ -1,22 +1,53 @@
+/**
+ * templates.ts – Supabase wrapper for workout templates.
+ * Replaces the localStorage implementation from Phase 1–8.
+ */
+
 import { WorkoutTemplate } from "@/types/template";
+import { supabase } from "./supabase";
 
-const TEMPLATES_KEY = "gymhub_templates";
-
-export function getTemplates(): WorkoutTemplate[] {
-  if (typeof window === "undefined") return [];
-  const raw = localStorage.getItem(TEMPLATES_KEY);
-  if (!raw) return [];
-  try { return JSON.parse(raw); } catch { return []; }
+function toTemplate(row: any): WorkoutTemplate {
+  return {
+    id: row.id,
+    name: row.name,
+    workoutType: row.workout_type,
+    exercises: row.exercises,
+    distance: row.distance ?? undefined,
+    duration: row.duration ?? undefined,
+    intervals: row.intervals ?? undefined,
+  };
 }
 
-export function saveTemplate(template: WorkoutTemplate): void {
-  if (typeof window === "undefined") return;
-  const existing = getTemplates();
-  localStorage.setItem(TEMPLATES_KEY, JSON.stringify([...existing, template]));
+export async function getTemplates(): Promise<WorkoutTemplate[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("workout_templates")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(toTemplate);
 }
 
-export function deleteTemplate(id: string): void {
-  if (typeof window === "undefined") return;
-  const updated = getTemplates().filter((t) => t.id !== id);
-  localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated));
+export async function saveTemplate(template: WorkoutTemplate): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("workout_templates").insert({
+    id: template.id,
+    user_id: user.id,
+    name: template.name,
+    workout_type: template.workoutType,
+    exercises: template.exercises,
+    distance: template.distance ?? null,
+    duration: template.duration ?? null,
+    intervals: template.intervals ?? null,
+  });
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  await supabase.from("workout_templates").delete().eq("id", id);
 }

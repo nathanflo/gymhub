@@ -34,37 +34,42 @@ export default function EditWorkoutPage() {
   const [legacyWorkout, setLegacyWorkout] = useState<Workout | null>(null);
 
   useEffect(() => {
-    // Check sessions first
-    const session = getSessions().find((s) => s.id === id);
-    if (session) {
-      setSource("session");
-      setOriginalDate(session.date);
-      setInitialForm(sessionToFormState(session));
-      return;
-    }
+    async function load() {
+      // Check sessions first
+      const sessions = await getSessions();
+      const session = sessions.find((s) => s.id === id);
+      if (session) {
+        setSource("session");
+        setOriginalDate(session.date);
+        setInitialForm(sessionToFormState(session));
+        return;
+      }
 
-    // Fall back to legacy workouts
-    const workout = getWorkouts().find((w) => w.id === id);
-    if (workout) {
-      setSource("legacy");
-      setLegacyWorkout(workout);
-      setOriginalDate(workout.date);
-      setInitialForm(legacyToFormState(workout));
-      return;
-    }
+      // Fall back to legacy workouts
+      const workouts = await getWorkouts();
+      const workout = workouts.find((w) => w.id === id);
+      if (workout) {
+        setSource("legacy");
+        setLegacyWorkout(workout);
+        setOriginalDate(workout.date);
+        setInitialForm(legacyToFormState(workout));
+        return;
+      }
 
-    router.replace("/workouts");
+      router.replace("/workouts");
+    }
+    load();
   }, [id, router]);
 
-  function handleUpdateSession(session: WorkoutSession) {
-    updateSession({ ...session, id, date: originalDate });
+  async function handleUpdateSession(session: WorkoutSession) {
+    await updateSession({ ...session, id, date: originalDate });
     router.push("/workouts");
   }
 
-  function handleSaveLegacy(session: WorkoutSession) {
+  async function handleSaveLegacy(session: WorkoutSession) {
     // Migrate: save as new session, delete old workout entry
-    saveSession({ ...session, id: crypto.randomUUID(), date: originalDate });
-    if (legacyWorkout) deleteWorkout(legacyWorkout.id);
+    await saveSession({ ...session, id: crypto.randomUUID(), date: originalDate });
+    if (legacyWorkout) await deleteWorkout(legacyWorkout.id);
     router.push("/workouts");
   }
 

@@ -11,7 +11,7 @@
  * - Muscle group selector
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { WorkoutSession, WorkoutExercise, WorkoutSet, TrackingMode, WeightUnit } from "@/types/session";
 import { WorkoutType, EnergyLevel } from "@/types/workout";
 import { WorkoutTemplate } from "@/types/template";
@@ -157,7 +157,11 @@ export function SessionForm({
     initialState ?? emptySessionForm()
   );
   const [error, setError] = useState<string | null>(null);
-  const exerciseLibrary = useMemo(() => getExerciseLibrary(), []);
+  const [exerciseLibrary, setExerciseLibrary] = useState<string[]>([]);
+
+  useEffect(() => {
+    getExerciseLibrary().then(setExerciseLibrary);
+  }, []);
 
   const isRun = form.workoutType === "Run";
 

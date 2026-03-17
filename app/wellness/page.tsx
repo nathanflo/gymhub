@@ -71,8 +71,8 @@ export default function WellnessPage() {
   const [entries, setEntries] = useState<WellnessEntry[]>([]);
   const [saved, setSaved] = useState(false);
 
-  function loadData() {
-    const todayEntry = getWellnessForDate(today);
+  async function loadData() {
+    const todayEntry = await getWellnessForDate(today);
     if (todayEntry) {
       setExistingId(todayEntry.id);
       setSleep(todayEntry.sleep != null ? String(todayEntry.sleep) : "");
@@ -82,14 +82,14 @@ export default function WellnessPage() {
       setSoreness(todayEntry.soreness);
       setNotes(todayEntry.notes ?? "");
     }
-    setEntries(getWellnessEntries());
+    setEntries(await getWellnessEntries());
   }
 
   useEffect(() => {
     loadData();
   }, []);
 
-  function handleSave() {
+  async function handleSave() {
     const entry: WellnessEntry = {
       id: existingId ?? crypto.randomUUID(),
       date: today,
@@ -100,16 +100,16 @@ export default function WellnessPage() {
       ...(soreness != null ? { soreness: soreness as 1 | 2 | 3 | 4 | 5 } : {}),
       ...(notes.trim() ? { notes: notes.trim() } : {}),
     };
-    saveWellnessEntry(entry);
+    await saveWellnessEntry(entry);
     setExistingId(entry.id);
-    setEntries(getWellnessEntries());
+    setEntries(await getWellnessEntries());
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleDelete(id: string) {
-    deleteWellnessEntry(id);
-    setEntries(getWellnessEntries());
+  async function handleDelete(id: string) {
+    await deleteWellnessEntry(id);
+    setEntries(await getWellnessEntries());
   }
 
   return (

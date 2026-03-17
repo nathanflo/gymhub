@@ -35,10 +35,19 @@ export default function ProgressPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    setWorkouts(getWorkouts());
-    setSessions(getSessions());
-    setBwEntries(getBodyweightEntries());
-    setWellnessEntries(getWellnessEntries());
+    async function load() {
+      const [ws, ss, bw, we] = await Promise.all([
+        getWorkouts(),
+        getSessions(),
+        getBodyweightEntries(),
+        getWellnessEntries(),
+      ]);
+      setWorkouts(ws);
+      setSessions(ss);
+      setBwEntries(bw);
+      setWellnessEntries(we);
+    }
+    load();
   }, []);
 
   const prs = useMemo(() => getAllPRs(workouts, sessions), [workouts, sessions]);
@@ -47,21 +56,21 @@ export default function ProgressPage() {
     [workouts, sessions, bwEntries]
   );
 
-  function handleLogWeight() {
+  async function handleLogWeight() {
     const value = parseFloat(weightInput);
     if (!weightInput || isNaN(value) || value <= 0) {
       setFormError("Please enter a valid weight.");
       return;
     }
-    saveBodyweightEntry({ id: crypto.randomUUID(), date: new Date().toISOString(), weight: value });
+    await saveBodyweightEntry({ id: crypto.randomUUID(), date: new Date().toISOString(), weight: value });
     setWeightInput("");
     setFormError(null);
-    setBwEntries(getBodyweightEntries());
+    setBwEntries(await getBodyweightEntries());
   }
 
-  function handleDeleteBw(id: string) {
-    deleteBodyweightEntry(id);
-    setBwEntries(getBodyweightEntries());
+  async function handleDeleteBw(id: string) {
+    await deleteBodyweightEntry(id);
+    setBwEntries(await getBodyweightEntries());
   }
 
   return (

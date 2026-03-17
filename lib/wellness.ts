@@ -1,40 +1,74 @@
+/**
+ * wellness.ts – Supabase wrapper for wellness entries.
+ * Replaces the localStorage implementation from Phase 1–8.
+ */
+
 import { WellnessEntry } from "@/types/wellness";
+import { supabase } from "./supabase";
 
-const KEY = "gymhub_wellness";
-
-export function getWellnessEntries(): WellnessEntry[] {
-  if (typeof window === "undefined") return [];
-
-  const raw = localStorage.getItem(KEY);
-  if (!raw) return [];
-
-  try {
-    const entries: WellnessEntry[] = JSON.parse(raw);
-    return entries.sort((a, b) => b.date.localeCompare(a.date));
-  } catch {
-    return [];
-  }
+function toEntry(row: any): WellnessEntry {
+  return {
+    id: row.id,
+    date: row.date,
+    sleep: row.sleep ?? undefined,
+    hydration: row.hydration ?? undefined,
+    caffeine: row.caffeine ?? undefined,
+    mood: row.mood ?? undefined,
+    soreness: row.soreness ?? undefined,
+    notes: row.notes ?? undefined,
+  };
 }
 
-export function getWellnessForDate(date: string): WellnessEntry | undefined {
-  return getWellnessEntries().find((e) => e.date === date);
+export async function getWellnessEntries(): Promise<WellnessEntry[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("wellness_entries")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("date", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(toEntry);
 }
 
-export function saveWellnessEntry(entry: WellnessEntry): void {
-  if (typeof window === "undefined") return;
+export async function getWellnessForDate(date: string): Promise<WellnessEntry | undefined> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
 
-  const all = getWellnessEntries();
-  const existing = all.find((e) => e.date === entry.date);
-  if (existing) {
-    localStorage.setItem(KEY, JSON.stringify(all.map((e) => (e.date === entry.date ? entry : e))));
-  } else {
-    localStorage.setItem(KEY, JSON.stringify([...all, entry]));
-  }
+  const { data, error } = await supabase
+    .from("wellness_entries")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("date", date)
+    .maybeSingle();
+
+  if (error || !data) return undefined;
+  return toEntry(data);
 }
 
-export function deleteWellnessEntry(id: string): void {
-  if (typeof window === "undefined") return;
+export async function saveWellnessEntry(entry: WellnessEntry): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
-  const updated = getWellnessEntries().filter((e) => e.id !== id);
-  localStorage.setItem(KEY, JSON.stringify(updated));
+  await supabase.from("wellness_entries").upsert(
+    {
+      id: entry.id,
+      user_id: user.id,
+      date: entry.date,
+      sleep: entry.sleep ?? null,
+      hydration: entry.hydration ?? null,
+      caffeine: entry.caffeine ?? null,
+      mood: entry.mood ?? null,
+      soreness: entry.soreness ?? null,
+      notes: entry.notes ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,date" }
+  );
+}
+
+export async function deleteWellnessEntry(id: string): Promise<void> {
+  await supabase.from("wellness_entries").delete().eq("id", id);
 }

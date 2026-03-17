@@ -50,12 +50,15 @@ export default function HomePage() {
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
 
   useEffect(() => {
-    const sessions = getSessions();
-    setTodaySession(sessions.find(s => s.date.slice(0, 10) === today));
-    setRecentSessions(sessions.slice(0, 2));
-    const bwEntries = getBodyweightEntries();
-    setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
-    setTodayWellness(getWellnessForDate(today));
+    async function load() {
+      const sessions = await getSessions();
+      setTodaySession(sessions.find(s => s.date.slice(0, 10) === today));
+      setRecentSessions(sessions.slice(0, 2));
+      const bwEntries = await getBodyweightEntries();
+      setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
+      setTodayWellness(await getWellnessForDate(today));
+    }
+    load();
   }, []);
 
   const dateLabel = new Date().toLocaleDateString("en-GB", {
@@ -144,7 +147,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v0.6 – today dashboard</p>
+      <p className="text-xs text-neutral-600">v0.7 – cloud sync</p>
     </main>
   );
 }

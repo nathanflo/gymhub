@@ -1,44 +1,48 @@
 /**
- * bodyweight.ts – localStorage wrapper for bodyweight entries.
- * Mirrors the pattern in lib/storage.ts for easy future database migration.
- *
- * Future: replace with fetch() calls to an API route.
+ * bodyweight.ts – Supabase wrapper for bodyweight entries.
+ * Replaces the localStorage implementation from Phase 1–8.
  */
 
 import { BodyweightEntry } from "@/types/bodyweight";
+import { supabase } from "./supabase";
 
-const BODYWEIGHT_KEY = "gymhub_bodyweight";
+function toEntry(row: any): BodyweightEntry {
+  return {
+    id: row.id,
+    date: row.date,
+    weight: row.weight,
+  };
+}
 
 /** Read all bodyweight entries, newest first. */
-export function getBodyweightEntries(): BodyweightEntry[] {
-  if (typeof window === "undefined") return [];
+export async function getBodyweightEntries(): Promise<BodyweightEntry[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
 
-  const raw = localStorage.getItem(BODYWEIGHT_KEY);
-  if (!raw) return [];
+  const { data, error } = await supabase
+    .from("bodyweight_entries")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("date", { ascending: false });
 
-  try {
-    const entries: BodyweightEntry[] = JSON.parse(raw);
-    return entries.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  } catch {
-    return [];
-  }
+  if (error || !data) return [];
+  return data.map(toEntry);
 }
 
 /** Append a new bodyweight entry. */
-export function saveBodyweightEntry(entry: BodyweightEntry): void {
-  if (typeof window === "undefined") return;
+export async function saveBodyweightEntry(entry: BodyweightEntry): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
-  const existing = getBodyweightEntries();
-  const updated = [...existing, entry];
-  localStorage.setItem(BODYWEIGHT_KEY, JSON.stringify(updated));
+  await supabase.from("bodyweight_entries").insert({
+    id: entry.id,
+    user_id: user.id,
+    date: entry.date.slice(0, 10),
+    weight: entry.weight,
+  });
 }
 
 /** Remove a bodyweight entry by id. */
-export function deleteBodyweightEntry(id: string): void {
-  if (typeof window === "undefined") return;
-
-  const updated = getBodyweightEntries().filter((e) => e.id !== id);
-  localStorage.setItem(BODYWEIGHT_KEY, JSON.stringify(updated));
+export async function deleteBodyweightEntry(id: string): Promise<void> {
+  await supabase.from("bodyweight_entries").delete().eq("id", id);
 }

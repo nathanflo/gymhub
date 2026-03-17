@@ -17,12 +17,12 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
 
   useEffect(() => {
-    setTemplates(getTemplates());
+    getTemplates().then(setTemplates);
   }, []);
 
-  function handleDelete(id: string) {
-    deleteTemplate(id);
-    setTemplates(getTemplates());
+  async function handleDelete(id: string) {
+    await deleteTemplate(id);
+    setTemplates(await getTemplates());
   }
 
   function handleStart(id: string) {
