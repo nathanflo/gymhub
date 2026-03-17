@@ -19,7 +19,8 @@ function toTemplate(row: any): WorkoutTemplate {
 }
 
 export async function getTemplates(): Promise<WorkoutTemplate[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -33,7 +34,8 @@ export async function getTemplates(): Promise<WorkoutTemplate[]> {
 }
 
 export async function saveTemplate(template: WorkoutTemplate): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return;
 
   await supabase.from("workout_templates").insert({

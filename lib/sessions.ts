@@ -24,7 +24,8 @@ function toSession(row: any): WorkoutSession {
 
 /** Read all sessions, newest first. */
 export async function getSessions(): Promise<WorkoutSession[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -37,9 +38,24 @@ export async function getSessions(): Promise<WorkoutSession[]> {
   return data.map(toSession);
 }
 
+/** Read a single session by id. */
+export async function getSessionById(id: string): Promise<WorkoutSession | undefined> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return undefined;
+  const { data } = await supabase
+    .from("workout_sessions")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  return data ? toSession(data) : undefined;
+}
+
 /** Append a new session. */
 export async function saveSession(session: WorkoutSession): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: authSession } } = await supabase.auth.getSession();
+  const user = authSession?.user;
   if (!user) return;
 
   await supabase.from("workout_sessions").insert({

@@ -28,82 +28,85 @@ export async function runMigrationIfNeeded(userId: string): Promise<void> {
   const bwEntries: BodyweightEntry[] = readLS("gymhub_bodyweight");
   const wellnessEntries: WellnessEntry[] = readLS("gymhub_wellness");
 
-  if (sessions.length > 0) {
-    const rows = sessions.map((s) => ({
-      id: s.id,
-      user_id: userId,
-      date: s.date.slice(0, 10),
-      title: s.title,
-      workout_type: s.workoutType,
-      energy_level: s.energyLevel,
-      notes: s.notes,
-      bodyweight: s.bodyweight ?? null,
-      distance: s.distance ?? null,
-      duration: s.duration ?? null,
-      intervals: s.intervals ?? null,
-      exercises: s.exercises,
-    }));
-    await supabase.from("workout_sessions").upsert(rows, { onConflict: "id" });
-  }
+  const sessionRows = sessions.map((s) => ({
+    id: s.id,
+    user_id: userId,
+    date: s.date.slice(0, 10),
+    title: s.title,
+    workout_type: s.workoutType,
+    energy_level: s.energyLevel,
+    notes: s.notes,
+    bodyweight: s.bodyweight ?? null,
+    distance: s.distance ?? null,
+    duration: s.duration ?? null,
+    intervals: s.intervals ?? null,
+    exercises: s.exercises,
+  }));
 
-  if (workouts.length > 0) {
-    const rows = workouts.map((w) => ({
-      id: w.id,
-      user_id: userId,
-      date: w.date.slice(0, 10),
-      exercise: w.exercise,
-      workout_type: w.workoutType,
-      energy_level: w.energyLevel,
-      notes: w.notes,
-      rpe: w.rpe ?? null,
-      weight: w.weight ?? null,
-      sets: w.sets ?? null,
-      reps: w.reps ?? null,
-      distance: w.distance ?? null,
-      duration: w.duration ?? null,
-      intervals: w.intervals ?? null,
-    }));
-    await supabase.from("workouts").upsert(rows, { onConflict: "id" });
-  }
+  const workoutRows = workouts.map((w) => ({
+    id: w.id,
+    user_id: userId,
+    date: w.date.slice(0, 10),
+    exercise: w.exercise,
+    workout_type: w.workoutType,
+    energy_level: w.energyLevel,
+    notes: w.notes,
+    rpe: w.rpe ?? null,
+    weight: w.weight ?? null,
+    sets: w.sets ?? null,
+    reps: w.reps ?? null,
+    distance: w.distance ?? null,
+    duration: w.duration ?? null,
+    intervals: w.intervals ?? null,
+  }));
 
-  if (templates.length > 0) {
-    const rows = templates.map((t) => ({
-      id: t.id,
-      user_id: userId,
-      name: t.name,
-      workout_type: t.workoutType,
-      exercises: t.exercises,
-      distance: t.distance ?? null,
-      duration: t.duration ?? null,
-      intervals: t.intervals ?? null,
-    }));
-    await supabase.from("workout_templates").upsert(rows, { onConflict: "id" });
-  }
+  const templateRows = templates.map((t) => ({
+    id: t.id,
+    user_id: userId,
+    name: t.name,
+    workout_type: t.workoutType,
+    exercises: t.exercises,
+    distance: t.distance ?? null,
+    duration: t.duration ?? null,
+    intervals: t.intervals ?? null,
+  }));
 
-  if (bwEntries.length > 0) {
-    const rows = bwEntries.map((e) => ({
-      id: e.id,
-      user_id: userId,
-      date: e.date.slice(0, 10),
-      weight: e.weight,
-    }));
-    await supabase.from("bodyweight_entries").upsert(rows, { onConflict: "id" });
-  }
+  const bwRows = bwEntries.map((e) => ({
+    id: e.id,
+    user_id: userId,
+    date: e.date.slice(0, 10),
+    weight: e.weight,
+  }));
 
-  if (wellnessEntries.length > 0) {
-    const rows = wellnessEntries.map((e) => ({
-      id: e.id,
-      user_id: userId,
-      date: e.date,
-      sleep: e.sleep ?? null,
-      hydration: e.hydration ?? null,
-      caffeine: e.caffeine ?? null,
-      mood: e.mood ?? null,
-      soreness: e.soreness ?? null,
-      notes: e.notes ?? null,
-    }));
-    await supabase.from("wellness_entries").upsert(rows, { onConflict: "id" });
-  }
+  const wellnessRows = wellnessEntries.map((e) => ({
+    id: e.id,
+    user_id: userId,
+    date: e.date,
+    sleep: e.sleep ?? null,
+    hydration: e.hydration ?? null,
+    caffeine: e.caffeine ?? null,
+    mood: e.mood ?? null,
+    soreness: e.soreness ?? null,
+    notes: e.notes ?? null,
+  }));
+
+  await Promise.all([
+    sessions.length > 0
+      ? supabase.from("workout_sessions").upsert(sessionRows, { onConflict: "id" })
+      : Promise.resolve(),
+    workouts.length > 0
+      ? supabase.from("workouts").upsert(workoutRows, { onConflict: "id" })
+      : Promise.resolve(),
+    templates.length > 0
+      ? supabase.from("workout_templates").upsert(templateRows, { onConflict: "id" })
+      : Promise.resolve(),
+    bwEntries.length > 0
+      ? supabase.from("bodyweight_entries").upsert(bwRows, { onConflict: "id" })
+      : Promise.resolve(),
+    wellnessEntries.length > 0
+      ? supabase.from("wellness_entries").upsert(wellnessRows, { onConflict: "id" })
+      : Promise.resolve(),
+  ]);
 
   localStorage.setItem(MIGRATED_KEY, "true");
 }

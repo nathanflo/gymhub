@@ -31,8 +31,9 @@ export default function WorkoutsPage() {
 
   useEffect(() => {
     async function load() {
-      setSessions(await getSessions());
-      setWorkouts(await getWorkouts());
+      const [sessions, workouts] = await Promise.all([getSessions(), getWorkouts()]);
+      setSessions(sessions);
+      setWorkouts(workouts);
     }
     load();
   }, []);

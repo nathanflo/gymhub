@@ -11,8 +11,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getSessions, updateSession, saveSession } from "@/lib/sessions";
-import { getWorkouts, deleteWorkout } from "@/lib/storage";
+import { getSessionById, updateSession, saveSession } from "@/lib/sessions";
+import { getWorkoutById, deleteWorkout } from "@/lib/storage";
 import { WorkoutSession } from "@/types/session";
 import { Workout } from "@/types/workout";
 import {
@@ -35,9 +35,11 @@ export default function EditWorkoutPage() {
 
   useEffect(() => {
     async function load() {
-      // Check sessions first
-      const sessions = await getSessions();
-      const session = sessions.find((s) => s.id === id);
+      const [session, workout] = await Promise.all([
+        getSessionById(id),
+        getWorkoutById(id),
+      ]);
+
       if (session) {
         setSource("session");
         setOriginalDate(session.date);
@@ -45,9 +47,6 @@ export default function EditWorkoutPage() {
         return;
       }
 
-      // Fall back to legacy workouts
-      const workouts = await getWorkouts();
-      const workout = workouts.find((w) => w.id === id);
       if (workout) {
         setSource("legacy");
         setLegacyWorkout(workout);
@@ -73,7 +72,11 @@ export default function EditWorkoutPage() {
     router.push("/workouts");
   }
 
-  if (!source || !initialForm) return null;
+  if (!source || !initialForm) return (
+    <main className="flex flex-col flex-1 px-6 py-8 gap-6">
+      <div className="h-8 w-40 rounded-lg bg-neutral-800/60 animate-pulse" />
+    </main>
+  );
 
   return (
     <main className="flex flex-col flex-1 px-6 py-8 gap-6">

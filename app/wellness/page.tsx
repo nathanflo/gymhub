@@ -72,7 +72,10 @@ export default function WellnessPage() {
   const [saved, setSaved] = useState(false);
 
   async function loadData() {
-    const todayEntry = await getWellnessForDate(today);
+    const [todayEntry, entries] = await Promise.all([
+      getWellnessForDate(today),
+      getWellnessEntries(),
+    ]);
     if (todayEntry) {
       setExistingId(todayEntry.id);
       setSleep(todayEntry.sleep != null ? String(todayEntry.sleep) : "");
@@ -82,7 +85,7 @@ export default function WellnessPage() {
       setSoreness(todayEntry.soreness);
       setNotes(todayEntry.notes ?? "");
     }
-    setEntries(await getWellnessEntries());
+    setEntries(entries);
   }
 
   useEffect(() => {

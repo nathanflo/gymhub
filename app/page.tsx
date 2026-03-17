@@ -63,24 +63,26 @@ export default function HomePage() {
 
   useEffect(() => {
     async function load() {
-      const sessions = await getSessions();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+
+      const [sessions, bwEntries, todayWellness, profileResult] = await Promise.all([
+        getSessions(),
+        getBodyweightEntries(),
+        getWellnessForDate(today),
+        user
+          ? supabase.from("profiles").select("name").eq("id", user.id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
       setLastSession(sessions[0]);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
       setWeeklyCount(sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length);
       setTodaySession(sessions.find(s => s.date.slice(0, 10) === today));
       setRecentSessions(sessions.slice(0, 2));
-      const bwEntries = await getBodyweightEntries();
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
-      setTodayWellness(await getWellnessForDate(today));
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (profile?.name) setUserName(profile.name);
-      }
+      setTodayWellness(todayWellness);
+      if (profileResult?.data?.name) setUserName(profileResult.data.name);
     }
     load();
   }, []);

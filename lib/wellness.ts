@@ -20,7 +20,8 @@ function toEntry(row: any): WellnessEntry {
 }
 
 export async function getWellnessEntries(): Promise<WellnessEntry[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -34,7 +35,8 @@ export async function getWellnessEntries(): Promise<WellnessEntry[]> {
 }
 
 export async function getWellnessForDate(date: string): Promise<WellnessEntry | undefined> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return undefined;
 
   const { data, error } = await supabase
@@ -49,7 +51,8 @@ export async function getWellnessForDate(date: string): Promise<WellnessEntry | 
 }
 
 export async function saveWellnessEntry(entry: WellnessEntry): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return;
 
   await supabase.from("wellness_entries").upsert(

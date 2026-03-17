@@ -9,7 +9,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { saveSession, getSessions } from "@/lib/sessions";
+import { saveSession, getSessionById } from "@/lib/sessions";
 import { getTemplates } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState } from "@/components/SessionForm";
@@ -26,8 +26,7 @@ function LogPageInner() {
   useEffect(() => {
     async function load() {
       if (fromId) {
-        const sessions = await getSessions();
-        const session = sessions.find((s) => s.id === fromId);
+        const session = await getSessionById(fromId);
         if (session) {
           setInitialState({ ...sessionToFormState(session), notes: "", bodyweight: "" });
         }
@@ -48,16 +47,15 @@ function LogPageInner() {
     router.push("/workouts");
   }
 
-  if (!loaded) return null;
+  if (!loaded) return (
+    <main className="flex flex-col flex-1 px-6 py-8 gap-6">
+      <div className="h-8 w-40 rounded-lg bg-neutral-800/60 animate-pulse" />
+    </main>
+  );
 
   return (
     <main className="flex flex-col flex-1 px-6 py-8 gap-6">
-      <div>
-        <button onClick={() => router.back()} className="text-sm text-indigo-400 mb-4">
-          ← Back
-        </button>
-        <h1 className="text-2xl font-bold text-white">Log Session</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-white">Log Session</h1>
 
       <SessionForm
         initialState={initialState}
