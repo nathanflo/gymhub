@@ -1,64 +1,150 @@
-/**
- * Homepage – GymHub landing screen.
- *
- * Future additions:
- * - Quick-stats banner (total sessions this week, last PR, etc.)
- * - Bottom navigation with tabs: Workouts | Wellness | Music | Insights
- * - Greeting based on time of day ("Good morning, Nathan 💪")
- */
+"use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSessions } from "@/lib/sessions";
+import { getBodyweightEntries } from "@/lib/bodyweight";
+import { getWellnessForDate } from "@/lib/wellness";
+import { WorkoutSession } from "@/types/session";
+import { BodyweightEntry } from "@/types/bodyweight";
+import { WellnessEntry } from "@/types/wellness";
+
+const today = new Date().toISOString().slice(0, 10);
+
+function wellnessSummary(entry: WellnessEntry): string {
+  const parts: string[] = [];
+  if (entry.sleep != null) parts.push(`💤 ${entry.sleep}h`);
+  if (entry.hydration != null) parts.push(`💧 ${entry.hydration}L`);
+  if (entry.caffeine != null) parts.push(`☕ ${entry.caffeine}`);
+  if (entry.mood != null) parts.push(`Mood ${entry.mood}/5`);
+  if (entry.soreness != null) parts.push(`Soreness ${entry.soreness}/5`);
+  return parts.join(" · ");
+}
+
+function SessionRow({ session }: { session: WorkoutSession }) {
+  const isRun = session.workoutType === "Run";
+  const summary = isRun
+    ? `${session.distance ?? "—"} km · ${session.duration ?? "—"}`
+    : session.exercises.slice(0, 2).map(e => e.name).join(", ")
+        + (session.exercises.length > 2 ? ` +${session.exercises.length - 2}` : "");
+
+  return (
+    <Link
+      href={`/edit/${session.id}`}
+      className="flex items-center justify-between rounded-xl bg-neutral-800 px-4 py-3
+                 active:scale-95 transition-all"
+    >
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-white">{session.title}</span>
+        <span className="text-xs text-neutral-400">{summary}</span>
+      </div>
+      <p className="text-xs text-neutral-600">{session.workoutType}</p>
+    </Link>
+  );
+}
 
 export default function HomePage() {
+  const [todaySession, setTodaySession] = useState<WorkoutSession | undefined>(undefined);
+  const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
+  const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
+  const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
+
+  useEffect(() => {
+    const sessions = getSessions();
+    setTodaySession(sessions.find(s => s.date.slice(0, 10) === today));
+    setRecentSessions(sessions.slice(0, 2));
+    const bwEntries = getBodyweightEntries();
+    setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
+    setTodayWellness(getWellnessForDate(today));
+  }, []);
+
+  const dateLabel = new Date().toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
   return (
-    <main className="flex flex-col items-center justify-center flex-1 px-6 py-12 gap-10">
-      {/* Brand */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-white">
-          GymHub
-        </h1>
-        <p className="mt-2 text-sm text-neutral-400">
-          Your personal fitness OS
+    <main className="px-6 py-8 flex flex-col gap-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">GymHub</h1>
+        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-1">
+          Today · {dateLabel}
         </p>
       </div>
 
-      {/* Primary actions */}
-      <div className="flex flex-col w-full gap-4">
-        <Link
-          href="/log"
-          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
-                     transition-all text-center py-5 text-lg font-semibold text-white shadow-lg"
-        >
-          Log Workout
-        </Link>
+      {/* Primary CTA */}
+      <Link
+        href={todaySession ? `/edit/${todaySession.id}` : "/log"}
+        className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
+                   transition-all py-5 text-lg font-semibold text-white text-center shadow-lg"
+      >
+        {todaySession ? "Continue Workout" : "Start Workout"}
+      </Link>
 
-        <Link
-          href="/templates"
-          className="w-full rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
-                     transition-all text-center py-5 text-lg font-semibold text-white shadow-lg"
-        >
-          Templates
-        </Link>
+      {/* Quick Actions */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+          Quick Actions
+        </h2>
+        <div className="flex gap-3">
+          <Link
+            href="/templates"
+            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
+                       transition-all py-3 text-sm text-white text-center font-medium"
+          >
+            Start from Template
+          </Link>
+          <Link
+            href="/wellness"
+            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
+                       transition-all py-3 text-sm text-white text-center font-medium"
+          >
+            Log Wellness
+          </Link>
+        </div>
+      </section>
 
-        <Link
-          href="/workouts"
-          className="w-full rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
-                     transition-all text-center py-5 text-lg font-semibold text-white shadow-lg"
-        >
-          View Workouts
-        </Link>
+      {/* Today Snapshot */}
+      {(todayBw || todayWellness) && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            Today
+          </h2>
+          <div className="rounded-xl bg-neutral-800 px-4 py-3 flex flex-col gap-1.5">
+            {todayBw && (
+              <div className="flex justify-between">
+                <span className="text-xs text-neutral-500">Bodyweight</span>
+                <span className="text-sm font-semibold text-white">{todayBw.weight} kg</span>
+              </div>
+            )}
+            {todayWellness && (
+              <div className="flex justify-between">
+                <span className="text-xs text-neutral-500">Wellness</span>
+                <span className="text-xs text-neutral-400">{wellnessSummary(todayWellness)}</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
-        <Link
-          href="/progress"
-          className="w-full rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
-                     transition-all text-center py-5 text-lg font-semibold text-white shadow-lg"
-        >
-          Progress
-        </Link>
-      </div>
+      {/* Recent Sessions */}
+      {recentSessions.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            Recent
+          </h2>
+          <div className="flex flex-col gap-2">
+            {recentSessions.map(s => (
+              <SessionRow key={s.id} session={s} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Version stamp – easy to spot during iteration */}
-      <p className="text-xs text-neutral-600">v0.4 – templates</p>
+      {/* Version stamp */}
+      <p className="text-xs text-neutral-600">v0.6 – today dashboard</p>
     </main>
   );
 }
