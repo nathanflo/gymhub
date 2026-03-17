@@ -12,6 +12,13 @@ import { WellnessEntry } from "@/types/wellness";
 
 const today = new Date().toISOString().slice(0, 10);
 
+function daysAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000);
+  if (diff === 0) return "today";
+  if (diff === 1) return "yesterday";
+  return `${diff} days ago`;
+}
+
 function wellnessSummary(entry: WellnessEntry): string {
   const parts: string[] = [];
   if (entry.sleep != null) parts.push(`💤 ${entry.sleep}h`);
@@ -45,8 +52,11 @@ function SessionRow({ session }: { session: WorkoutSession }) {
 }
 
 export default function HomePage() {
+  const [greetingIdx] = useState(() => Math.floor(Math.random() * 3));
   const [todaySession, setTodaySession] = useState<WorkoutSession | undefined>(undefined);
   const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
+  const [lastSession, setLastSession] = useState<WorkoutSession | undefined>(undefined);
+  const [weeklyCount, setWeeklyCount] = useState(0);
   const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
   const [userName, setUserName] = useState<string | null>(null);
@@ -54,6 +64,9 @@ export default function HomePage() {
   useEffect(() => {
     async function load() {
       const sessions = await getSessions();
+      setLastSession(sessions[0]);
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      setWeeklyCount(sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length);
       setTodaySession(sessions.find(s => s.date.slice(0, 10) === today));
       setRecentSessions(sessions.slice(0, 2));
       const bwEntries = await getBodyweightEntries();
@@ -78,16 +91,37 @@ export default function HomePage() {
     month: "short",
   });
 
+  const greetings = userName
+    ? [
+        `Ready to train, ${userName}?`,
+        `Let's get after it, ${userName}`,
+        `Back at it, ${userName}`,
+      ]
+    : ["Ready to train?", "Let's go.", "Time to work."];
+  const greeting = greetings[greetingIdx];
+
   return (
-    <main className="px-6 py-8 flex flex-col gap-8">
+    <main className="px-6 py-8 flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">
-          {userName ? `Welcome back, ${userName}` : "Welcome back"}
-        </h1>
-        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-1">
+        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">
           Today · {dateLabel}
         </p>
+        <h1 className="text-2xl font-bold text-white">{greeting}</h1>
+
+        {/* Last session context */}
+        <p className="text-sm text-neutral-400 mt-2">
+          {lastSession
+            ? `Last session: ${lastSession.title} · ${daysAgo(lastSession.date)}`
+            : "No workouts logged yet — start your first session"}
+        </p>
+
+        {/* Weekly count */}
+        {weeklyCount > 0 && (
+          <p className="text-xs text-neutral-500 mt-0.5">
+            You&apos;ve trained {weeklyCount} time{weeklyCount !== 1 ? "s" : ""} this week
+          </p>
+        )}
       </div>
 
       {/* Primary CTA */}
