@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const links = [
   { href: "/log", label: "Log", match: (p: string) => p.startsWith("/log") || p.startsWith("/edit") },
@@ -12,6 +14,17 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setSignedIn(!!data.user);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_, session) => setSignedIn(!!session)
+    );
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
@@ -25,7 +38,7 @@ export default function Nav() {
         </Link>
 
         {/* Page links */}
-        <div className="flex gap-1 ml-auto">
+        <div className="flex gap-1 ml-auto items-center">
           {links.map(({ href, label, match }) => {
             const isActive = match(pathname);
             return (
@@ -42,6 +55,27 @@ export default function Nav() {
               </Link>
             );
           })}
+
+          {signedIn === false && (
+            <Link
+              href="/login"
+              aria-label="Sign in"
+              className="px-1.5 py-2 rounded-lg text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+            </Link>
+          )}
+          {signedIn === true && (
+            <span
+              title="Signed in"
+              className="px-2 py-2 text-sm text-indigo-400 select-none"
+            >
+              ●
+            </span>
+          )}
         </div>
       </nav>
     </header>
