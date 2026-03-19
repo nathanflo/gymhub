@@ -9,11 +9,12 @@ import { inputClass, selectClass, Field } from "@/components/Field";
 
 const emptyForm: UserProfile = {
   name: "",
-  age: null,
+  birth_date: null,
   sex: null,
   height_cm: null,
   bodyweight_kg: null,
   training_goal: null,
+  city: null,
 };
 
 function clamp(value: number | null, min: number, max: number): number | null {
@@ -34,7 +35,6 @@ export default function ProfilePage() {
   const [loaded, setLoaded] = useState(false);
 
   // Raw string values for numeric inputs
-  const [ageStr, setAgeStr] = useState("");
   const [heightStr, setHeightStr] = useState("");
   const [weightStr, setWeightStr] = useState("");
 
@@ -49,7 +49,6 @@ export default function ProfilePage() {
       const profile = await getProfile();
       if (profile) {
         setForm(profile);
-        setAgeStr(profile.age !== null ? String(profile.age) : "");
         setHeightStr(profile.height_cm !== null ? String(profile.height_cm) : "");
         setWeightStr(profile.bodyweight_kg !== null ? String(profile.bodyweight_kg) : "");
       }
@@ -61,17 +60,16 @@ export default function ProfilePage() {
   const initial = form.name?.[0]?.toUpperCase() ?? email?.[0]?.toUpperCase() ?? "?";
 
   async function handleSave() {
-    const age = clamp(parseNum(ageStr), 10, 100);
     const height_cm = clamp(parseNum(heightStr), 100, 250);
     const bodyweight_kg = clamp(parseNum(weightStr), 30, 200);
 
     const payload: UserProfile = {
       ...form,
-      age,
       height_cm,
       bodyweight_kg,
       sex: form.sex || null,
       training_goal: form.training_goal || null,
+      city: form.city || null,
     };
 
     setSaveState("saving");
@@ -115,7 +113,9 @@ export default function ProfilePage() {
                         text-2xl font-bold text-white select-none">
           {initial}
         </div>
-        <h1 className="text-xl font-bold text-white">{form.name || email || "Profile"}</h1>
+        <h1 className="text-xl font-bold text-white">
+          {form.name ? `Hi, ${form.name}` : "Hi there"}
+        </h1>
         <p className="text-sm text-neutral-400">This helps GymHub tailor your training.</p>
       </div>
 
@@ -147,15 +147,12 @@ export default function ProfilePage() {
           Training Profile
         </p>
 
-        <Field label="Age">
+        <Field label="Birth Date">
           <input
             className={inputClass}
-            type="number"
-            placeholder="e.g. 28"
-            min="10"
-            max="100"
-            value={ageStr}
-            onChange={e => setAgeStr(e.target.value)}
+            type="date"
+            value={form.birth_date ?? ""}
+            onChange={e => setForm(f => ({ ...f, birth_date: e.target.value || null }))}
           />
         </Field>
 
@@ -211,6 +208,16 @@ export default function ProfilePage() {
             <option value="Maintain">Maintain</option>
             <option value="Other">Other</option>
           </select>
+        </Field>
+
+        <Field label="City">
+          <input
+            className={inputClass}
+            type="text"
+            placeholder="e.g. London"
+            value={form.city ?? ""}
+            onChange={e => setForm(f => ({ ...f, city: e.target.value || null }))}
+          />
         </Field>
       </section>
 

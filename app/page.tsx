@@ -27,6 +27,17 @@ function workoutTimeAgo(isoString: string): string {
   return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
 }
 
+function weatherLabel(code: number): string {
+  if (code === 0) return "Clear";
+  if (code <= 3) return "Cloudy";
+  if (code <= 48) return "Foggy";
+  if (code <= 55) return "Drizzle";
+  if (code <= 65) return "Rain";
+  if (code <= 75) return "Snow";
+  if (code <= 82) return "Showers";
+  return "Stormy";
+}
+
 function wellnessSummary(entry: WellnessEntry): string {
   const parts: string[] = [];
   if (entry.sleep != null) parts.push(`💤 ${entry.sleep}h`);
@@ -67,6 +78,8 @@ export default function HomePage() {
   const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
   const [userName, setUserName] = useState<string | null>(null);
+  const [city, setCity] = useState<string | null>(null);
+  const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
   const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -102,7 +115,7 @@ export default function HomePage() {
         getBodyweightEntries(),
         getWellnessForDate(today),
         user
-          ? supabase.from("profiles").select("name").eq("id", user.id).maybeSingle()
+          ? supabase.from("profiles").select("name, city").eq("id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
 
@@ -113,9 +126,38 @@ export default function HomePage() {
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
       if (profileResult?.data?.name) setUserName(profileResult.data.name);
+      if (profileResult?.data?.city) setCity(profileResult.data.city);
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (!city) return;
+    setWeather(null);
+    let cancelled = false;
+    async function fetchWeather() {
+      try {
+        const geoRes = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city!)}&count=1&language=en&format=json`
+        );
+        const geoData = await geoRes.json();
+        const loc = geoData?.results?.[0];
+        if (!loc || cancelled) return;
+        const wxRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weathercode&temperature_unit=celsius`
+        );
+        const wxData = await wxRes.json();
+        const temp = wxData?.current?.temperature_2m;
+        const code = wxData?.current?.weathercode;
+        if (temp == null || code == null || cancelled) return;
+        setWeather({ temp: Math.round(temp), label: weatherLabel(code) });
+      } catch {
+        // silently fail — city name alone will show
+      }
+    }
+    fetchWeather();
+    return () => { cancelled = true; };
+  }, [city]);
 
   const dateLabel = new Date().toLocaleDateString("en-GB", {
     weekday: "short",
@@ -140,6 +182,13 @@ export default function HomePage() {
           Today · {dateLabel}
         </p>
         <h1 className="text-2xl font-bold text-white">{greeting}</h1>
+
+        {/* City + weather — city shows immediately, weather fills in when ready */}
+        {city && (
+          <p className="text-xs text-neutral-500 mt-1">
+            {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
+          </p>
+        )}
 
         {/* Last session context */}
         <p className="text-sm text-neutral-400 mt-2">
