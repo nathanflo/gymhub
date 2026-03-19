@@ -41,6 +41,7 @@ export interface DraftExercise {
   unit: WeightUnit;
   sets: DraftSet[];
   freeformNote: string;
+  note?: string;  // undefined = hidden, "" or string = textarea shown
 }
 
 export interface SessionFormState {
@@ -154,12 +155,14 @@ const MODE_LABELS: Record<TrackingMode, string> = {
 
 export function SessionForm({
   initialState,
+  initialStartTime,
   submitLabel = "Save Session",
   showDateEdit = false,
   onSave,
   onCancel,
 }: {
   initialState?: SessionFormState;
+  initialStartTime?: string;  // ISO string from draft resume
   submitLabel?: string;
   showDateEdit?: boolean;
   onSave: (session: WorkoutSession) => void;
@@ -170,10 +173,34 @@ export function SessionForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [exerciseLibrary, setExerciseLibrary] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState<string | null>(initialStartTime ?? null);
+  const [elapsed, setElapsed] = useState(0);
+  const [activeExIdx, setActiveExIdx] = useState(0);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
   }, []);
+
+  // Autosave draft to localStorage once workout has meaningfully started
+  useEffect(() => {
+    if (!startTime) return;
+    const hasData = form.exercises.some(ex => ex.sets.length > 0);
+    if (!hasData) return;
+    localStorage.setItem("activeWorkoutDraft", JSON.stringify({
+      version: 1,
+      session: form,
+      startTime,
+    }));
+  }, [form, startTime]);
+
+  // Live timer
+  useEffect(() => {
+    if (!startTime) return;
+    const tick = () => setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
 
   const isRun = form.workoutType === "Run";
 
@@ -282,6 +309,8 @@ export function SessionForm({
   }
 
   function handleAddSet(exIdx: number) {
+    if (!startTime) setStartTime(new Date().toISOString());
+    setActiveExIdx(exIdx);
     setForm((prev) => ({
       ...prev,
       exercises: prev.exercises.map((ex, i) => {
@@ -291,6 +320,14 @@ export function SessionForm({
         return { ...ex, sets: [...ex.sets, newSet] };
       }),
     }));
+  }
+
+  function handleExerciseNote(exIdx: number, value: string) {
+    setForm(f => { const exs = [...f.exercises]; exs[exIdx] = { ...exs[exIdx], note: value }; return { ...f, exercises: exs }; });
+  }
+
+  function handleOpenNote(exIdx: number) {
+    handleExerciseNote(exIdx, "");
   }
 
   function handleRemoveSet(exIdx: number, setIdx: number) {
@@ -373,6 +410,7 @@ export function SessionForm({
             unit: mode === "weight_reps" ? ex.unit : undefined,
             freeformNote: mode === "freeform" ? ex.freeformNote.trim() : undefined,
             sets: mode === "freeform" ? [] : ex.sets.map(buildSet),
+            note: ex.note || undefined,
           };
         });
 
@@ -398,6 +436,13 @@ export function SessionForm({
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-5">
+      {/* Active session indicator */}
+      {startTime && (
+        <p className="text-xs text-neutral-400 text-center mb-4">
+          Workout in progress • {Math.floor(elapsed / 60)}m
+        </p>
+      )}
+
       {/* Session title */}
       <Field label="Session Title">
         <input
@@ -498,6 +543,7 @@ export function SessionForm({
               key={exIdx}
               exercise={ex}
               exerciseIdx={exIdx}
+              isActive={activeExIdx === exIdx}
               canRemove={form.exercises.length > 1}
               canMoveUp={exIdx > 0}
               canMoveDown={exIdx < form.exercises.length - 1}
@@ -505,6 +551,7 @@ export function SessionForm({
               onMoveDown={() => handleMoveExercise(exIdx, "down")}
               onInsertBelow={() => handleInsertExerciseBelow(exIdx)}
               onNameChange={(v) => handleExerciseName(exIdx, v)}
+              onNameFocus={() => setActiveExIdx(exIdx)}
               onModeChange={(m) => handleModeChange(exIdx, m)}
               onUnitChange={(u) => handleUnitChange(exIdx, u)}
               onFreeformNote={(v) => handleFreeformNote(exIdx, v)}
@@ -512,6 +559,8 @@ export function SessionForm({
               onSetField={(setIdx, field, v) => handleSetField(exIdx, setIdx, field, v)}
               onAddSet={() => handleAddSet(exIdx)}
               onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
+              onNote={(v) => handleExerciseNote(exIdx, v)}
+              onOpenNote={() => handleOpenNote(exIdx)}
               exerciseLibrary={exerciseLibrary}
             />
           ))}
@@ -569,6 +618,7 @@ export function SessionForm({
 function ExerciseBlock({
   exercise,
   exerciseIdx,
+  isActive,
   canRemove,
   canMoveUp,
   canMoveDown,
@@ -576,6 +626,7 @@ function ExerciseBlock({
   onMoveDown,
   onInsertBelow,
   onNameChange,
+  onNameFocus,
   onModeChange,
   onUnitChange,
   onFreeformNote,
@@ -583,10 +634,13 @@ function ExerciseBlock({
   onSetField,
   onAddSet,
   onRemoveSet,
+  onNote,
+  onOpenNote,
   exerciseLibrary,
 }: {
   exercise: DraftExercise;
   exerciseIdx: number;
+  isActive: boolean;
   canRemove: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
@@ -594,6 +648,7 @@ function ExerciseBlock({
   onMoveDown: () => void;
   onInsertBelow: () => void;
   onNameChange: (v: string) => void;
+  onNameFocus: () => void;
   onModeChange: (m: TrackingMode) => void;
   onUnitChange: (u: WeightUnit) => void;
   onFreeformNote: (v: string) => void;
@@ -601,6 +656,8 @@ function ExerciseBlock({
   onSetField: (setIdx: number, field: keyof DraftSet, v: string) => void;
   onAddSet: () => void;
   onRemoveSet: (setIdx: number) => void;
+  onNote: (v: string) => void;
+  onOpenNote: () => void;
   exerciseLibrary: string[];
 }) {
   const { mode, unit } = exercise;
@@ -629,7 +686,11 @@ function ExerciseBlock({
     "px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition";
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-neutral-800/60 border border-neutral-700 p-3">
+    <div className={`flex flex-col gap-2 rounded-xl bg-neutral-800/60 border p-3 ${
+      isActive
+        ? "border-indigo-500/40 ring-1 ring-indigo-500/40"
+        : "border-neutral-700"
+    }`}>
       {/* Exercise name row */}
       <div className="relative flex gap-2 items-center">
         <input
@@ -637,7 +698,7 @@ function ExerciseBlock({
           placeholder={`Exercise ${exerciseIdx + 1}`}
           value={exercise.name}
           onChange={(e) => onNameChange(e.target.value)}
-          onFocus={() => setShowSuggestions(true)}
+          onFocus={() => { setShowSuggestions(true); onNameFocus(); }}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           className={`${inputClass} py-2 text-sm font-medium`}
         />
@@ -751,6 +812,25 @@ function ExerciseBlock({
             + Add Set
           </button>
         </div>
+      )}
+
+      {/* Per-exercise note */}
+      {exercise.note !== undefined ? (
+        <textarea
+          value={exercise.note}
+          onChange={e => onNote(e.target.value)}
+          placeholder="Note…"
+          rows={2}
+          className="w-full mt-2 rounded-lg bg-neutral-700/60 border border-neutral-700 text-sm text-neutral-300 placeholder:text-neutral-600 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={onOpenNote}
+          className="mt-2 text-xs text-neutral-600 hover:text-neutral-400 text-left"
+        >
+          + Note
+        </button>
       )}
     </div>
   );

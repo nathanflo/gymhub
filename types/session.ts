@@ -26,6 +26,7 @@ export interface WorkoutExercise {
   unit?: WeightUnit;       // undefined → "kg" for backwards compat (weight_reps only)
   sets: WorkoutSet[];
   freeformNote?: string;   // freeform mode only; sets is [] in this case
+  note?: string;           // per-exercise note (all modes)
 }
 
 export interface WorkoutSession {
