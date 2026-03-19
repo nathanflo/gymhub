@@ -123,7 +123,7 @@ function LogPageInner() {
               }}
               className="w-full py-3 rounded-xl bg-neutral-800 text-neutral-300"
             >
-              Start new
+              Start New
             </button>
           </div>
         </div>

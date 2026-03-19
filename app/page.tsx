@@ -182,7 +182,7 @@ export default function HomePage() {
               }}
               className="flex-1 py-3 rounded-xl bg-neutral-700 text-neutral-300 text-sm text-center active:scale-95 transition-all"
             >
-              Start new
+              Start New
             </Link>
           </div>
         </div>
