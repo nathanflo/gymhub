@@ -38,7 +38,10 @@ export default function Nav() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+    <header
+      className="sticky top-0 z-50 bg-neutral-900/80 backdrop-blur border-b border-neutral-800"
+      style={{ paddingTop: 'var(--safe-top)' }}
+    >
       <nav className="flex items-center px-4 h-14">
         {/* Brand wordmark = home link */}
         <Link
