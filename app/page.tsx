@@ -61,7 +61,6 @@ function SessionRow({ session }: { session: WorkoutSession }) {
 
 export default function HomePage() {
   const [greetingIdx] = useState(() => Math.floor(Math.random() * 3));
-  const [todaySession, setTodaySession] = useState<WorkoutSession | undefined>(undefined);
   const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
   const [lastSession, setLastSession] = useState<WorkoutSession | undefined>(undefined);
   const [weeklyCount, setWeeklyCount] = useState(0);
@@ -110,7 +109,6 @@ export default function HomePage() {
       setLastSession(sessions[0]);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
       setWeeklyCount(sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length);
-      setTodaySession(sessions.find(s => s.date.slice(0, 10) === today));
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
@@ -190,11 +188,11 @@ export default function HomePage() {
         </div>
       ) : (
         <Link
-          href={todaySession ? `/edit/${todaySession.id}` : "/log"}
+          href="/log"
           className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
                      transition-all py-5 text-lg font-semibold text-white text-center shadow-lg"
         >
-          {todaySession ? "Continue Workout" : "Start Workout"}
+          Start Workout
         </Link>
       )}
 
@@ -259,7 +257,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.3.2 – workout loop fixes</p>
+      <p className="text-xs text-neutral-600">v1.3.3 – routing fix: live workout always via /log</p>
     </main>
   );
 }

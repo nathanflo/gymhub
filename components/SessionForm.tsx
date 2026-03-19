@@ -185,11 +185,9 @@ export function SessionForm({
     getExerciseLibrary().then(setExerciseLibrary);
   }, []);
 
-  // Autosave draft to localStorage once workout has meaningfully started
+  // Autosave draft to localStorage as soon as workout has started
   useEffect(() => {
     if (!startTime) return;
-    const hasData = form.exercises.some(ex => ex.sets.length > 0);
-    if (!hasData) return;
     localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime, activeExIdx }));
     setSavedPulse(true);
     const t = setTimeout(() => setSavedPulse(false), 2000);
