@@ -196,7 +196,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.1 – cleaner navigation</p>
+      <p className="text-xs text-neutral-600">v1.2 – workout summaries</p>
     </main>
   );
 }

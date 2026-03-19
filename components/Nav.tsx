@@ -16,7 +16,8 @@ const links = [
       p.startsWith("/progress") ||
       p.startsWith("/templates") ||
       p.startsWith("/log") ||
-      p.startsWith("/edit"),
+      p.startsWith("/edit") ||
+      p.startsWith("/session"),
   },
   { href: "/wellness", label: "Wellness", match: (p: string) => p.startsWith("/wellness") },
   { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") },

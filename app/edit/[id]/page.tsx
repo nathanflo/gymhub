@@ -63,14 +63,15 @@ export default function EditWorkoutPage() {
 
   async function handleUpdateSession(session: WorkoutSession) {
     await updateSession({ ...session, id });
-    router.push("/workouts");
+    router.push(`/session/${id}/summary`);
   }
 
   async function handleSaveLegacy(session: WorkoutSession) {
     // Migrate: save as new session, delete old workout entry
-    await saveSession({ ...session, id: crypto.randomUUID(), date: originalDate });
+    const newId = crypto.randomUUID();
+    await saveSession({ ...session, id: newId, date: originalDate });
     if (legacyWorkout) await deleteWorkout(legacyWorkout.id);
-    router.push("/workouts");
+    router.push(`/session/${newId}/summary`);
   }
 
   if (!source || !initialForm) return (

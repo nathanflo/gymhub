@@ -44,7 +44,7 @@ function LogPageInner() {
 
   async function handleSave(session: WorkoutSession) {
     await saveSession(session);
-    router.push("/workouts");
+    router.push(`/session/${session.id}/summary`);
   }
 
   if (!loaded) return (

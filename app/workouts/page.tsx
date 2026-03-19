@@ -109,6 +109,7 @@ export default function WorkoutsPage() {
               onEdit={() => router.push(`/edit/${item.data.id}`)}
               onDelete={() => handleDeleteSession(item.data.id)}
               onSaveAsTemplate={() => handleSaveAsTemplate(item.data)}
+              onSummary={() => router.push(`/session/${item.data.id}/summary`)}
             />
           ) : (
             <LegacyWorkoutCard
@@ -132,12 +133,14 @@ function SessionCard({
   onEdit,
   onDelete,
   onSaveAsTemplate,
+  onSummary,
 }: {
   session: WorkoutSession;
   onDuplicate: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onSaveAsTemplate: () => void;
+  onSummary: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
@@ -258,6 +261,9 @@ function SessionCard({
 
           {/* Actions */}
           <div className="border-t border-neutral-700/50 pt-3 flex justify-end gap-5">
+            <button onClick={onSummary} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
+              Summary
+            </button>
             <button onClick={onDuplicate} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
               Duplicate
             </button>
