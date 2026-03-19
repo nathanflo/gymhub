@@ -21,6 +21,7 @@ function LogPageInner() {
   const searchParams = useSearchParams();
   const fromId = searchParams.get("from");
   const templateId = searchParams.get("template");
+  const resumeParam = searchParams.get("resume");
 
   const [initialState, setInitialState] = useState<SessionFormState | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
@@ -37,14 +38,21 @@ function LogPageInner() {
       try {
         const parsed = JSON.parse(raw);
         if (parsed?.version === 1 && parsed?.startTime) {
-          setDraftData(parsed);
+          if (resumeParam) {
+            // Came from home "Resume" — skip modal, go straight in
+            setOverrideInitial(parsed.session);
+            setResumeStartTime(parsed.startTime);
+            setDraftData(null);
+          } else {
+            setDraftData(parsed);  // show modal
+          }
           return;
         }
         localStorage.removeItem("activeWorkoutDraft");
       } catch {}
     }
     setDraftData(null);
-  }, []);
+  }, [resumeParam]);
 
   useEffect(() => {
     async function load() {

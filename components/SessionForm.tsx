@@ -42,6 +42,7 @@ export interface DraftExercise {
   sets: DraftSet[];
   freeformNote: string;
   note?: string;  // undefined = hidden, "" or string = textarea shown
+  completed?: boolean;  // draft-only, not persisted to WorkoutExercise
 }
 
 export interface SessionFormState {
@@ -176,6 +177,7 @@ export function SessionForm({
   const [startTime, setStartTime] = useState<string | null>(initialStartTime ?? null);
   const [elapsed, setElapsed] = useState(0);
   const [activeExIdx, setActiveExIdx] = useState(0);
+  const [savedPulse, setSavedPulse] = useState(false);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -186,11 +188,10 @@ export function SessionForm({
     if (!startTime) return;
     const hasData = form.exercises.some(ex => ex.sets.length > 0);
     if (!hasData) return;
-    localStorage.setItem("activeWorkoutDraft", JSON.stringify({
-      version: 1,
-      session: form,
-      startTime,
-    }));
+    localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime }));
+    setSavedPulse(true);
+    const t = setTimeout(() => setSavedPulse(false), 2000);
+    return () => clearTimeout(t);
   }, [form, startTime]);
 
   // Live timer
@@ -330,6 +331,17 @@ export function SessionForm({
     handleExerciseNote(exIdx, "");
   }
 
+  function handleToggleComplete(exIdx: number) {
+    setForm(f => {
+      const exs = [...f.exercises];
+      exs[exIdx] = { ...exs[exIdx], completed: !exs[exIdx].completed };
+      return { ...f, exercises: exs };
+    });
+    // Auto-advance to next uncompleted exercise
+    const next = form.exercises.findIndex((ex, i) => i > exIdx && !ex.completed);
+    if (next !== -1) setActiveExIdx(next);
+  }
+
   function handleRemoveSet(exIdx: number, setIdx: number) {
     setForm((prev) => ({
       ...prev,
@@ -438,9 +450,14 @@ export function SessionForm({
     <div className="flex flex-col gap-5">
       {/* Active session indicator */}
       {startTime && (
-        <p className="text-xs text-neutral-400 text-center mb-4">
-          Workout in progress • {Math.floor(elapsed / 60)}m
-        </p>
+        <div className="flex items-center justify-center gap-2.5 py-2 px-4 rounded-xl bg-indigo-950/50 border border-indigo-500/20 mx-auto">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+          <span className="text-sm font-semibold text-indigo-300 tabular-nums">
+            {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+          </span>
+          <span className="text-xs text-indigo-500">in progress</span>
+          {savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
+        </div>
       )}
 
       {/* Session title */}
@@ -539,30 +556,39 @@ export function SessionForm({
       ) : (
         <div className="flex flex-col gap-4">
           {form.exercises.map((ex, exIdx) => (
-            <ExerciseBlock
+            <div
               key={exIdx}
-              exercise={ex}
-              exerciseIdx={exIdx}
-              isActive={activeExIdx === exIdx}
-              canRemove={form.exercises.length > 1}
-              canMoveUp={exIdx > 0}
-              canMoveDown={exIdx < form.exercises.length - 1}
-              onMoveUp={() => handleMoveExercise(exIdx, "up")}
-              onMoveDown={() => handleMoveExercise(exIdx, "down")}
-              onInsertBelow={() => handleInsertExerciseBelow(exIdx)}
-              onNameChange={(v) => handleExerciseName(exIdx, v)}
-              onNameFocus={() => setActiveExIdx(exIdx)}
-              onModeChange={(m) => handleModeChange(exIdx, m)}
-              onUnitChange={(u) => handleUnitChange(exIdx, u)}
-              onFreeformNote={(v) => handleFreeformNote(exIdx, v)}
-              onRemoveExercise={() => handleRemoveExercise(exIdx)}
-              onSetField={(setIdx, field, v) => handleSetField(exIdx, setIdx, field, v)}
-              onAddSet={() => handleAddSet(exIdx)}
-              onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
-              onNote={(v) => handleExerciseNote(exIdx, v)}
-              onOpenNote={() => handleOpenNote(exIdx)}
-              exerciseLibrary={exerciseLibrary}
-            />
+              onClick={(e) => {
+                if (!(e.target as HTMLElement).closest("input, select, button, textarea")) {
+                  setActiveExIdx(exIdx);
+                }
+              }}
+            >
+              <ExerciseBlock
+                exercise={ex}
+                exerciseIdx={exIdx}
+                isActive={activeExIdx === exIdx}
+                canRemove={form.exercises.length > 1}
+                canMoveUp={exIdx > 0}
+                canMoveDown={exIdx < form.exercises.length - 1}
+                onMoveUp={() => handleMoveExercise(exIdx, "up")}
+                onMoveDown={() => handleMoveExercise(exIdx, "down")}
+                onInsertBelow={() => handleInsertExerciseBelow(exIdx)}
+                onNameChange={(v) => handleExerciseName(exIdx, v)}
+                onNameFocus={() => setActiveExIdx(exIdx)}
+                onModeChange={(m) => handleModeChange(exIdx, m)}
+                onUnitChange={(u) => handleUnitChange(exIdx, u)}
+                onFreeformNote={(v) => handleFreeformNote(exIdx, v)}
+                onRemoveExercise={() => handleRemoveExercise(exIdx)}
+                onSetField={(setIdx, field, v) => handleSetField(exIdx, setIdx, field, v)}
+                onAddSet={() => handleAddSet(exIdx)}
+                onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
+                onNote={(v) => handleExerciseNote(exIdx, v)}
+                onOpenNote={() => handleOpenNote(exIdx)}
+                onToggleComplete={() => handleToggleComplete(exIdx)}
+                exerciseLibrary={exerciseLibrary}
+              />
+            </div>
           ))}
 
           <button
@@ -636,6 +662,7 @@ function ExerciseBlock({
   onRemoveSet,
   onNote,
   onOpenNote,
+  onToggleComplete,
   exerciseLibrary,
 }: {
   exercise: DraftExercise;
@@ -658,6 +685,7 @@ function ExerciseBlock({
   onRemoveSet: (setIdx: number) => void;
   onNote: (v: string) => void;
   onOpenNote: () => void;
+  onToggleComplete: () => void;
   exerciseLibrary: string[];
 }) {
   const { mode, unit } = exercise;
@@ -687,9 +715,11 @@ function ExerciseBlock({
 
   return (
     <div className={`flex flex-col gap-2 rounded-xl bg-neutral-800/60 border p-3 ${
-      isActive
-        ? "border-indigo-500/40 ring-1 ring-indigo-500/40"
-        : "border-neutral-700"
+      exercise.completed
+        ? "border-neutral-700/50 opacity-60"
+        : isActive
+          ? "border-indigo-500/40 ring-1 ring-indigo-500/40"
+          : "border-neutral-700"
     }`}>
       {/* Exercise name row */}
       <div className="relative flex gap-2 items-center">
@@ -814,23 +844,37 @@ function ExerciseBlock({
         </div>
       )}
 
-      {/* Per-exercise note */}
-      {exercise.note !== undefined ? (
+      {/* Bottom actions: Note toggle + Mark done */}
+      <div className="flex items-center justify-between mt-1">
+        {exercise.note === undefined ? (
+          <button
+            type="button"
+            onClick={onOpenNote}
+            className="text-xs text-neutral-600 hover:text-neutral-400 text-left"
+          >
+            + Note
+          </button>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={onToggleComplete}
+          className={`text-xs font-medium transition-colors ${
+            exercise.completed ? "text-green-400 hover:text-green-300" : "text-neutral-600 hover:text-neutral-400"
+          }`}
+        >
+          {exercise.completed ? "✓ Done" : "Mark done"}
+        </button>
+      </div>
+      {exercise.note !== undefined && (
         <textarea
           value={exercise.note}
           onChange={e => onNote(e.target.value)}
           placeholder="Note…"
           rows={2}
-          className="w-full mt-2 rounded-lg bg-neutral-700/60 border border-neutral-700 text-sm text-neutral-300 placeholder:text-neutral-600 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+          className="w-full rounded-lg bg-neutral-700/60 border border-neutral-700 text-sm text-neutral-300 placeholder:text-neutral-600 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
         />
-      ) : (
-        <button
-          type="button"
-          onClick={onOpenNote}
-          className="mt-2 text-xs text-neutral-600 hover:text-neutral-400 text-left"
-        >
-          + Note
-        </button>
       )}
     </div>
   );
