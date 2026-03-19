@@ -61,7 +61,7 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
   await supabase.from("workout_sessions").insert({
     id: session.id,
     user_id: user.id,
-    date: session.date.slice(0, 10),
+    date: session.date,
     title: session.title,
     workout_type: session.workoutType,
     energy_level: session.energyLevel,
@@ -84,7 +84,7 @@ export async function updateSession(updated: WorkoutSession): Promise<void> {
   await supabase
     .from("workout_sessions")
     .update({
-      date: updated.date.slice(0, 10),
+      date: updated.date,
       title: updated.title,
       workout_type: updated.workoutType,
       energy_level: updated.energyLevel,

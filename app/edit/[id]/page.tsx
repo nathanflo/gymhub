@@ -32,6 +32,7 @@ export default function EditWorkoutPage() {
   const [initialForm, setInitialForm] = useState<SessionFormState | null>(null);
   const [originalDate, setOriginalDate] = useState<string>("");
   const [legacyWorkout, setLegacyWorkout] = useState<Workout | null>(null);
+  // originalDate is kept only for the legacy save path
 
   useEffect(() => {
     async function load() {
@@ -61,7 +62,7 @@ export default function EditWorkoutPage() {
   }, [id, router]);
 
   async function handleUpdateSession(session: WorkoutSession) {
-    await updateSession({ ...session, id, date: originalDate });
+    await updateSession({ ...session, id });
     router.push("/workouts");
   }
 
@@ -95,6 +96,7 @@ export default function EditWorkoutPage() {
       <SessionForm
         initialState={initialForm}
         submitLabel="Save Changes"
+        showDateEdit={true}
         onSave={source === "session" ? handleUpdateSession : handleSaveLegacy}
         onCancel={() => router.back()}
       />

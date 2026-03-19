@@ -18,6 +18,14 @@ import { WorkoutTemplate } from "@/types/template";
 import { Field, inputClass, selectClass } from "@/components/Field";
 import { getExerciseLibrary } from "@/lib/exercises";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function toDateTimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // ─── Draft types ──────────────────────────────────────────────────────────────
 // Numeric fields stored as strings to avoid controlled-input NaN issues.
 
@@ -46,6 +54,7 @@ export interface SessionFormState {
   distance: string;
   duration: string;
   intervals: string;
+  dateTime?: string;
 }
 
 // ─── Factories ────────────────────────────────────────────────────────────────
@@ -97,6 +106,7 @@ export function sessionToFormState(s: WorkoutSession): SessionFormState {
     distance: s.distance !== undefined ? String(s.distance) : "",
     duration: s.duration ?? "",
     intervals: s.intervals ?? "",
+    dateTime: toDateTimeLocal(s.date),
   };
 }
 
@@ -145,11 +155,13 @@ const MODE_LABELS: Record<TrackingMode, string> = {
 export function SessionForm({
   initialState,
   submitLabel = "Save Session",
+  showDateEdit = false,
   onSave,
   onCancel,
 }: {
   initialState?: SessionFormState;
   submitLabel?: string;
+  showDateEdit?: boolean;
   onSave: (session: WorkoutSession) => void;
   onCancel: () => void;
 }) {
@@ -366,7 +378,7 @@ export function SessionForm({
 
     const session: WorkoutSession = {
       id: crypto.randomUUID(),       // parent overrides for edit mode
-      date: new Date().toISOString(), // parent overrides for edit mode
+      date: form.dateTime ? new Date(form.dateTime).toISOString() : new Date().toISOString(),
       title: form.title.trim(),
       workoutType: form.workoutType,
       energyLevel: form.energyLevel,
@@ -397,6 +409,19 @@ export function SessionForm({
           className={inputClass}
         />
       </Field>
+
+      {/* Date & Time (edit page only) */}
+      {showDateEdit && (
+        <Field label="Date & Time">
+          <input
+            name="dateTime"
+            type="datetime-local"
+            value={form.dateTime ?? ""}
+            onChange={handleTopLevel}
+            className={inputClass}
+          />
+        </Field>
+      )}
 
       {/* Type + Energy + optional Bodyweight */}
       <div className="flex gap-3">

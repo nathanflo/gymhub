@@ -196,7 +196,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v0.7 – cloud sync</p>
+      <p className="text-xs text-neutral-600">v1.0 – accurate timestamps</p>
     </main>
   );
 }
