@@ -306,7 +306,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.3.3 – routing fix: live workout always via /log</p>
+      <p className="text-xs text-neutral-600">v1.4.0 – profile polish: city in summary/share, volume label, dark date input</p>
     </main>
   );
 }
