@@ -48,36 +48,87 @@ function wellnessSummary(entry: WellnessEntry): string {
   return parts.join(" · ");
 }
 
+function pick<T>(arr: T[]): T {
+  const seed = new Date().toISOString().slice(0, 10);
+  const hash = seed.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return arr[hash % arr.length];
+}
+
+function computeStreak(sessions: WorkoutSession[]): number {
+  if (sessions.length === 0) return 0;
+  const dates = [...new Set(sessions.map(s => s.date.slice(0, 10)))].sort().reverse();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (dates[0] !== todayStr && dates[0] !== yesterdayStr) return 0;
+  let streak = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i - 1]);
+    const curr = new Date(dates[i]);
+    if (Math.round((prev.getTime() - curr.getTime()) / 86400000) === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function generateGreeting(sessions: WorkoutSession[], userName: string | null): string {
+  const name = userName ? `, ${userName}` : "";
+  const daysSinceLast = sessions.length > 0
+    ? Math.floor((Date.now() - new Date(sessions[0].date).getTime()) / 86400000)
+    : Infinity;
+  const streak = computeStreak(sessions);
+  const hour = new Date().getHours();
+
+  if (daysSinceLast >= 3) return pick(["Back in it", "Let's get moving"]) + name;
+  if (streak >= 3)        return pick(["On a roll", "Still going"]) + name;
+  if (hour < 12)          return `Good morning${name}`;
+  if (hour < 17)          return `Good afternoon${name}`;
+  return `Good evening${name}`;
+}
+
 function generateInsight(
   sessions: WorkoutSession[],
   weeklyCount: number,
+  streak: number,
   todayWellness: WellnessEntry | undefined
 ): string {
-  // 1. Recovery (highest priority — requires today's wellness data)
+  // 1. Recovery — extreme signals (highest priority)
   if (todayWellness) {
     const { sleep, soreness } = todayWellness;
-    if ((sleep != null && sleep < 6) || (soreness != null && soreness >= 4)) {
-      return "Recovery is low — take it lighter today";
+    const lowRecovery = (sleep != null && sleep < 6) || (soreness != null && soreness >= 4);
+    const goodRecovery = (sleep != null && sleep >= 7) && (soreness != null && soreness <= 2);
+
+    if (lowRecovery) {
+      if (weeklyCount >= 5) return "Strong consistency — watch your recovery";
+      return pick(["Recovery is low — take it lighter today", "Recovery looks low — take it easier today"]);
     }
-    if ((sleep != null && sleep >= 7) && (soreness != null && soreness <= 2)) {
-      return "Recovered well — good day to train hard";
+    if (goodRecovery) {
+      if (weeklyCount <= 1) return "Recovered well — good day to restart";
+      return pick(["Recovered well — good day to train hard", "Feeling fresh — make it count"]);
     }
   }
 
-  // 2. Strong consistency
-  if (weeklyCount >= 5) return "Strong consistency this week";
+  // 2. Streak
+  if (streak >= 5) return "5-day streak — strong discipline";
+  if (streak >= 3) return "3-day streak — keep it going";
 
-  // 3. Training awareness — surfaces over medium/low consistency (more actionable)
+  // 3. Strong consistency
+  if (weeklyCount >= 5) return pick([
+    "Strong consistency this week",
+    "You've been consistent this week",
+    "Nice consistency lately",
+  ]);
+
+  // 4. Training awareness
   if (sessions.length >= 2 && sessions[0].workoutType === sessions[1].workoutType) {
     return "Same focus again — stay mindful of recovery";
   }
 
-  // 4. Medium / low consistency
+  // 5. Medium / low consistency
   if (weeklyCount >= 3) return "Nice rhythm this week";
   if (weeklyCount >= 1) return "Good start — keep showing up";
   if (weeklyCount === 0 && sessions.length > 0) return "Been a few days — ease back in";
 
-  // 5. Fallback
+  // 6. Fallback
   return "Ready when you are";
 }
 
@@ -104,13 +155,12 @@ function SessionRow({ session }: { session: WorkoutSession }) {
 }
 
 export default function HomePage() {
-  const [greetingIdx] = useState(() => Math.floor(Math.random() * 3));
+  const [greeting, setGreeting] = useState<string>("");
   const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
   const [lastSession, setLastSession] = useState<WorkoutSession | undefined>(undefined);
   const [weeklyCount, setWeeklyCount] = useState(0);
   const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
-  const [userName, setUserName] = useState<string | null>(null);
   const [city, setCity] = useState<string | null>(null);
   const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
   const [insight, setInsight] = useState<string>("Ready when you are");
@@ -156,12 +206,14 @@ export default function HomePage() {
       setLastSession(sessions[0]);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
       const count = sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length;
+      const streak = computeStreak(sessions);
+      const profileName = profileResult?.data?.name ?? null;
       setWeeklyCount(count);
-      setInsight(generateInsight(sessions, count, todayWellness));
+      setGreeting(generateGreeting(sessions, profileName));
+      setInsight(generateInsight(sessions, count, streak, todayWellness));
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
-      if (profileResult?.data?.name) setUserName(profileResult.data.name);
       if (profileResult?.data?.city) setCity(profileResult.data.city);
     }
     load();
@@ -200,15 +252,6 @@ export default function HomePage() {
     day: "numeric",
     month: "short",
   });
-
-  const greetings = userName
-    ? [
-        `Ready to train, ${userName}?`,
-        `Let's get after it, ${userName}`,
-        `Back at it, ${userName}`,
-      ]
-    : ["Ready to train?", "Let's go.", "Time to work."];
-  const greeting = greetings[greetingIdx];
 
   return (
     <main className="px-6 py-8 flex flex-col gap-6">
@@ -345,7 +388,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.5.0 – intelligence layer: daily insight from wellness + consistency</p>
+      <p className="text-xs text-neutral-600">v1.5.1 – dynamic greeting + insight refinement: streak, variation, combo signals</p>
     </main>
   );
 }
