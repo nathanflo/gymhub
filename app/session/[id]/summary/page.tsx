@@ -7,28 +7,49 @@ import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel } from "@/types/workout";
 
-const effortMap: Record<EnergyLevel, { label: string; color: string; bgColor: string }> = {
-  Low:    { label: "Light",   color: "text-emerald-400", bgColor: "bg-emerald-950/60" },
-  Medium: { label: "Solid",   color: "text-yellow-400",  bgColor: "bg-yellow-950/60"  },
-  High:   { label: "All Out", color: "text-red-400",     bgColor: "bg-red-950/60"     },
-};
+function getEffortLabel(
+  energyLevel: EnergyLevel,
+  totalSets: number,
+  totalVolume: number
+): { label: string; color: string; bgColor: string } {
+  const isLarge = totalSets >= 15 || totalVolume >= 3000;
+  if (energyLevel === "High") {
+    return { label: isLarge ? "Intense" : "All Out", color: "text-red-400", bgColor: "bg-red-950/60" };
+  }
+  if (energyLevel === "Medium") {
+    return { label: isLarge ? "Strong" : "Solid", color: "text-yellow-400", bgColor: "bg-yellow-950/60" };
+  }
+  return { label: "Steady", color: "text-emerald-400", bgColor: "bg-emerald-950/60" };
+}
 
-function getVibe(session: WorkoutSession): string {
+function generateHeadline(session: WorkoutSession): string {
   const { workoutType, energyLevel, exercises } = session;
+  const totalSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
+  const totalVolume = exercises.reduce((s, ex) =>
+    s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+  const isLarge = exercises.length >= 5 || totalSets >= 15;
+  const isHeavy = totalVolume >= 3000;
+
   if (workoutType === "Run") {
-    if (energyLevel === "High") return "Pushed the pace today";
+    const isLong = (session.distance ?? 0) >= 10;
+    if (energyLevel === "High") return isLong ? "Big aerobic effort" : "Pushed the pace today";
     if (energyLevel === "Low")  return "Easy miles, still showing up";
-    return "Steady run, solid effort";
+    return "Steady aerobic effort";
   }
   if (energyLevel === "High") {
-    if (workoutType === "Push") return "Chest and shoulders on fire";
+    if (isLarge && isHeavy) return "Big volume session";
+    if (isLarge)             return "Strong workload today";
+    if (workoutType === "Push") return "Push day, well executed";
     if (workoutType === "Pull") return "Back day locked in";
-    if (workoutType === "Legs") return "Legs destroyed. Worth it.";
-    return "Left it all in the gym";
+    if (workoutType === "Legs") return "Strong lower-body work";
+    return "Strong session today";
   }
-  if (energyLevel === "Low") return "Showed up. That counts.";
-  if (exercises.length >= 5) return "Strong, controlled session";
-  return "Consistency building";
+  if (energyLevel === "Low") return "Good work, even on a lower-energy day";
+  // Medium
+  if (isLarge && isHeavy) return "Big volume session";
+  if (isLarge)            return "Strong, controlled session";
+  if (exercises.length >= 3) return "Quick, efficient work";
+  return "Back in the groove";
 }
 
 function formatDateTime(iso: string) {
@@ -83,9 +104,21 @@ export default function SummaryPage() {
   const totalVolume = session.exercises.reduce((s, ex) =>
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
 
-  const effort = effortMap[session.energyLevel];
-  const vibe = getVibe(session);
+  const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
+  const headline = generateHeadline(session);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
+
+  const topExercise = !isRun && totalVolume > 0
+    ? [...session.exercises].sort((a, b) => {
+        const vol = (ex: typeof a) => ex.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+        return vol(b) - vol(a);
+      })[0]
+    : null;
+  const summaryInsight = topExercise
+    ? `Top volume: ${topExercise.name}`
+    : !isRun && exerciseCount > 0
+    ? `${exerciseCount} exercise${exerciseCount !== 1 ? "s" : ""} completed`
+    : null;
 
   return (
     <>
@@ -109,8 +142,8 @@ export default function SummaryPage() {
             {/* Title */}
             <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
 
-            {/* Vibe */}
-            <p className="text-sm italic text-neutral-500 text-center mt-2">{vibe}</p>
+            {/* Headline */}
+            <p className="text-sm italic text-neutral-500 text-center mt-2">{headline}</p>
 
             {/* Date */}
             <p className="text-xs text-neutral-500 mt-3">{dateLabel}</p>
@@ -196,7 +229,10 @@ export default function SummaryPage() {
         {/* Header */}
         <div className="border-b border-neutral-800 pb-5">
           <h1 className="text-4xl font-bold text-white">{session.title}</h1>
-          <p className="text-sm italic text-neutral-500 mt-1">{vibe}</p>
+          <p className="text-sm italic text-neutral-500 mt-1">{headline}</p>
+          {summaryInsight && (
+            <p className="text-xs text-neutral-500 mt-0.5">{summaryInsight}</p>
+          )}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="text-xs text-neutral-600">{dateLabel} · {timeLabel}</span>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-700 text-neutral-300">
@@ -303,6 +339,8 @@ export default function SummaryPage() {
         >
           ← Back to History
         </button>
+
+        <p className="text-xs text-neutral-600">v1.5.2 – intelligent session summary: contextual headline + effort label</p>
       </main>
     </>
   );
