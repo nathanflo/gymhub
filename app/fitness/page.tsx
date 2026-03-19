@@ -107,7 +107,6 @@ export default function FitnessPage() {
         ))}
       </div>
 
-      <p className="text-xs text-neutral-600">v1.3.4 – draft-aware CTA</p>
     </main>
   );
 }

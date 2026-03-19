@@ -149,8 +149,10 @@ export default function ProfilePage() {
 
         <Field label="Birth Date">
           <input
-            className={`${inputClass} [color-scheme:dark] max-w-full min-w-0`}
-            type="date"
+            className={inputClass}
+            type="text"
+            inputMode="numeric"
+            placeholder="YYYY-MM-DD"
             value={form.birth_date ?? ""}
             onChange={e => setForm(f => ({ ...f, birth_date: e.target.value || null }))}
           />
