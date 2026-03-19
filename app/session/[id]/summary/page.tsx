@@ -6,10 +6,10 @@ import { getSessionById } from "@/lib/sessions";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel } from "@/types/workout";
 
-const effortMap: Record<EnergyLevel, { label: string; color: string }> = {
-  Low:    { label: "Light",   color: "text-emerald-400" },
-  Medium: { label: "Solid",   color: "text-yellow-400"  },
-  High:   { label: "All Out", color: "text-red-400"     },
+const effortMap: Record<EnergyLevel, { label: string; color: string; bgColor: string }> = {
+  Low:    { label: "Light",   color: "text-emerald-400", bgColor: "bg-emerald-950/60" },
+  Medium: { label: "Solid",   color: "text-yellow-400",  bgColor: "bg-yellow-950/60"  },
+  High:   { label: "All Out", color: "text-red-400",     bgColor: "bg-red-950/60"     },
 };
 
 function getVibe(session: WorkoutSession): string {
@@ -78,7 +78,7 @@ export default function SummaryPage() {
     <>
       {/* ── Share Overlay ──────────────────────────────────────────────── */}
       {shareOpen && (
-        <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col items-center justify-center px-8">
+        <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col items-center justify-center px-8 overflow-y-auto max-h-screen py-12">
           <button
             onClick={() => setShareOpen(false)}
             className="absolute top-4 right-4 text-neutral-400 hover:text-white text-2xl leading-none"
@@ -89,7 +89,7 @@ export default function SummaryPage() {
 
           <div className="flex flex-col items-center gap-0 w-full max-w-sm">
             {/* Brand */}
-            <p className="text-indigo-400 text-xs font-bold tracking-widest uppercase mb-6">
+            <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-8">
               GymHub
             </p>
 
@@ -97,42 +97,42 @@ export default function SummaryPage() {
             <h1 className="text-3xl font-bold text-white text-center">{session.title}</h1>
 
             {/* Vibe */}
-            <p className="text-sm italic text-neutral-400 text-center mt-1">{vibe}</p>
+            <p className="text-sm italic text-neutral-500 text-center mt-2">{vibe}</p>
 
             {/* Date */}
-            <p className="text-xs text-neutral-500 mt-2">{dateLabel}</p>
+            <p className="text-xs text-neutral-500 mt-3">{dateLabel}</p>
 
             {/* Stats row */}
-            <div className="flex gap-6 justify-center mt-6">
+            <div className="flex gap-8 justify-center mt-8 divide-x divide-neutral-800">
               {isRun ? (
                 <>
                   {session.distance !== undefined && (
-                    <div className="flex flex-col items-center">
-                      <span className="text-xl font-bold text-white">{session.distance}</span>
-                      <span className="text-xs text-neutral-500">km</span>
+                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                      <span className="text-2xl font-bold text-white">{session.distance}</span>
+                      <span className="text-xs text-neutral-600">km</span>
                     </div>
                   )}
                   {session.duration && (
-                    <div className="flex flex-col items-center">
-                      <span className="text-xl font-bold text-white">{session.duration}</span>
-                      <span className="text-xs text-neutral-500">duration</span>
+                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                      <span className="text-2xl font-bold text-white">{session.duration}</span>
+                      <span className="text-xs text-neutral-600">duration</span>
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  <div className="flex flex-col items-center">
-                    <span className="text-xl font-bold text-white">{totalSets}</span>
-                    <span className="text-xs text-neutral-500">sets</span>
+                  <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                    <span className="text-2xl font-bold text-white">{totalSets}</span>
+                    <span className="text-xs text-neutral-600">sets</span>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-xl font-bold text-white">{exerciseCount}</span>
-                    <span className="text-xs text-neutral-500">exercises</span>
+                  <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                    <span className="text-2xl font-bold text-white">{exerciseCount}</span>
+                    <span className="text-xs text-neutral-600">exercises</span>
                   </div>
                   {totalVolume > 0 && (
-                    <div className="flex flex-col items-center">
-                      <span className="text-xl font-bold text-white">{totalVolume.toLocaleString()}</span>
-                      <span className="text-xs text-neutral-500">kg volume</span>
+                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                      <span className="text-2xl font-bold text-white">{totalVolume.toLocaleString()}</span>
+                      <span className="text-xs text-neutral-600">kg volume</span>
                     </div>
                   )}
                 </>
@@ -140,26 +140,23 @@ export default function SummaryPage() {
             </div>
 
             {/* Energy pill */}
-            <div className="mt-4">
-              <span className={`text-sm font-semibold px-3 py-1 rounded-full bg-neutral-800 ${effort.color}`}>
+            <div className="mt-6">
+              <span className={`inline-block px-4 py-1.5 rounded-full font-semibold ${effort.bgColor} ${effort.color}`}>
                 {effort.label}
               </span>
             </div>
 
             {/* Exercise preview (top 3) */}
             {!isRun && session.exercises.length > 0 && (
-              <div className="flex flex-col items-center gap-1 mt-6">
+              <div className="flex flex-col items-center gap-1 mt-8">
                 {session.exercises.slice(0, 3).map((ex, i) => (
                   <p key={i} className="text-sm text-neutral-300">
                     {ex.name}{" "}
-                    <span className="text-neutral-500">({ex.sets.length} sets)</span>
+                    <span className="text-neutral-600">({ex.sets.length} sets)</span>
                   </p>
                 ))}
               </div>
             )}
-
-            {/* Footer brand */}
-            <p className="text-xs text-neutral-700 mt-10">gymhub.app</p>
           </div>
         </div>
       )}
@@ -184,10 +181,10 @@ export default function SummaryPage() {
 
         {/* Header */}
         <div className="border-b border-neutral-800 pb-5">
-          <h1 className="text-2xl font-bold text-white">{session.title}</h1>
-          <p className="text-sm italic text-neutral-400 mt-1">{vibe}</p>
+          <h1 className="text-3xl font-bold text-white">{session.title}</h1>
+          <p className="text-sm italic text-neutral-500 mt-1">{vibe}</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="text-xs text-neutral-500">{dateLabel} · {timeLabel}</span>
+            <span className="text-xs text-neutral-600">{dateLabel} · {timeLabel}</span>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-700 text-neutral-300">
               {session.workoutType}
             </span>
@@ -196,37 +193,37 @@ export default function SummaryPage() {
 
         {/* Key Stats */}
         {isRun ? (
-          <div className="rounded-2xl bg-neutral-800 px-5 py-4">
+          <div className="rounded-2xl bg-neutral-800 px-5 py-5">
             <div className="grid grid-cols-2 gap-4">
               {session.distance !== undefined && (
                 <div className="flex flex-col">
-                  <span className="text-xs text-neutral-500">Distance</span>
-                  <span className="text-xl font-bold text-white">{session.distance} km</span>
+                  <span className="text-xs text-neutral-600">Distance</span>
+                  <span className="text-2xl font-bold text-white">{session.distance} km</span>
                 </div>
               )}
               {session.duration && (
                 <div className="flex flex-col">
-                  <span className="text-xs text-neutral-500">Duration</span>
-                  <span className="text-xl font-bold text-white">{session.duration}</span>
+                  <span className="text-xs text-neutral-600">Duration</span>
+                  <span className="text-2xl font-bold text-white">{session.duration}</span>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl bg-neutral-800 px-5 py-4">
+          <div className="rounded-2xl bg-neutral-800 px-5 py-5">
             <div className={`grid gap-4 ${totalVolume > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="flex flex-col">
-                <span className="text-xs text-neutral-500">Exercises</span>
-                <span className="text-xl font-bold text-white">{exerciseCount}</span>
+                <span className="text-xs text-neutral-600">Exercises</span>
+                <span className="text-2xl font-bold text-white">{exerciseCount}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-neutral-500">Sets</span>
-                <span className="text-xl font-bold text-white">{totalSets}</span>
+                <span className="text-xs text-neutral-600">Sets</span>
+                <span className="text-2xl font-bold text-white">{totalSets}</span>
               </div>
               {totalVolume > 0 && (
                 <div className="flex flex-col">
-                  <span className="text-xs text-neutral-500">Volume</span>
-                  <span className="text-xl font-bold text-white">{totalVolume.toLocaleString()} kg</span>
+                  <span className="text-xs text-neutral-600">Volume</span>
+                  <span className="text-2xl font-bold text-white">{totalVolume.toLocaleString()} kg</span>
                 </div>
               )}
             </div>
@@ -235,7 +232,9 @@ export default function SummaryPage() {
 
         {/* Energy Card */}
         <div className="rounded-2xl bg-neutral-800 px-5 py-4">
-          <p className={`text-2xl font-bold ${effort.color}`}>{effort.label}</p>
+          <span className={`inline-block text-xl font-bold px-4 py-1.5 rounded-full ${effort.bgColor} ${effort.color}`}>
+            {effort.label}
+          </span>
           <p className="text-xs text-neutral-500 mt-0.5">Energy: {session.energyLevel}</p>
         </div>
 

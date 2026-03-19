@@ -260,7 +260,7 @@ function SessionCard({
           )}
 
           {/* Actions */}
-          <div className="border-t border-neutral-700/50 pt-3 flex justify-end gap-5">
+          <div className="border-t border-neutral-700/50 pt-3 flex flex-wrap justify-end gap-x-4 gap-y-2">
             <button onClick={onSummary} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
               Summary
             </button>
