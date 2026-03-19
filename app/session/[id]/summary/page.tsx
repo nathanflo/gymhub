@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getSessionById } from "@/lib/sessions";
+import { getSessionById, getSessions } from "@/lib/sessions";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel } from "@/types/workout";
@@ -52,6 +52,46 @@ function generateHeadline(session: WorkoutSession): string {
   return "Back in the groove";
 }
 
+function generateDeltaInsight(
+  current: WorkoutSession,
+  previous: WorkoutSession
+): string | null {
+  const isRun = current.workoutType === "Run";
+  const prevLabel = previous.title?.trim()
+    ? `your last ${previous.title} session`
+    : `your last ${current.workoutType.toLowerCase()} session`;
+
+  if (isRun) {
+    const curDist = current.distance ?? 0;
+    const prevDist = previous.distance ?? 0;
+    if (prevDist > 0) {
+      if (curDist > prevDist * 1.1) return "Longer than your last run";
+      if (curDist < prevDist * 0.9) return "Shorter than your last run";
+    }
+    return null;
+  }
+
+  // Strength
+  const vol = (s: WorkoutSession) =>
+    s.exercises.reduce((acc, ex) =>
+      acc + ex.sets.reduce((a, set) => a + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+  const sets = (s: WorkoutSession) =>
+    s.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
+
+  const curVol = vol(current);
+  const prevVol = vol(previous);
+  const curSets = sets(current);
+  const prevSets = sets(previous);
+
+  if (prevVol > 0) {
+    if (curVol > prevVol * 1.1) return `Volume up from ${prevLabel}`;
+    if (curVol < prevVol * 0.9) return `Lighter than ${prevLabel}`;
+  }
+  if (curSets >= prevSets + 2) return `More sets than ${prevLabel}`;
+  if (curSets <= prevSets - 2) return `Fewer sets than ${prevLabel}`;
+  return null;
+}
+
 function formatDateTime(iso: string) {
   const d = new Date(iso);
   return {
@@ -64,6 +104,7 @@ export default function SummaryPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
+  const [previousSession, setPreviousSession] = useState<WorkoutSession | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
 
@@ -75,6 +116,11 @@ export default function SummaryPage() {
         return;
       }
       setSession(s);
+      const all = await getSessions();
+      const prev = all.find(
+        (x) => x.id !== s.id && x.workoutType === s.workoutType && x.date < s.date
+      ) ?? null;
+      setPreviousSession(prev);
     }
     load();
   }, [id, router]);
@@ -118,6 +164,10 @@ export default function SummaryPage() {
     ? `Top volume: ${topExercise.name}`
     : !isRun && exerciseCount > 0
     ? `${exerciseCount} exercise${exerciseCount !== 1 ? "s" : ""} completed`
+    : null;
+
+  const deltaInsight = previousSession
+    ? generateDeltaInsight(session, previousSession)
     : null;
 
   return (
@@ -230,6 +280,9 @@ export default function SummaryPage() {
         <div className="border-b border-neutral-800 pb-5">
           <h1 className="text-4xl font-bold text-white">{session.title}</h1>
           <p className="text-sm italic text-neutral-500 mt-1">{headline}</p>
+          {deltaInsight && (
+            <p className="text-xs text-neutral-500 mt-0.5">{deltaInsight}</p>
+          )}
           {summaryInsight && (
             <p className="text-xs text-neutral-500 mt-0.5">{summaryInsight}</p>
           )}
@@ -340,7 +393,7 @@ export default function SummaryPage() {
           ← Back to History
         </button>
 
-        <p className="text-xs text-neutral-600">v1.5.2 – intelligent session summary: contextual headline + effort label</p>
+        <p className="text-xs text-neutral-600">v1.5.3 – progress intelligence: session-to-session comparison</p>
       </main>
     </>
   );
