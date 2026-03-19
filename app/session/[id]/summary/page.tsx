@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getSessionById } from "@/lib/sessions";
+import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel } from "@/types/workout";
 
@@ -43,6 +44,7 @@ export default function SummaryPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [city, setCity] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -55,6 +57,17 @@ export default function SummaryPage() {
     }
     load();
   }, [id, router]);
+
+  useEffect(() => {
+    async function fetchCity() {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const user = authSession?.user ?? null;
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("city").eq("id", user.id).maybeSingle();
+      if (data?.city) setCity(data.city);
+    }
+    fetchCity();
+  }, []);
 
   if (!session) {
     return (
@@ -101,6 +114,7 @@ export default function SummaryPage() {
 
             {/* Date */}
             <p className="text-xs text-neutral-500 mt-3">{dateLabel}</p>
+            {city && <p className="text-xs text-neutral-500 mt-0.5">{city}</p>}
 
             {/* Stats row */}
             <div className="flex gap-8 justify-center mt-8 divide-x divide-neutral-800">
@@ -189,6 +203,7 @@ export default function SummaryPage() {
               {session.workoutType}
             </span>
           </div>
+          {city && <p className="text-xs text-neutral-600 mt-0.5">{city}</p>}
         </div>
 
         {/* Key Stats */}
@@ -222,8 +237,8 @@ export default function SummaryPage() {
               </div>
               {totalVolume > 0 && (
                 <div className="flex flex-col">
-                  <span className="text-xs text-neutral-600">Volume</span>
-                  <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()} kg</span>
+                  <span className="text-xs text-neutral-600">Volume (kg)</span>
+                  <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()}</span>
                 </div>
               )}
             </div>
