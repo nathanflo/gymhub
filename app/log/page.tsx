@@ -14,7 +14,7 @@ import { getTemplates } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState } from "@/components/SessionForm";
 
-type DraftData = { session: SessionFormState; startTime: string };
+type DraftData = { session: SessionFormState; startTime: string; activeExIdx?: number };
 
 function LogPageInner() {
   const router = useRouter();
@@ -30,6 +30,7 @@ function LogPageInner() {
   const [draftData, setDraftData] = useState<DraftData | null | "unchecked">("unchecked");
   const [resumeStartTime, setResumeStartTime] = useState<string | undefined>(undefined);
   const [overrideInitial, setOverrideInitial] = useState<SessionFormState | undefined>(undefined);
+  const [resumeActiveExIdx, setResumeActiveExIdx] = useState<number>(0);
 
   // Check localStorage for an active draft on mount (synchronous)
   useEffect(() => {
@@ -42,6 +43,7 @@ function LogPageInner() {
             // Came from home "Resume" — skip modal, go straight in
             setOverrideInitial(parsed.session);
             setResumeStartTime(parsed.startTime);
+            setResumeActiveExIdx(parsed.activeExIdx ?? 0);
             setDraftData(null);
           } else {
             setDraftData(parsed);  // show modal
@@ -105,6 +107,7 @@ function LogPageInner() {
               onClick={() => {
                 setOverrideInitial(draftData.session);
                 setResumeStartTime(draftData.startTime);
+                setResumeActiveExIdx(draftData.activeExIdx ?? 0);
                 setDraftData(null);
               }}
               className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold"
@@ -131,6 +134,7 @@ function LogPageInner() {
       <SessionForm
         initialState={overrideInitial ?? initialState}
         initialStartTime={resumeStartTime}
+        initialActiveExIdx={resumeActiveExIdx}
         submitLabel="Save Session"
         onSave={handleSave}
         onCancel={() => router.back()}

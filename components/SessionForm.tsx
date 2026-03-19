@@ -157,6 +157,7 @@ const MODE_LABELS: Record<TrackingMode, string> = {
 export function SessionForm({
   initialState,
   initialStartTime,
+  initialActiveExIdx,
   submitLabel = "Save Session",
   showDateEdit = false,
   onSave,
@@ -164,6 +165,7 @@ export function SessionForm({
 }: {
   initialState?: SessionFormState;
   initialStartTime?: string;  // ISO string from draft resume
+  initialActiveExIdx?: number;
   submitLabel?: string;
   showDateEdit?: boolean;
   onSave: (session: WorkoutSession) => void;
@@ -176,7 +178,7 @@ export function SessionForm({
   const [exerciseLibrary, setExerciseLibrary] = useState<string[]>([]);
   const [startTime, setStartTime] = useState<string | null>(initialStartTime ?? null);
   const [elapsed, setElapsed] = useState(0);
-  const [activeExIdx, setActiveExIdx] = useState(0);
+  const [activeExIdx, setActiveExIdx] = useState(initialActiveExIdx ?? 0);
   const [savedPulse, setSavedPulse] = useState(false);
 
   useEffect(() => {
@@ -188,7 +190,7 @@ export function SessionForm({
     if (!startTime) return;
     const hasData = form.exercises.some(ex => ex.sets.length > 0);
     if (!hasData) return;
-    localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime }));
+    localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime, activeExIdx }));
     setSavedPulse(true);
     const t = setTimeout(() => setSavedPulse(false), 2000);
     return () => clearTimeout(t);
@@ -332,14 +334,20 @@ export function SessionForm({
   }
 
   function handleToggleComplete(exIdx: number) {
+    const isCompleting = !form.exercises[exIdx].completed;
     setForm(f => {
       const exs = [...f.exercises];
       exs[exIdx] = { ...exs[exIdx], completed: !exs[exIdx].completed };
       return { ...f, exercises: exs };
     });
-    // Auto-advance to next uncompleted exercise
-    const next = form.exercises.findIndex((ex, i) => i > exIdx && !ex.completed);
-    if (next !== -1) setActiveExIdx(next);
+    if (isCompleting) {
+      // Auto-advance to next uncompleted exercise
+      const next = form.exercises.findIndex((ex, i) => i > exIdx && !ex.completed);
+      if (next !== -1) setActiveExIdx(next);
+    } else {
+      // Uncompleting — restore focus to this exercise
+      setActiveExIdx(exIdx);
+    }
   }
 
   function handleRemoveSet(exIdx: number, setIdx: number) {
@@ -616,25 +624,58 @@ export function SessionForm({
       {/* Error */}
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      {/* Actions */}
-      <div className="flex gap-3">
+      {/* Actions — lifecycle-aware */}
+      {showDateEdit ? (
+        // Edit page — always show Cancel + submitLabel
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
+                       transition-all py-4 text-base font-semibold text-neutral-300"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex-1 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
+                       transition-all py-4 text-base font-semibold text-white shadow-lg"
+          >
+            {submitLabel}
+          </button>
+        </div>
+      ) : startTime ? (
+        // Active workout — Cancel + Finish Workout
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
+                       transition-all py-4 text-base font-semibold text-neutral-300"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex-1 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95
+                       transition-all py-4 text-base font-semibold text-white shadow-lg"
+          >
+            Finish Workout
+          </button>
+        </div>
+      ) : (
+        // Pre-start — single full-width Begin button
         <button
           type="button"
-          onClick={onCancel}
-          className="flex-1 rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
-                     transition-all py-4 text-base font-semibold text-neutral-300"
+          onClick={() => setStartTime(new Date().toISOString())}
+          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
+                     transition-all py-5 text-lg font-semibold text-white shadow-lg"
         >
-          Cancel
+          Begin Workout
         </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          className="flex-1 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
-                     transition-all py-4 text-base font-semibold text-white shadow-lg"
-        >
-          {submitLabel}
-        </button>
-      </div>
+      )}
     </div>
   );
 }

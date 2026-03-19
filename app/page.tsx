@@ -68,15 +68,29 @@ export default function HomePage() {
   const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
   const [userName, setUserName] = useState<string | null>(null);
-  const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string } | null>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("activeWorkoutDraft");
-    if (!raw) return;
+  const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string } | null>(() => {
+    if (typeof window === "undefined") return null;
     try {
+      const raw = localStorage.getItem("activeWorkoutDraft");
+      if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (parsed?.version === 1 && parsed?.startTime) setActiveDraft(parsed);
-    } catch {}
+      return parsed?.version === 1 && parsed?.startTime ? parsed : null;
+    } catch { return null; }
+  });
+
+  // Re-sync on every navigation back to home (guards against Next.js router cache)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("activeWorkoutDraft");
+      if (!raw) { setActiveDraft(null); return; }
+      const parsed = JSON.parse(raw);
+      if (parsed?.version === 1 && parsed?.startTime) {
+        setActiveDraft(parsed);
+      } else {
+        localStorage.removeItem("activeWorkoutDraft");
+        setActiveDraft(null);
+      }
+    } catch { setActiveDraft(null); }
   }, []);
 
   useEffect(() => {
@@ -245,7 +259,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.3.1 – active workout refinements</p>
+      <p className="text-xs text-neutral-600">v1.3.2 – workout loop fixes</p>
     </main>
   );
 }
