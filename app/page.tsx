@@ -48,6 +48,39 @@ function wellnessSummary(entry: WellnessEntry): string {
   return parts.join(" · ");
 }
 
+function generateInsight(
+  sessions: WorkoutSession[],
+  weeklyCount: number,
+  todayWellness: WellnessEntry | undefined
+): string {
+  // 1. Recovery (highest priority — requires today's wellness data)
+  if (todayWellness) {
+    const { sleep, soreness } = todayWellness;
+    if ((sleep != null && sleep < 6) || (soreness != null && soreness >= 4)) {
+      return "Recovery is low — take it lighter today";
+    }
+    if ((sleep != null && sleep >= 7) && (soreness != null && soreness <= 2)) {
+      return "Recovered well — good day to train hard";
+    }
+  }
+
+  // 2. Strong consistency
+  if (weeklyCount >= 5) return "Strong consistency this week";
+
+  // 3. Training awareness — surfaces over medium/low consistency (more actionable)
+  if (sessions.length >= 2 && sessions[0].workoutType === sessions[1].workoutType) {
+    return "Same focus again — stay mindful of recovery";
+  }
+
+  // 4. Medium / low consistency
+  if (weeklyCount >= 3) return "Nice rhythm this week";
+  if (weeklyCount >= 1) return "Good start — keep showing up";
+  if (weeklyCount === 0 && sessions.length > 0) return "Been a few days — ease back in";
+
+  // 5. Fallback
+  return "Ready when you are";
+}
+
 function SessionRow({ session }: { session: WorkoutSession }) {
   const isRun = session.workoutType === "Run";
   const summary = isRun
@@ -80,6 +113,7 @@ export default function HomePage() {
   const [userName, setUserName] = useState<string | null>(null);
   const [city, setCity] = useState<string | null>(null);
   const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
+  const [insight, setInsight] = useState<string>("Ready when you are");
   const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -121,7 +155,9 @@ export default function HomePage() {
 
       setLastSession(sessions[0]);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-      setWeeklyCount(sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length);
+      const count = sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length;
+      setWeeklyCount(count);
+      setInsight(generateInsight(sessions, count, todayWellness));
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
@@ -182,6 +218,9 @@ export default function HomePage() {
           Today · {dateLabel}
         </p>
         <h1 className="text-2xl font-bold text-white">{greeting}</h1>
+
+        {/* Insight line */}
+        <p className="text-sm text-neutral-400 mt-1">{insight}</p>
 
         {/* City + weather — city shows immediately, weather fills in when ready */}
         {city && (
@@ -306,7 +345,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.4.0 – profile polish: city in summary/share, volume label, dark date input</p>
+      <p className="text-xs text-neutral-600">v1.5.0 – intelligence layer: daily insight from wellness + consistency</p>
     </main>
   );
 }
