@@ -87,14 +87,14 @@ export default function SummaryPage() {
             ×
           </button>
 
-          <div className="flex flex-col items-center gap-0 w-full max-w-sm">
+          <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-16">
             {/* Brand */}
             <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-8">
               GymHub
             </p>
 
             {/* Title */}
-            <h1 className="text-3xl font-bold text-white text-center">{session.title}</h1>
+            <h1 className="text-4xl font-black text-white text-center">{session.title}</h1>
 
             {/* Vibe */}
             <p className="text-sm italic text-neutral-500 text-center mt-2">{vibe}</p>
@@ -108,13 +108,13 @@ export default function SummaryPage() {
                 <>
                   {session.distance !== undefined && (
                     <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-2xl font-bold text-white">{session.distance}</span>
+                      <span className="text-3xl font-bold text-white">{session.distance}</span>
                       <span className="text-xs text-neutral-600">km</span>
                     </div>
                   )}
                   {session.duration && (
                     <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-2xl font-bold text-white">{session.duration}</span>
+                      <span className="text-3xl font-bold text-white">{session.duration}</span>
                       <span className="text-xs text-neutral-600">duration</span>
                     </div>
                   )}
@@ -122,16 +122,16 @@ export default function SummaryPage() {
               ) : (
                 <>
                   <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                    <span className="text-2xl font-bold text-white">{totalSets}</span>
+                    <span className="text-3xl font-bold text-white">{totalSets}</span>
                     <span className="text-xs text-neutral-600">sets</span>
                   </div>
                   <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                    <span className="text-2xl font-bold text-white">{exerciseCount}</span>
+                    <span className="text-3xl font-bold text-white">{exerciseCount}</span>
                     <span className="text-xs text-neutral-600">exercises</span>
                   </div>
                   {totalVolume > 0 && (
                     <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-2xl font-bold text-white">{totalVolume.toLocaleString()}</span>
+                      <span className="text-3xl font-bold text-white">{totalVolume.toLocaleString()}</span>
                       <span className="text-xs text-neutral-600">kg volume</span>
                     </div>
                   )}
@@ -148,7 +148,7 @@ export default function SummaryPage() {
 
             {/* Exercise preview (top 3) */}
             {!isRun && session.exercises.length > 0 && (
-              <div className="flex flex-col items-center gap-1 mt-8">
+              <div className="flex flex-col items-center gap-1 mt-5">
                 {session.exercises.slice(0, 3).map((ex, i) => (
                   <p key={i} className="text-sm text-neutral-300">
                     {ex.name}{" "}
@@ -198,13 +198,13 @@ export default function SummaryPage() {
               {session.distance !== undefined && (
                 <div className="flex flex-col">
                   <span className="text-xs text-neutral-600">Distance</span>
-                  <span className="text-2xl font-bold text-white">{session.distance} km</span>
+                  <span className="text-3xl font-bold text-white">{session.distance} km</span>
                 </div>
               )}
               {session.duration && (
                 <div className="flex flex-col">
                   <span className="text-xs text-neutral-600">Duration</span>
-                  <span className="text-2xl font-bold text-white">{session.duration}</span>
+                  <span className="text-3xl font-bold text-white">{session.duration}</span>
                 </div>
               )}
             </div>
@@ -214,16 +214,16 @@ export default function SummaryPage() {
             <div className={`grid gap-4 ${totalVolume > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="flex flex-col">
                 <span className="text-xs text-neutral-600">Exercises</span>
-                <span className="text-2xl font-bold text-white">{exerciseCount}</span>
+                <span className="text-3xl font-bold text-white">{exerciseCount}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-neutral-600">Sets</span>
-                <span className="text-2xl font-bold text-white">{totalSets}</span>
+                <span className="text-3xl font-bold text-white">{totalSets}</span>
               </div>
               {totalVolume > 0 && (
                 <div className="flex flex-col">
                   <span className="text-xs text-neutral-600">Volume</span>
-                  <span className="text-2xl font-bold text-white">{totalVolume.toLocaleString()} kg</span>
+                  <span className="text-3xl font-bold text-white">{totalVolume.toLocaleString()} kg</span>
                 </div>
               )}
             </div>
