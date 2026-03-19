@@ -45,7 +45,7 @@ export default function Nav() {
           href="/"
           className="text-base font-bold text-white tracking-tight"
         >
-          GymHub
+          FloForm
         </Link>
 
         {/* Page links */}

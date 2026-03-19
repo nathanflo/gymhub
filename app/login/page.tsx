@@ -46,7 +46,7 @@ export default function LoginPage() {
     <main className="flex flex-col items-center justify-center min-h-screen px-6 gap-6">
       <div className="w-full max-w-sm flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">GymHub</h1>
+          <h1 className="text-2xl font-bold text-white">FloForm</h1>
           <p className="text-sm text-neutral-400 mt-1">
             {mode === "signin" ? "Sign in to sync your data across devices" : "Create your account"}
           </p>

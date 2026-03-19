@@ -3,7 +3,7 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
-  title: "GymHub",
+  title: "FloForm",
   description: "Your personal fitness operating system",
   // Future: add og:image, twitter card, etc.
 };

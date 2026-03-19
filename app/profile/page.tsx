@@ -116,7 +116,7 @@ export default function ProfilePage() {
         <h1 className="text-xl font-bold text-white">
           {form.name ? `Hi, ${form.name}` : "Hi there"}
         </h1>
-        <p className="text-sm text-neutral-400">This helps GymHub tailor your training.</p>
+        <p className="text-sm text-neutral-400">This helps FloForm tailor your training.</p>
       </div>
 
       {/* Account section */}

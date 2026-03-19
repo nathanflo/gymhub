@@ -186,7 +186,7 @@ export default function SummaryPage() {
           <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
             {/* Brand */}
             <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-8">
-              GymHub
+              FloForm
             </p>
 
             {/* Title */}
