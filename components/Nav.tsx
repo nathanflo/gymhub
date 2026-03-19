@@ -1,22 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const links = [
-  { href: "/log", label: "Log", match: (p: string) => p.startsWith("/log") || p.startsWith("/edit") },
-  { href: "/workouts", label: "History", match: (p: string) => p.startsWith("/workouts") },
-  { href: "/progress", label: "Progress", match: (p: string) => p.startsWith("/progress") },
+  { href: "/", label: "Home", match: (p: string) => p === "/" },
+  {
+    href: "/fitness",
+    label: "Fitness",
+    match: (p: string) =>
+      p.startsWith("/fitness") ||
+      p.startsWith("/workouts") ||
+      p.startsWith("/progress") ||
+      p.startsWith("/templates") ||
+      p.startsWith("/log") ||
+      p.startsWith("/edit"),
+  },
   { href: "/wellness", label: "Wellness", match: (p: string) => p.startsWith("/wellness") },
+  { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -43,6 +51,18 @@ export default function Nav() {
         <div className="flex gap-1 ml-auto items-center">
           {links.map(({ href, label, match }) => {
             const isActive = match(pathname);
+            // Profile link redirects to login when signed out
+            if (href === "/profile" && signedIn === false) {
+              return (
+                <Link
+                  key={href}
+                  href="/login"
+                  className="px-2 py-2 rounded-lg text-sm transition-colors text-indigo-400 hover:text-indigo-300"
+                >
+                  {label}
+                </Link>
+              );
+            }
             return (
               <Link
                 key={href}
@@ -69,45 +89,6 @@ export default function Nav() {
                 <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
               </svg>
             </Link>
-          )}
-          {signedIn === true && (
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen(o => !o)}
-                aria-label="Account menu"
-                className="px-2 py-2 text-sm text-indigo-400 select-none leading-none"
-              >
-                ●
-              </button>
-
-              {menuOpen && (
-                <>
-                  {/* Backdrop — closes menu on outside tap */}
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setMenuOpen(false)}
-                  />
-
-                  {/* Popover */}
-                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px]
-                                  rounded-xl bg-neutral-800 border border-neutral-700
-                                  shadow-lg py-1 flex flex-col">
-                    <span className="px-4 py-2 text-xs text-neutral-500">Signed in</span>
-                    <button
-                      onClick={async () => {
-                        setMenuOpen(false);
-                        await supabase.auth.signOut();
-                        router.push("/");
-                      }}
-                      className="px-4 py-2 text-sm text-left text-red-400 hover:bg-neutral-700
-                                 transition-colors"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
           )}
         </div>
       </nav>
