@@ -164,6 +164,7 @@ export default function HomePage() {
   const [city, setCity] = useState<string | null>(null);
   const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
   const [insight, setInsight] = useState<string>("Ready when you are");
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -193,6 +194,7 @@ export default function HomePage() {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user ?? null;
+      setSignedIn(!!user);
 
       const [sessions, bwEntries, todayWellness, profileResult] = await Promise.all([
         getSessions(),
@@ -252,6 +254,39 @@ export default function HomePage() {
     day: "numeric",
     month: "short",
   });
+
+  if (signedIn === null) return null;
+
+  if (signedIn === false) {
+    return (
+      <main className="px-6 py-8 flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Let&apos;s get moving</h1>
+          <p className="text-sm text-neutral-400 mt-1">
+            Create an account to save workouts, track progress, and personalize FloForm over time.
+          </p>
+        </div>
+
+        <Link
+          href="/login"
+          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
+                     transition-all py-5 text-lg font-semibold text-white text-center shadow-lg"
+        >
+          Get Started
+        </Link>
+
+        <Link
+          href="/log"
+          className="w-full rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
+                     transition-all py-5 text-lg font-semibold text-neutral-300 text-center"
+        >
+          Continue as Guest
+        </Link>
+
+        <p className="text-xs text-neutral-600">FloForm v1.6.0</p>
+      </main>
+    );
+  }
 
   return (
     <main className="px-6 py-8 flex flex-col gap-6">
@@ -388,7 +423,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.5.3</p>
+      <p className="text-xs text-neutral-600">FloForm v1.6.0</p>
     </main>
   );
 }
