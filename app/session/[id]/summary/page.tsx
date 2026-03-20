@@ -340,8 +340,6 @@ export default function SummaryPage() {
           </div>
         )}
 
-        <p className="text-xs text-neutral-500 text-center mt-2">floform.fit</p>
-
         {/* Energy Card */}
         <div className="rounded-2xl bg-neutral-800 px-5 py-4">
           <span className={`inline-block text-xl font-bold px-4 py-1.5 rounded-full ${effort.bgColor} ${effort.color}`}>
