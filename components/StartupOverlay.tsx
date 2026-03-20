@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function StartupOverlay() {
   const [visible, setVisible] = useState(true);
@@ -27,22 +28,14 @@ export default function StartupOverlay() {
         pointerEvents: fading ? "none" : "auto",
       }}
     >
-      {/* Inline FF mark — renders instantly, no network round-trip */}
-      <svg
-        width="96"
-        height="96"
-        viewBox="0 0 80 80"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-      >
-        {/* Top horizontal bar */}
-        <rect x="16" y="16" width="48" height="8" rx="4" fill="#818cf8" />
-        {/* Mid horizontal bar (shorter) */}
-        <rect x="16" y="36" width="32" height="8" rx="4" fill="#818cf8" />
-        {/* Vertical stem */}
-        <rect x="16" y="16" width="8" height="48" rx="4" fill="#818cf8" />
-      </svg>
+      <Image
+        src="/ff-mark.png"
+        alt="FloForm"
+        width={120}
+        height={120}
+        priority
+        className="object-contain"
+      />
 
       <span className="mt-7 text-2xl font-medium tracking-tight text-neutral-100">
         FloForm
