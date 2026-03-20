@@ -26,6 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preload" href="/ff-mark.svg" as="image" type="image/svg+xml" />
+      </head>
       <body className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
         <StartupOverlay />
         {/*
