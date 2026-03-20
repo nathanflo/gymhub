@@ -261,9 +261,9 @@ export default function HomePage() {
     return (
       <main className="px-6 py-8 flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Let&apos;s get moving</h1>
+          <h1 className="text-2xl font-bold text-white">Train with intention</h1>
           <p className="text-sm text-neutral-400 mt-1">
-            Create an account to save workouts, track progress, and personalize FloForm over time.
+            Build strength. Track progress. See who you&apos;re becoming.
           </p>
         </div>
 
@@ -272,8 +272,12 @@ export default function HomePage() {
           className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
                      transition-all py-5 text-lg font-semibold text-white text-center shadow-lg"
         >
-          Get Started
+          Start your journey
         </Link>
+
+        <p className="text-xs text-neutral-500 text-center mt-1">
+          Takes 10 seconds. Saves everything.
+        </p>
 
         <Link
           href="/log"
@@ -283,7 +287,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.6.0</p>
+        <p className="text-xs text-neutral-600">FloForm v1.6.1</p>
       </main>
     );
   }
@@ -423,7 +427,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.6.0</p>
+      <p className="text-xs text-neutral-600">FloForm v1.6.1</p>
     </main>
   );
 }
