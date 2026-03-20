@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import StartupOverlay from "@/components/StartupOverlay";
 
 export const metadata: Metadata = {
   title: "FloForm",
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
+        <StartupOverlay />
         {/*
          * Shell wrapper – keeps max width iPhone-sized and centered on desktop.
          * Future: consider bottom nav when tabs grow beyond 5 (Wellness, Music, AI).
