@@ -30,9 +30,9 @@ export default function StartupOverlay() {
       
       <div className="mb-8">
         <img
-          src="/AppIcon-512@2x.png"
+          src="/ff-mark.png"
           alt="FloForm"
-          className="w-24 h-24 object-contain"
+          className="w-28 h-28 object-contain"
         />
       </div>
 
