@@ -22,34 +22,73 @@ function getEffortLabel(
   return { label: "Steady", color: "text-emerald-400", bgColor: "bg-emerald-950/60" };
 }
 
-function generateHeadline(session: WorkoutSession): string {
-  const { workoutType, energyLevel, exercises } = session;
+function detectPR(session: WorkoutSession, allSessions: WorkoutSession[]): string | null {
+  const historical = allSessions.filter(s => s.id !== session.id && s.date < session.date);
+
+  const historicalMaxes = new Map<string, number>();
+  for (const s of historical) {
+    for (const ex of s.exercises) {
+      if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
+      if ((ex.unit ?? "kg") === "plates") continue;
+      const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
+      const key = ex.name.trim().toLowerCase();
+      for (const set of ex.sets) {
+        if (!set.weight || set.weight <= 0) continue;
+        historicalMaxes.set(key, Math.max(historicalMaxes.get(key) ?? 0, toKg(set.weight)));
+      }
+    }
+  }
+
+  for (const ex of session.exercises) {
+    if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
+    if ((ex.unit ?? "kg") === "plates") continue;
+    const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
+    const key = ex.name.trim().toLowerCase();
+    const currentMax = Math.max(0, ...ex.sets.filter(s => s.weight && s.weight > 0).map(s => toKg(s.weight!)));
+    if (currentMax <= 0) continue;
+    const historicalMax = historicalMaxes.get(key);
+    if (historicalMax === undefined) continue; // first-ever log — not a PR
+    if (currentMax > historicalMax) return ex.name.trim();
+  }
+
+  return null;
+}
+
+function generateSubtitle(
+  session: WorkoutSession,
+  previousSession: WorkoutSession | null,
+  prExercise: string | null
+): string {
+  const { workoutType, exercises } = session;
+
+  // ── Run sessions: keep existing logic ──────────────────────────────────────
+  if (workoutType === "Run") {
+    const isLong = (session.distance ?? 0) >= 10;
+    if (session.energyLevel === "High") return isLong ? "Big aerobic effort" : "Pushed the pace today";
+    if (session.energyLevel === "Low")  return "Easy miles, still showing up";
+    return "Steady aerobic effort";
+  }
+
+  // ── Strength sessions: priority chain ──────────────────────────────────────
   const totalSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
   const totalVolume = exercises.reduce((s, ex) =>
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
-  const isLarge = exercises.length >= 5 || totalSets >= 15;
-  const isHeavy = totalVolume >= 3000;
 
-  if (workoutType === "Run") {
-    const isLong = (session.distance ?? 0) >= 10;
-    if (energyLevel === "High") return isLong ? "Big aerobic effort" : "Pushed the pace today";
-    if (energyLevel === "Low")  return "Easy miles, still showing up";
-    return "Steady aerobic effort";
+  // 1. PR
+  if (prExercise) return `New PR: ${prExercise}`;
+
+  // 2. High volume vs previous session
+  if (previousSession) {
+    const prevVolume = previousSession.exercises.reduce((s, ex) =>
+      s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+    if (prevVolume > 0 && totalVolume > prevVolume * 1.1) return "High volume session";
   }
-  if (energyLevel === "High") {
-    if (isLarge && isHeavy) return "Big volume session";
-    if (isLarge)             return "Strong workload today";
-    if (workoutType === "Push") return "Push day, well executed";
-    if (workoutType === "Pull") return "Back day locked in";
-    if (workoutType === "Legs") return "Strong lower-body work";
-    return "Strong session today";
-  }
-  if (energyLevel === "Low") return "Good work, even on a lower-energy day";
-  // Medium
-  if (isLarge && isHeavy) return "Big volume session";
-  if (isLarge)            return "Strong, controlled session";
-  if (exercises.length >= 3) return "Quick, efficient work";
-  return "Back in the groove";
+
+  // 3. Short session
+  if (totalSets <= 6) return "Quick, efficient work";
+
+  // 4. Default
+  return "Solid session";
 }
 
 function generateDeltaInsight(
@@ -105,6 +144,7 @@ export default function SummaryPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [previousSession, setPreviousSession] = useState<WorkoutSession | null>(null);
+  const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
 
@@ -117,6 +157,7 @@ export default function SummaryPage() {
       }
       setSession(s);
       const all = await getSessions();
+      setAllSessions(all);
       const prev = all.find(
         (x) => x.id !== s.id && x.workoutType === s.workoutType && x.date < s.date
       ) ?? null;
@@ -151,7 +192,8 @@ export default function SummaryPage() {
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
 
   const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
-  const headline = generateHeadline(session);
+  const prExercise = detectPR(session, allSessions);
+  const headline = generateSubtitle(session, previousSession, prExercise);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
 
   const topExercise = !isRun && totalVolume > 0
@@ -251,6 +293,7 @@ export default function SummaryPage() {
                   <p key={i} className="text-sm text-neutral-300">
                     {ex.name}{" "}
                     <span className="text-neutral-600">({ex.sets.length} sets)</span>
+                    {ex.name.trim().toLowerCase() === prExercise?.trim().toLowerCase() ? " 🔥" : ""}
                   </p>
                 ))}
               </div>
@@ -399,7 +442,7 @@ export default function SummaryPage() {
           ← Back to History
         </button>
 
-        <p className="text-xs text-neutral-600">v1.5.3 – progress intelligence: session-to-session comparison</p>
+        <p className="text-xs text-neutral-600">v1.6.6 – PR indicator in exercise list</p>
       </main>
     </>
   );
