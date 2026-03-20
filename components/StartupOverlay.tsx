@@ -27,12 +27,14 @@ export default function StartupOverlay() {
         pointerEvents: fading ? "none" : "auto",
       }}
     >
-      {/* Icon mark — stylised "F" built from three rectangles */}
-      <svg width="56" height="56" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="10" y="10" width="28" height="4" rx="2" fill="#818cf8" />
-        <rect x="10" y="22" width="18" height="4" rx="2" fill="#818cf8" />
-        <rect x="10" y="10" width="4" height="28" rx="2" fill="#818cf8" />
-      </svg>
+      
+      <div className="mb-8">
+        <img
+          src="/AppIcon-512@2x.png"
+          alt="FloForm"
+          className="w-24 h-24 object-contain"
+        />
+      </div>
 
       <span className="mt-6 text-2xl font-medium tracking-tight text-neutral-100">
         FloForm
