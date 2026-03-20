@@ -177,7 +177,8 @@ export default function SummaryPage() {
         <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col items-center justify-center px-6 overflow-y-auto max-h-screen py-12">
           <button
             onClick={() => setShareOpen(false)}
-            className="absolute top-4 right-4 text-neutral-400 hover:text-white text-2xl leading-none"
+            className="absolute text-neutral-400 hover:text-white text-2xl leading-none"
+            style={{ top: "calc(env(safe-area-inset-top) + 16px)", right: "20px" }}
             aria-label="Close share overlay"
           >
             ×
@@ -254,6 +255,11 @@ export default function SummaryPage() {
                 ))}
               </div>
             )}
+
+            {/* Brand watermark */}
+            <p className="text-xs text-neutral-500 text-center mt-6">
+              floform.fit
+            </p>
           </div>
         </div>
       )}
