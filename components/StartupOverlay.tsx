@@ -7,8 +7,8 @@ export default function StartupOverlay() {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setFading(true), 500);
-    const hideTimer = setTimeout(() => setVisible(false), 900);
+    const fadeTimer = setTimeout(() => setFading(true), 700);
+    const hideTimer = setTimeout(() => setVisible(false), 1100);
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);
@@ -28,13 +28,13 @@ export default function StartupOverlay() {
       }}
     >
       {/* Icon mark — stylised "F" built from three rectangles */}
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <svg width="56" height="56" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="10" y="10" width="28" height="4" rx="2" fill="#818cf8" />
         <rect x="10" y="22" width="18" height="4" rx="2" fill="#818cf8" />
         <rect x="10" y="10" width="4" height="28" rx="2" fill="#818cf8" />
       </svg>
 
-      <span className="mt-4 text-xl font-bold tracking-tight text-white">
+      <span className="mt-6 text-2xl font-medium tracking-tight text-neutral-100">
         FloForm
       </span>
     </div>
