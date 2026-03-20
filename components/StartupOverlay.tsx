@@ -29,10 +29,10 @@ export default function StartupOverlay() {
       }}
     >
       <Image
-        src="/ff-mark.png"
+        src="/ff-mark.svg"
         alt="FloForm"
-        width={120}
-        height={120}
+        width={128}
+        height={128}
         priority
         className="object-contain"
       />

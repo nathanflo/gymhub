@@ -388,7 +388,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">v1.5.1 – dynamic greeting + insight refinement: streak, variation, combo signals</p>
+      <p className="text-xs text-neutral-600">FloForm v1.5.3</p>
     </main>
   );
 }
