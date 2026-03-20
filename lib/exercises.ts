@@ -1,8 +1,28 @@
 import { getSessions } from "./sessions";
 import { getWorkouts } from "./storage";
 
-/** Returns a sorted, case-insensitively deduplicated list of exercise names the user has logged.
- *  The first-seen display version is preserved as the canonical name. */
+export const STARTER_EXERCISES: string[] = [
+  "Bench Press",
+  "Incline Dumbbell Press",
+  "Shoulder Press",
+  "Lat Pulldown",
+  "Seated Cable Row",
+  "Bicep Curl",
+  "Tricep Pushdown",
+  "Squat",
+  "Leg Press",
+  "Romanian Deadlift",
+  "Leg Curl",
+  "Leg Extension",
+  "Calf Raise",
+  "Lateral Raise",
+  "Pec Fly",
+  "Treadmill Run",
+  "Outdoor Run",
+];
+
+/** Returns a deduplicated list of exercise names: user-logged exercises first, then starter
+ *  exercises to fill in. The first-seen display version is preserved as the canonical name. */
 export async function getExerciseLibrary(): Promise<string[]> {
   const seen = new Map<string, string>(); // lowercase key → first-seen display value
   const add = (raw: string) => {
@@ -14,5 +34,6 @@ export async function getExerciseLibrary(): Promise<string[]> {
   const [sessions, workouts] = await Promise.all([getSessions(), getWorkouts()]);
   sessions.forEach((s) => s.exercises.forEach((e) => add(e.name)));
   workouts.forEach((w) => add(w.exercise));
-  return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  STARTER_EXERCISES.forEach(add);
+  return Array.from(seen.values());
 }

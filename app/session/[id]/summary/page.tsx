@@ -327,12 +327,14 @@ export default function SummaryPage() {
               {totalVolume > 0 && (
                 <div className="flex flex-col">
                   <span className="text-xs text-neutral-600">Volume (kg)</span>
-                  <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()}</span>
+                  <span className="text-3xl font-semibold tracking-tight tabular-nums text-white">{totalVolume.toLocaleString()}</span>
                 </div>
               )}
             </div>
           </div>
         )}
+
+        <p className="text-xs text-neutral-500 text-center mt-2">floform.fit</p>
 
         {/* Energy Card */}
         <div className="rounded-2xl bg-neutral-800 px-5 py-4">

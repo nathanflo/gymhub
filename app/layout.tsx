@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import StartupOverlay from "@/components/StartupOverlay";
+import { Analytics } from "@vercel/analytics/react";
+
 
 export const metadata: Metadata = {
   title: "FloForm",
@@ -39,6 +41,7 @@ export default function RootLayout({
           <Nav />
           {children}
         </div>
+        <Analytics />
       </body>
     </html>
   );
