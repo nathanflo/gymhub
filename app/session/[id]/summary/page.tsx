@@ -131,6 +131,15 @@ function generateDeltaInsight(
   return null;
 }
 
+function formatDuration(start: string, end: string): string {
+  const diffMs = new Date(end).getTime() - new Date(start).getTime();
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 function formatDateTime(iso: string) {
   const d = new Date(iso);
   return {
@@ -195,6 +204,9 @@ export default function SummaryPage() {
   const prExercise = detectPR(session, allSessions);
   const headline = generateSubtitle(session, previousSession, prExercise);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
+  const workoutDuration = session.started_at && session.ended_at
+    ? formatDuration(session.started_at, session.ended_at)
+    : null;
 
   const topExercise = !isRun && totalVolume > 0
     ? [...session.exercises].sort((a, b) => {
@@ -239,7 +251,9 @@ export default function SummaryPage() {
             <p className="text-sm italic text-neutral-500 text-center mt-2">{headline}</p>
 
             {/* Date */}
-            <p className="text-xs text-neutral-500 mt-3">{dateLabel}</p>
+            <p className="text-xs text-neutral-500 mt-3">
+              {dateLabel}{workoutDuration ? ` · ${workoutDuration}` : ""}
+            </p>
             {city && <p className="text-xs text-neutral-500 mt-0.5">{city}</p>}
 
             {/* Stats row */}
@@ -336,7 +350,9 @@ export default function SummaryPage() {
             <p className="text-xs text-neutral-500 mt-0.5">{summaryInsight}</p>
           )}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="text-xs text-neutral-600">{dateLabel} · {timeLabel}</span>
+            <span className="text-xs text-neutral-600">
+              {dateLabel} · {timeLabel}{workoutDuration ? ` · ${workoutDuration}` : ""}
+            </span>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-700 text-neutral-300">
               {session.workoutType}
             </span>
@@ -442,7 +458,7 @@ export default function SummaryPage() {
           ← Back to History
         </button>
 
-        <p className="text-xs text-neutral-600">v1.6.6 – PR indicator in exercise list</p>
+        <p className="text-xs text-neutral-600">v1.7.0 – workout duration</p>
       </main>
     </>
   );

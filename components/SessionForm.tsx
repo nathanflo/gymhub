@@ -441,6 +441,8 @@ export function SessionForm({
       notes: form.notes.trim(),
       exercises,
       bodyweight: form.bodyweight ? parseFloat(form.bodyweight) : undefined,
+      started_at: startTime ?? undefined,
+      ended_at: new Date().toISOString(),
       ...(isRun && {
         distance: parseFloat(form.distance),
         duration: form.duration.trim(),

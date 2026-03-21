@@ -18,6 +18,8 @@ function toSession(row: any): WorkoutSession {
     distance: row.distance ?? undefined,
     duration: row.duration ?? undefined,
     intervals: row.intervals ?? undefined,
+    started_at: row.started_at ?? undefined,
+    ended_at: row.ended_at ?? undefined,
     exercises: row.exercises,
   };
 }
@@ -70,6 +72,8 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
     distance: session.distance ?? null,
     duration: session.duration ?? null,
     intervals: session.intervals ?? null,
+    started_at: session.started_at ?? null,
+    ended_at: session.ended_at ?? null,
     exercises: session.exercises,
   });
 }

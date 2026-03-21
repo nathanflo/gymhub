@@ -43,4 +43,7 @@ export interface WorkoutSession {
   distance?: number;        // km
   duration?: string;        // free text: "31:45" or "45 min"
   intervals?: string;       // e.g. "4 x 400m"
+
+  started_at?: string;      // ISO 8601 — when first set was logged or Begin Workout tapped
+  ended_at?: string;        // ISO 8601 — when session was saved
 }
