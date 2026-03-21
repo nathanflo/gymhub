@@ -165,7 +165,7 @@ export default function HomePage() {
   const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
   const [insight, setInsight] = useState<string>("Ready when you are");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string } | null>(() => {
+  const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string; isPaused?: boolean; pausedOffset?: number; pauseStartedAt?: number | null } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
       const raw = localStorage.getItem("activeWorkoutDraft");
