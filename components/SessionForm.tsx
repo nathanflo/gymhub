@@ -518,12 +518,17 @@ export function SessionForm({
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/90 border border-indigo-500/30 backdrop-blur-sm shadow-lg">
             <span
               className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                isPaused ? "bg-indigo-400/40" : "bg-indigo-400 animate-pulse"
+                isPaused ? "bg-amber-400/40" : "bg-indigo-400 animate-pulse"
               }`}
             />
             <span className={`text-sm font-semibold tabular-nums ${isPaused ? "text-indigo-300/50" : "text-indigo-300"}`}>
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
+            {isPaused && (
+              <span className="text-xs text-amber-400/50 tabular-nums">
+                · Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -533,7 +538,7 @@ export function SessionForm({
         {startTime && (
           <div className="flex items-center justify-center gap-2.5 py-2 px-4 rounded-xl bg-indigo-950/50 border border-indigo-500/20 mx-auto">
             {isPaused ? (
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/40 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400/40 shrink-0" />
             ) : (
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
             )}
@@ -541,12 +546,12 @@ export function SessionForm({
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
             {isPaused ? (
-              <span className="text-xs text-indigo-500">resting</span>
+              <span className="text-xs text-amber-500/80">resting</span>
             ) : (
               <span className="text-xs text-indigo-500">in progress</span>
             )}
             {isPaused && (
-              <span className="text-xs text-indigo-400/60 tabular-nums">
+              <span className="text-xs text-amber-400/50 tabular-nums">
                 Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
               </span>
             )}

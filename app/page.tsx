@@ -287,7 +287,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.8.3</p>
+        <p className="text-xs text-neutral-600">FloForm v1.8.4</p>
       </main>
     );
   }
@@ -327,16 +327,25 @@ export default function HomePage() {
       </div>
 
       {/* Primary CTA — in-progress card if draft exists, else normal button */}
-      {activeDraft ? (
+      {activeDraft ? (() => {
+        const homeElapsed = (() => {
+          const startMs = new Date(activeDraft.startTime).getTime();
+          const base = activeDraft.isPaused && activeDraft.pauseStartedAt
+            ? Math.floor((activeDraft.pauseStartedAt - startMs) / 1000)
+            : Math.floor((Date.now() - startMs) / 1000);
+          return Math.max(0, base - (activeDraft.pausedOffset ?? 0));
+        })();
+        return (
         <div className="w-full rounded-2xl bg-neutral-800 border border-indigo-500/30 px-5 py-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-            <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">Workout in progress</span>
+            <span className={`w-2 h-2 rounded-full ${activeDraft.isPaused ? "bg-amber-400/40" : "bg-indigo-400 animate-pulse"}`} />
+            <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
+              {activeDraft.isPaused ? "Workout paused" : "Workout in progress"} · {String(Math.floor(homeElapsed / 60)).padStart(2, "0")}:{String(homeElapsed % 60).padStart(2, "0")}
+            </span>
           </div>
           {activeDraft.session.title && (
             <p className="text-white font-semibold text-base">{activeDraft.session.title}</p>
           )}
-          <p className="text-xs text-neutral-500">Started {workoutTimeAgo(activeDraft.startTime)}</p>
           <div className="flex gap-2 mt-1">
             <Link
               href="/log?resume=1"
@@ -356,7 +365,8 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-      ) : (
+        );
+      })() : (
         <Link
           href="/log"
           className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
@@ -427,7 +437,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.8.3</p>
+      <p className="text-xs text-neutral-600">FloForm v1.8.4</p>
     </main>
   );
 }
