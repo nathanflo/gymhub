@@ -44,6 +44,14 @@ export async function saveBodyweightEntry(entry: BodyweightEntry): Promise<void>
   });
 }
 
+/** Return the most recent bodyweight (kg) logged today, or undefined. */
+export async function getTodayBodyweight(): Promise<number | undefined> {
+  const entries = await getBodyweightEntries();
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const todayEntry = entries.find(e => e.date === today);
+  return todayEntry?.weight;
+}
+
 /** Remove a bodyweight entry by id. */
 export async function deleteBodyweightEntry(id: string): Promise<void> {
   await supabase.from("bodyweight_entries").delete().eq("id", id);

@@ -12,7 +12,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { saveSession, getSessionById } from "@/lib/sessions";
 import { getTemplates } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
-import { SessionForm, SessionFormState, sessionToFormState, templateToFormState } from "@/components/SessionForm";
+import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
+import { SessionForm, SessionFormState, sessionToFormState, templateToFormState, emptySessionForm } from "@/components/SessionForm";
 
 type DraftData = {
   session: SessionFormState;
@@ -71,6 +72,10 @@ function LogPageInner() {
 
   useEffect(() => {
     async function load() {
+      const [todayBw] = await Promise.all([
+        getTodayBodyweight(),
+      ]);
+
       if (fromId) {
         const session = await getSessionById(fromId);
         if (session) {
@@ -82,7 +87,11 @@ function LogPageInner() {
         if (template) {
           setInitialState(templateToFormState(template));
         }
+      } else if (todayBw !== undefined) {
+        // Fresh session — prefill BW from today's progress entry
+        setInitialState({ ...emptySessionForm(), bodyweight: String(todayBw) });
       }
+
       setLoaded(true);
     }
     load();
@@ -90,6 +99,16 @@ function LogPageInner() {
 
   async function handleSave(session: WorkoutSession) {
     await saveSession(session);
+    if (session.bodyweight !== undefined && session.bodyweight > 0) {
+      const todayBw = await getTodayBodyweight();
+      if (todayBw !== session.bodyweight) {
+        await saveBodyweightEntry({
+          id: crypto.randomUUID(),
+          date: new Date().toISOString(),
+          weight: session.bodyweight,
+        });
+      }
+    }
     localStorage.removeItem("activeWorkoutDraft");
     router.push(`/session/${session.id}/summary`);
   }
