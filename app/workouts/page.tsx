@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { getSessions, deleteSession } from "@/lib/sessions";
 import { getWorkouts, deleteWorkout } from "@/lib/storage";
 import { formatExerciseSummary } from "@/lib/progress";
-import { saveTemplate } from "@/lib/templates";
+import { saveTemplateIfNew } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
 import { Workout } from "@/types/workout";
 import { WorkoutTemplate } from "@/types/template";
@@ -58,7 +58,9 @@ export default function WorkoutsPage() {
     setWorkouts(await getWorkouts());
   }
 
-  async function handleSaveAsTemplate(session: WorkoutSession) {
+  async function handleSaveAsTemplate(
+    session: WorkoutSession
+  ): Promise<'saved' | 'duplicate'> {
     const template: WorkoutTemplate = {
       id: crypto.randomUUID(),
       name: session.title,
@@ -70,7 +72,7 @@ export default function WorkoutsPage() {
         intervals: session.intervals,
       }),
     };
-    await saveTemplate(template);
+    return saveTemplateIfNew(template);
   }
 
   const totalCount = sessions.length + workouts.length;
@@ -139,10 +141,20 @@ function SessionCard({
   onDuplicate: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onSaveAsTemplate: () => void;
+  onSaveAsTemplate: () => Promise<'saved' | 'duplicate'>;
   onSummary: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [templateMsg, setTemplateMsg] = useState<string | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  async function handleTemplate() {
+    setSavingTemplate(true);
+    const result = await onSaveAsTemplate();
+    setSavingTemplate(false);
+    setTemplateMsg(result === 'saved' ? 'Template saved' : 'Template already exists');
+    setTimeout(() => setTemplateMsg(null), 2500);
+  }
   const { dateLabel, timeLabel } = formatDateTime(session.date);
   const isRun = session.workoutType === "Run";
   const previewExercises = session.exercises.slice(0, 2);
@@ -259,6 +271,11 @@ function SessionCard({
             </div>
           )}
 
+          {/* Template feedback */}
+          {templateMsg && (
+            <p className="text-xs text-neutral-400 text-right">{templateMsg}</p>
+          )}
+
           {/* Actions */}
           <div className="border-t border-neutral-700/50 pt-3 flex flex-wrap justify-end gap-x-4 gap-y-2">
             <button onClick={onSummary} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
@@ -267,8 +284,12 @@ function SessionCard({
             <button onClick={onDuplicate} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
               Duplicate
             </button>
-            <button onClick={onSaveAsTemplate} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
-              Template
+            <button
+              onClick={handleTemplate}
+              disabled={savingTemplate}
+              className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1 disabled:opacity-40"
+            >
+              {savingTemplate ? 'Saving…' : 'Template'}
             </button>
             <button onClick={onEdit} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
               Edit

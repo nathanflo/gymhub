@@ -50,6 +50,20 @@ export async function saveTemplate(template: WorkoutTemplate): Promise<void> {
   });
 }
 
+export async function saveTemplateIfNew(
+  template: WorkoutTemplate
+): Promise<'saved' | 'duplicate'> {
+  const existing = await getTemplates();
+  const normalize = (name: string) => name.trim().toLowerCase();
+  const toKey = (exercises: WorkoutTemplate['exercises']) =>
+    exercises.map(e => normalize(e.name)).filter(Boolean).join('|');
+  const key = toKey(template.exercises);
+  const isDuplicate = existing.some(t => toKey(t.exercises) === key);
+  if (isDuplicate) return 'duplicate';
+  await saveTemplate(template);
+  return 'saved';
+}
+
 export async function deleteTemplate(id: string): Promise<void> {
   await supabase.from("workout_templates").delete().eq("id", id);
 }
