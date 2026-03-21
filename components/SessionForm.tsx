@@ -455,18 +455,23 @@ export function SessionForm({
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5">
-      {/* Active session indicator */}
+    <>
+      {/* Floating timer pill — persists while scrolling */}
       {startTime && (
-        <div className="flex items-center justify-center gap-2.5 py-2 px-4 rounded-xl bg-indigo-950/50 border border-indigo-500/20 mx-auto">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
-          <span className="text-sm font-semibold text-indigo-300 tabular-nums">
-            {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
-          </span>
-          <span className="text-xs text-indigo-500">in progress</span>
-          {savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-none"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+        >
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/90 border border-indigo-500/30 backdrop-blur-sm shadow-lg">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+            <span className="text-sm font-semibold text-indigo-300 tabular-nums">
+              {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+            </span>
+          </div>
         </div>
       )}
+
+      <div className="flex flex-col gap-5">
 
       {/* Session title */}
       <Field label="Session Title">
@@ -677,6 +682,7 @@ export function SessionForm({
         </button>
       )}
     </div>
+  </>
   );
 }
 
