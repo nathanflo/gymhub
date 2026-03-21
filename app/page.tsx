@@ -330,6 +330,7 @@ export default function HomePage() {
       {activeDraft ? (() => {
         const homeElapsed = (() => {
           const startMs = new Date(activeDraft.startTime).getTime();
+          if (isNaN(startMs)) return 0;
           const base = activeDraft.isPaused && activeDraft.pauseStartedAt
             ? Math.floor((activeDraft.pauseStartedAt - startMs) / 1000)
             : Math.floor((Date.now() - startMs) / 1000);
@@ -343,7 +344,7 @@ export default function HomePage() {
               {activeDraft.isPaused ? "Workout paused" : "Workout in progress"} · {String(Math.floor(homeElapsed / 60)).padStart(2, "0")}:{String(homeElapsed % 60).padStart(2, "0")}
             </span>
           </div>
-          {activeDraft.session.title && (
+          {activeDraft.session?.title && (
             <p className="text-white font-semibold text-base">{activeDraft.session.title}</p>
           )}
           <div className="flex gap-2 mt-1">
