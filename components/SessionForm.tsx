@@ -183,7 +183,14 @@ export function SessionForm({
   const [error, setError] = useState<string | null>(null);
   const [exerciseLibrary, setExerciseLibrary] = useState<string[]>([]);
   const [startTime, setStartTime] = useState<string | null>(initialStartTime ?? null);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() => {
+    if (initialIsPaused && initialStartTime && initialPauseStartedAt != null) {
+      return Math.max(0, Math.floor(
+        (initialPauseStartedAt - new Date(initialStartTime).getTime()) / 1000
+      ) - (initialPausedOffset ?? 0));
+    }
+    return 0;
+  });
   const [activeExIdx, setActiveExIdx] = useState(initialActiveExIdx ?? 0);
   const [savedPulse, setSavedPulse] = useState(false);
   const [isPaused, setIsPaused] = useState(initialIsPaused ?? false);
@@ -530,17 +537,26 @@ export function SessionForm({
               <button
                 type="button"
                 onClick={handleResume}
-                className="text-xs text-indigo-300 hover:text-indigo-200 ml-1"
+                className="text-indigo-300 hover:text-indigo-200 ml-1"
+                aria-label="Resume"
               >
-                ▶
+                {/* Play triangle */}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <polygon points="2,1 9,5 2,9" />
+                </svg>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handlePause}
-                className="text-xs text-indigo-400 hover:text-indigo-300 ml-1"
+                className="text-indigo-400 hover:text-indigo-300 ml-1"
+                aria-label="Pause"
               >
-                ⏸
+                {/* Pause bars */}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <rect x="1.5" y="1" width="2.5" height="8" rx="0.5" />
+                  <rect x="6" y="1" width="2.5" height="8" rx="0.5" />
+                </svg>
               </button>
             )}
           </div>
