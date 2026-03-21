@@ -458,7 +458,7 @@ export default function SummaryPage() {
           ← Back to History
         </button>
 
-        <p className="text-xs text-neutral-600">v1.7.0 – workout duration</p>
+
       </main>
     </>
   );
