@@ -392,7 +392,7 @@ export default function SummaryPage() {
               {totalVolume > 0 && (
                 <div className="flex flex-col">
                   <span className="text-xs text-neutral-600">Volume (kg)</span>
-                  <span className="text-3xl font-semibold tracking-tight tabular-nums text-white">{totalVolume.toLocaleString()}</span>
+                  <span className="text-4xl font-semibold tracking-tight tabular-nums text-white">{totalVolume.toLocaleString()}</span>
                 </div>
               )}
             </div>
