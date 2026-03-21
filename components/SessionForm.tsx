@@ -557,26 +557,24 @@ export function SessionForm({
             )}
             {!isPaused && savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
             {isPaused ? (
-              <button
-                type="button"
-                onClick={handleResume}
-                className="text-indigo-300 hover:text-indigo-200 ml-1"
-                aria-label="Resume"
-              >
-                {/* Play triangle */}
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                  <polygon points="2,1 9,5 2,9" />
-                </svg>
-              </button>
+                  <button
+                  type="button"
+                  onClick={handleResume}
+                  className="ml-1 flex items-center justify-center w-5 h-5 text-indigo-300 hover:text-indigo-200"
+                  aria-label="Resume"
+                >
+                  <svg width="12" height="12" viewBox="0 0 10 10" fill="currentColor">
+                    <polygon points="2,1 9,5 2,9" />
+                  </svg>
+                </button>
             ) : (
               <button
                 type="button"
                 onClick={handlePause}
-                className="text-indigo-400 hover:text-indigo-300 ml-1"
+                className="ml-1 flex items-center justify-center w-5 h-5 text-indigo-400 hover:text-indigo-300"
                 aria-label="Pause"
               >
-                {/* Pause bars */}
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                <svg width="12" height="12" viewBox="0 0 10 10" fill="currentColor">
                   <rect x="1.5" y="1" width="2.5" height="8" rx="0.5" />
                   <rect x="6" y="1" width="2.5" height="8" rx="0.5" />
                 </svg>
