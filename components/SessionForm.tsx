@@ -180,6 +180,9 @@ export function SessionForm({
   const [elapsed, setElapsed] = useState(0);
   const [activeExIdx, setActiveExIdx] = useState(initialActiveExIdx ?? 0);
   const [savedPulse, setSavedPulse] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pausedOffset, setPausedOffset] = useState(0);
+  const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(null);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -196,12 +199,13 @@ export function SessionForm({
 
   // Live timer
   useEffect(() => {
-    if (!startTime) return;
-    const tick = () => setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000));
+    if (!startTime || isPaused) return;
+    const tick = () =>
+      setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000) - pausedOffset);
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [startTime]);
+  }, [startTime, isPaused, pausedOffset]);
 
   const isRun = form.workoutType === "Run";
 
@@ -309,8 +313,30 @@ export function SessionForm({
     }));
   }
 
+  function resetPauseState() {
+    setIsPaused(false);
+    setPausedOffset(0);
+    setPauseStartedAt(null);
+  }
+
+  function handlePause() {
+    setPauseStartedAt(Date.now());
+    setIsPaused(true);
+  }
+
+  function handleResume() {
+    if (pauseStartedAt !== null) {
+      setPausedOffset(prev => prev + Math.floor((Date.now() - pauseStartedAt) / 1000));
+    }
+    setPauseStartedAt(null);
+    setIsPaused(false);
+  }
+
   function handleAddSet(exIdx: number) {
-    if (!startTime) setStartTime(new Date().toISOString());
+    if (!startTime) {
+      setStartTime(new Date().toISOString());
+      resetPauseState();
+    }
     setActiveExIdx(exIdx);
     setForm((prev) => ({
       ...prev,
@@ -450,6 +476,7 @@ export function SessionForm({
       }),
     };
 
+    resetPauseState();
     onSave(session);
   }
 
@@ -463,8 +490,12 @@ export function SessionForm({
           style={{ bottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
         >
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/90 border border-indigo-500/30 backdrop-blur-sm shadow-lg">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
-            <span className="text-sm font-semibold text-indigo-300 tabular-nums">
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                isPaused ? "bg-indigo-400/40" : "bg-indigo-400 animate-pulse"
+              }`}
+            />
+            <span className={`text-sm font-semibold tabular-nums ${isPaused ? "text-indigo-300/50" : "text-indigo-300"}`}>
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
           </div>
@@ -475,12 +506,37 @@ export function SessionForm({
         {/* Active session indicator */}
         {startTime && (
           <div className="flex items-center justify-center gap-2.5 py-2 px-4 rounded-xl bg-indigo-950/50 border border-indigo-500/20 mx-auto">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+            {isPaused ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/40 shrink-0" />
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+            )}
             <span className="text-sm font-semibold text-indigo-300 tabular-nums">
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
-            <span className="text-xs text-indigo-500">in progress</span>
-            {savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
+            {isPaused ? (
+              <span className="text-xs text-indigo-500">paused</span>
+            ) : (
+              <span className="text-xs text-indigo-500">in progress</span>
+            )}
+            {!isPaused && savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
+            {isPaused ? (
+              <button
+                type="button"
+                onClick={handleResume}
+                className="text-xs text-indigo-300 hover:text-indigo-200 ml-1"
+              >
+                Resume
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePause}
+                className="text-xs text-indigo-400 hover:text-indigo-300 ml-1"
+              >
+                Pause
+              </button>
+            )}
           </div>
         )}
 
@@ -685,7 +741,7 @@ export function SessionForm({
         // Pre-start — single full-width Begin button
         <button
           type="button"
-          onClick={() => setStartTime(new Date().toISOString())}
+          onClick={() => { setStartTime(new Date().toISOString()); resetPauseState(); }}
           className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
                      transition-all py-5 text-lg font-semibold text-white shadow-lg"
         >
