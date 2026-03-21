@@ -158,6 +158,9 @@ export function SessionForm({
   initialState,
   initialStartTime,
   initialActiveExIdx,
+  initialIsPaused,
+  initialPausedOffset,
+  initialPauseStartedAt,
   submitLabel = "Save Session",
   showDateEdit = false,
   onSave,
@@ -166,6 +169,9 @@ export function SessionForm({
   initialState?: SessionFormState;
   initialStartTime?: string;  // ISO string from draft resume
   initialActiveExIdx?: number;
+  initialIsPaused?: boolean;
+  initialPausedOffset?: number;
+  initialPauseStartedAt?: number | null;
   submitLabel?: string;
   showDateEdit?: boolean;
   onSave: (session: WorkoutSession) => void;
@@ -180,9 +186,9 @@ export function SessionForm({
   const [elapsed, setElapsed] = useState(0);
   const [activeExIdx, setActiveExIdx] = useState(initialActiveExIdx ?? 0);
   const [savedPulse, setSavedPulse] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pausedOffset, setPausedOffset] = useState(0);
-  const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(null);
+  const [isPaused, setIsPaused] = useState(initialIsPaused ?? false);
+  const [pausedOffset, setPausedOffset] = useState(initialPausedOffset ?? 0);
+  const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(initialPauseStartedAt ?? null);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -191,11 +197,11 @@ export function SessionForm({
   // Autosave draft to localStorage as soon as workout has started
   useEffect(() => {
     if (!startTime) return;
-    localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime, activeExIdx }));
+    localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime, activeExIdx, isPaused, pausedOffset, pauseStartedAt }));
     setSavedPulse(true);
     const t = setTimeout(() => setSavedPulse(false), 2000);
     return () => clearTimeout(t);
-  }, [form, startTime]);
+  }, [form, startTime, isPaused, pausedOffset, pauseStartedAt]);
 
   // Live timer
   useEffect(() => {
@@ -526,7 +532,7 @@ export function SessionForm({
                 onClick={handleResume}
                 className="text-xs text-indigo-300 hover:text-indigo-200 ml-1"
               >
-                Resume
+                ▶
               </button>
             ) : (
               <button
@@ -534,7 +540,7 @@ export function SessionForm({
                 onClick={handlePause}
                 className="text-xs text-indigo-400 hover:text-indigo-300 ml-1"
               >
-                Pause
+                ⏸
               </button>
             )}
           </div>

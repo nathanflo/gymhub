@@ -287,7 +287,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.8.2</p>
+        <p className="text-xs text-neutral-600">FloForm v1.8.2b</p>
       </main>
     );
   }
@@ -427,7 +427,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.8.2</p>
+      <p className="text-xs text-neutral-600">FloForm v1.8.2b</p>
     </main>
   );
 }

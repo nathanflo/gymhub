@@ -14,7 +14,14 @@ import { getTemplates } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState } from "@/components/SessionForm";
 
-type DraftData = { session: SessionFormState; startTime: string; activeExIdx?: number };
+type DraftData = {
+  session: SessionFormState;
+  startTime: string;
+  activeExIdx?: number;
+  isPaused?: boolean;
+  pausedOffset?: number;
+  pauseStartedAt?: number | null;
+};
 
 function LogPageInner() {
   const router = useRouter();
@@ -31,6 +38,9 @@ function LogPageInner() {
   const [resumeStartTime, setResumeStartTime] = useState<string | undefined>(undefined);
   const [overrideInitial, setOverrideInitial] = useState<SessionFormState | undefined>(undefined);
   const [resumeActiveExIdx, setResumeActiveExIdx] = useState<number>(0);
+  const [resumeIsPaused, setResumeIsPaused] = useState(false);
+  const [resumePausedOffset, setResumePausedOffset] = useState(0);
+  const [resumePauseStartedAt, setResumePauseStartedAt] = useState<number | null>(null);
 
   // Check localStorage for an active draft on mount (synchronous)
   useEffect(() => {
@@ -44,6 +54,9 @@ function LogPageInner() {
             setOverrideInitial(parsed.session);
             setResumeStartTime(parsed.startTime);
             setResumeActiveExIdx(parsed.activeExIdx ?? 0);
+            setResumeIsPaused(parsed.isPaused ?? false);
+            setResumePausedOffset(parsed.pausedOffset ?? 0);
+            setResumePauseStartedAt(parsed.pauseStartedAt ?? null);
             setDraftData(null);
           } else {
             setDraftData(parsed);  // show modal
@@ -108,6 +121,9 @@ function LogPageInner() {
                 setOverrideInitial(draftData.session);
                 setResumeStartTime(draftData.startTime);
                 setResumeActiveExIdx(draftData.activeExIdx ?? 0);
+                setResumeIsPaused(draftData.isPaused ?? false);
+                setResumePausedOffset(draftData.pausedOffset ?? 0);
+                setResumePauseStartedAt(draftData.pauseStartedAt ?? null);
                 setDraftData(null);
               }}
               className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold"
@@ -135,6 +151,9 @@ function LogPageInner() {
         initialState={overrideInitial ?? initialState}
         initialStartTime={resumeStartTime}
         initialActiveExIdx={resumeActiveExIdx}
+        initialIsPaused={resumeIsPaused}
+        initialPausedOffset={resumePausedOffset}
+        initialPauseStartedAt={resumePauseStartedAt}
         submitLabel="Save Session"
         onSave={handleSave}
         onCancel={() => router.back()}
