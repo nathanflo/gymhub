@@ -472,6 +472,17 @@ export function SessionForm({
       )}
 
       <div className="flex flex-col gap-5">
+        {/* Active session indicator */}
+        {startTime && (
+          <div className="flex items-center justify-center gap-2.5 py-2 px-4 rounded-xl bg-indigo-950/50 border border-indigo-500/20 mx-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+            <span className="text-sm font-semibold text-indigo-300 tabular-nums">
+              {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+            </span>
+            <span className="text-xs text-indigo-500">in progress</span>
+            {savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
+          </div>
+        )}
 
       {/* Session title */}
       <Field label="Session Title">
