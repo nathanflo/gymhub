@@ -196,6 +196,7 @@ export function SessionForm({
   const [isPaused, setIsPaused] = useState(initialIsPaused ?? false);
   const [pausedOffset, setPausedOffset] = useState(initialPausedOffset ?? 0);
   const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(initialPauseStartedAt ?? null);
+  const [restElapsed, setRestElapsed] = useState(0);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -219,6 +220,18 @@ export function SessionForm({
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [startTime, isPaused, pausedOffset]);
+
+  useEffect(() => {
+    if (!isPaused || pauseStartedAt === null) {
+      setRestElapsed(0);
+      return;
+    }
+    const tick = () =>
+      setRestElapsed(Math.floor((Date.now() - pauseStartedAt) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [isPaused, pauseStartedAt]);
 
   const isRun = form.workoutType === "Run";
 
@@ -528,9 +541,14 @@ export function SessionForm({
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
             {isPaused ? (
-              <span className="text-xs text-indigo-500">paused</span>
+              <span className="text-xs text-indigo-500">resting</span>
             ) : (
               <span className="text-xs text-indigo-500">in progress</span>
+            )}
+            {isPaused && (
+              <span className="text-xs text-indigo-400/60 tabular-nums">
+                Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
+              </span>
             )}
             {!isPaused && savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
             {isPaused ? (
