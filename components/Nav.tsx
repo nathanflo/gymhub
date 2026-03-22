@@ -23,9 +23,13 @@ const links = [
   { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") },
 ];
 
+const AUTH_ROUTES = ["/login", "/reset-password", "/auth/callback"];
+
 export default function Nav() {
   const pathname = usePathname();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  if (AUTH_ROUTES.some(r => pathname.startsWith(r))) return null;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

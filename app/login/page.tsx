@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -47,6 +48,11 @@ export default function LoginPage() {
       await runMigrationIfNeeded(data.session!.user.id);
       router.push("/");
     } else {
+      if (password !== confirm) {
+        setLoading(false);
+        setError("Passwords do not match.");
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       setLoading(false);
       if (error) { setError(error.message); return; }
@@ -104,6 +110,7 @@ export default function LoginPage() {
             <label className="text-xs text-neutral-400">Password</label>
             <input
               type="password"
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -113,6 +120,22 @@ export default function LoginPage() {
                          focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          {mode === "signup" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-400">Confirm password</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                className="rounded-xl bg-neutral-800 border border-neutral-700 px-4 py-3
+                           text-sm text-white placeholder:text-neutral-500
+                           focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          )}
 
           {mode === "signin" && (
             <button
@@ -134,7 +157,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading || (mode === "signup" && (name.trim().length === 0 || password.length < 8))}
+            disabled={loading || (mode === "signup" && (name.trim().length === 0 || password.length < 8 || confirm !== password))}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
                        disabled:opacity-50 transition-all py-3 text-sm font-semibold text-white"
           >
@@ -145,7 +168,7 @@ export default function LoginPage() {
         </form>
 
         <button
-          onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setInfo(null); setName(""); }}
+          onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setInfo(null); setName(""); setConfirm(""); }}
           className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors text-center"
         >
           {mode === "signin" ? "No account yet? Create one →" : "Already have an account? Sign in →"}

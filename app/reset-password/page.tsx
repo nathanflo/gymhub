@@ -80,6 +80,7 @@ function ResetPasswordForm() {
             <label className="text-xs text-neutral-400">New password</label>
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -93,6 +94,7 @@ function ResetPasswordForm() {
             <label className="text-xs text-neutral-400">Confirm password</label>
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
