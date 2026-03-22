@@ -28,8 +28,7 @@ const AUTH_ROUTES = ["/login", "/reset-password", "/auth/callback"];
 export default function Nav() {
   const pathname = usePathname();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-
-  if (AUTH_ROUTES.some(r => pathname.startsWith(r))) return null;
+  const isAuthRoute = AUTH_ROUTES.some(r => pathname.startsWith(r));
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -40,6 +39,8 @@ export default function Nav() {
     );
     return () => subscription.unsubscribe();
   }, []);
+
+  if (isAuthRoute) return null;
 
   return (
     <header
