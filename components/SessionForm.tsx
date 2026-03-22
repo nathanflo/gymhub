@@ -1036,11 +1036,11 @@ function ExerciseBlock({
           {(() => {
             const lastHint = lastSet && exercise.name.trim()
               ? mode === "weight_reps" && lastSet.weight !== undefined && lastSet.reps !== undefined
-                ? `Last: ${lastSet.weight} × ${lastSet.reps}`
+                ? `Previous: ${lastSet.weight} × ${lastSet.reps}`
                 : mode === "reps_only" && lastSet.reps !== undefined
-                ? `Last: ${lastSet.reps} reps`
+                ? `Previous: ${lastSet.reps} reps`
                 : mode === "duration_only" && lastSet.duration
-                ? `Last: ${lastSet.duration}`
+                ? `Previous: ${lastSet.duration}`
                 : null
               : null;
             return lastHint ? <p className="text-xs text-neutral-500 pl-1">{lastHint}</p> : null;
