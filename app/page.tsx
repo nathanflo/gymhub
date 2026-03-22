@@ -84,7 +84,7 @@ function computeMomentumMessage(sessions: WorkoutSession[]): {
 
   // B. Trained yesterday
   if (diffDays === 1) {
-    return { title: "Picking it up", subtitle: "Keeping the rhythm" };
+    return { title: "Picking it up", subtitle: "Back in rhythm" };
   }
 
   // C. Repeating same workout type this week
@@ -264,7 +264,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.11.1</p>
+        <p className="text-xs text-neutral-600">FloForm v1.11.2</p>
       </main>
     );
   }
@@ -279,11 +279,11 @@ export default function HomePage() {
         <h1 className="text-xl font-semibold text-white">{greeting}</h1>
 
         {/* Insight line */}
-        {insight && <p className="text-sm text-neutral-300 mt-2">{insight}</p>}
+        {insight && <p className="text-sm text-indigo-300/80 mt-2">{insight}</p>}
 
         {/* City + weather — city shows immediately, weather fills in when ready */}
         {city && (
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="text-xs text-neutral-500 mt-3">
             {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
           </p>
         )}
@@ -415,7 +415,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.11.1</p>
+      <p className="text-xs text-neutral-600">FloForm v1.11.2</p>
     </main>
   );
 }
