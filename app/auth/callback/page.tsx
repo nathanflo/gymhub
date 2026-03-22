@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Auth callback page – handles the magic link redirect.
+ * Auth callback page – handles magic link and password recovery redirects.
  * With implicit flow, Supabase parses the access_token from the URL hash
- * automatically and fires a SIGNED_IN event. We catch it here, run migration,
- * and redirect to home.
+ * automatically and fires an auth event. PASSWORD_RECOVERY goes to the
+ * reset-password page; SIGNED_IN runs migration and goes home.
  */
 
 import { useEffect } from "react";
@@ -18,7 +18,9 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === "SIGNED_IN" && session) {
+        if (event === "PASSWORD_RECOVERY") {
+          router.replace("/reset-password");
+        } else if (event === "SIGNED_IN" && session) {
           await runMigrationIfNeeded(session.user.id);
           router.replace("/");
         }
