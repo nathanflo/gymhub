@@ -30,10 +30,15 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="preload" href="/ff-mark.svg" as="image" type="image/svg+xml" />
-        {/* Capture recovery flag BEFORE Supabase initializes and clears the hash */}
+        {/* Capture recovery flag BEFORE Supabase initializes and clears the URL.
+            Handles both implicit flow (#type=recovery) and PKCE flow (?code= on /reset-password). */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            if (window.location.hash.includes('type=recovery')) {
+            var h = window.location.hash;
+            var s = window.location.search;
+            var p = window.location.pathname;
+            if (h.includes('type=recovery') ||
+                (p === '/reset-password' && s.includes('code='))) {
               sessionStorage.setItem('passwordRecovery', '1');
             }
           } catch(e) {}

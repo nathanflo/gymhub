@@ -13,33 +13,32 @@ function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  // Recovery is confirmed when the callback planted ?recovery=1 in the URL
-  // (also mirrored in sessionStorage as a fallback).
+  // Three sources, in order of reliability:
+  //  1. ?code=  — PKCE recovery link landing here directly (may be cleared by
+  //               Supabase before React renders, hence the layout early-script)
+  //  2. ?recovery=1 — redirected here by auth/callback (legacy / implicit flow)
+  //  3. sessionStorage — set by the layout early-script before Supabase runs,
+  //                      survives URL cleanup by Supabase
   const isRecovery =
+    searchParams.get("code") !== null ||
     searchParams.get("recovery") === "1" ||
     (typeof sessionStorage !== "undefined" &&
       sessionStorage.getItem("passwordRecovery") === "1");
 
   useEffect(() => {
-    // --- DEBUG (temporary — remove after confirming the flow works) ---
-    console.log("[reset-password] pathname:", window.location.pathname + window.location.search);
-    console.log("[reset-password] sessionStorage.passwordRecovery:", sessionStorage.getItem("passwordRecovery"));
-    console.log("[reset-password] searchParams.recovery:", searchParams.get("recovery"));
-    console.log("[reset-password] isRecovery:", isRecovery);
-    // ------------------------------------------------------------------
-
-    // If there is no recovery marker this page was reached directly without a
-    // valid reset link — send the user somewhere safe.
+    // Solidify the flag into sessionStorage the moment we confirm recovery,
+    // so it survives any subsequent URL cleanup by Supabase.
+    if (searchParams.get("code") !== null || searchParams.get("recovery") === "1") {
+      sessionStorage.setItem("passwordRecovery", "1");
+    }
     if (!isRecovery) {
-      console.log("[reset-password] no recovery marker — redirecting to /login");
       router.replace("/login");
     }
-  }, [isRecovery, router, searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Clear the recovery marker whenever this page unmounts, covering the case
-  // where the user exits without completing the form (back navigation, tab
-  // close, etc.). On success, handleSubmit removes it first, so this is a
-  // safe no-op in that path.
+  // Clear the flag on unmount — covers abandonment (back nav, etc.).
+  // On success, handleSubmit removes it first so this is a safe no-op.
   useEffect(() => {
     return () => {
       sessionStorage.removeItem("passwordRecovery");
@@ -60,7 +59,6 @@ function ResetPasswordForm() {
     if (error) {
       setError(error.message);
     } else {
-      // Clear the recovery marker before navigating away.
       sessionStorage.removeItem("passwordRecovery");
       setInfo("Password updated. Redirecting…");
       setTimeout(() => router.replace("/"), 1500);
