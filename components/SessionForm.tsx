@@ -900,8 +900,8 @@ function computeNextSetSuggestion(
     const repLow = Math.max(6, prevR - 1);
     return `Suggested: ${nextW}${unit} × ${repLow}–${prevR}`;
   }
-  if (curW > prevW) return `Suggested: +1 rep`;
-  return `Suggested: +1 rep`;
+  // E & F: already beating previous top — no suggestion needed
+  return null;
 }
 
 function ExerciseBlock({
