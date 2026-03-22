@@ -79,12 +79,12 @@ function computeMomentumMessage(sessions: WorkoutSession[]): {
 
   // A. Trained today
   if (diffDays === 0) {
-    return { title: "Back again", subtitle: "Building momentum" };
+    return { title: "Back again", subtitle: "Back in flow" };
   }
 
   // B. Trained yesterday
   if (diffDays === 1) {
-    return { title: "Picking it up", subtitle: "You trained yesterday" };
+    return { title: "Picking it up", subtitle: "Keeping the rhythm" };
   }
 
   // C. Repeating same workout type this week
@@ -264,7 +264,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.11.0</p>
+        <p className="text-xs text-neutral-600">FloForm v1.11.1</p>
       </main>
     );
   }
@@ -279,7 +279,7 @@ export default function HomePage() {
         <h1 className="text-xl font-semibold text-white">{greeting}</h1>
 
         {/* Insight line */}
-        {insight && <p className="text-sm text-neutral-400 mt-1">{insight}</p>}
+        {insight && <p className="text-sm text-neutral-300 mt-2">{insight}</p>}
 
         {/* City + weather — city shows immediately, weather fills in when ready */}
         {city && (
@@ -415,7 +415,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.11.0</p>
+      <p className="text-xs text-neutral-600">FloForm v1.11.1</p>
     </main>
   );
 }
