@@ -131,6 +131,55 @@ function generateDeltaInsight(
   return null;
 }
 
+function computeSessionComparison(
+  current: WorkoutSession,
+  previous: WorkoutSession
+): { volumeLine: string | null; exerciseLine: string | null } {
+  const vol = (s: WorkoutSession) =>
+    s.exercises.reduce((acc, ex) =>
+      acc + ex.sets.reduce((a, set) => a + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+
+  const curVol = vol(current);
+  const prevVol = vol(previous);
+
+  let volumeLine: string | null = null;
+  if (curVol > 0 && prevVol > 0) {
+    const delta = curVol - prevVol;
+    if (delta > 0) volumeLine = `Up ${delta.toLocaleString()}kg from last session`;
+    else if (delta < 0) volumeLine = `Down ${Math.abs(delta).toLocaleString()}kg from last session`;
+    else volumeLine = "Matched last session";
+  }
+
+  // Key exercise: highest-volume exercise in current session
+  let exerciseLine: string | null = null;
+  const topEx = [...current.exercises].sort((a, b) => {
+    const v = (ex: typeof a) => ex.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+    return v(b) - v(a);
+  })[0];
+
+  if (topEx && (topEx.mode ?? "weight_reps") === "weight_reps" && (topEx.unit ?? "kg") !== "plates") {
+    const prevEx = previous.exercises.find(
+      (e) => e.name.trim().toLowerCase() === topEx.name.trim().toLowerCase()
+    );
+    if (prevEx && (prevEx.mode ?? "weight_reps") === "weight_reps") {
+      const topWeight = (ex: typeof topEx) =>
+        Math.max(0, ...ex.sets.filter((s) => s.weight !== undefined).map((s) => s.weight!));
+      const curTop = topWeight(topEx);
+      const prevTop = topWeight(prevEx);
+      if (curTop > 0 && prevTop > 0) {
+        const dW = curTop - prevTop;
+        if (dW !== 0) {
+          const unit = topEx.unit ?? "kg";
+          const sign = dW > 0 ? "+" : "";
+          exerciseLine = `${topEx.name} ${sign}${dW}${unit} top set`;
+        }
+      }
+    }
+  }
+
+  return { volumeLine, exerciseLine };
+}
+
 function formatDuration(start: string, end: string): string {
   const diffMs = new Date(end).getTime() - new Date(start).getTime();
   const totalMinutes = Math.floor(diffMs / (1000 * 60));
@@ -220,7 +269,13 @@ export default function SummaryPage() {
     ? `${exerciseCount} exercise${exerciseCount !== 1 ? "s" : ""} completed`
     : null;
 
-  const deltaInsight = previousSession
+  const sessionComparison = !isRun && previousSession
+    ? computeSessionComparison(session, previousSession)
+    : null;
+  // Suppress the vague header deltaInsight when the numeric block is available
+  const deltaInsight = sessionComparison && (sessionComparison.volumeLine || sessionComparison.exerciseLine)
+    ? null
+    : previousSession
     ? generateDeltaInsight(session, previousSession)
     : null;
 
@@ -405,6 +460,16 @@ export default function SummaryPage() {
             {effort.label}
           </span>
           <p className="text-xs text-neutral-500 mt-0.5">Energy: {session.energyLevel}</p>
+          {sessionComparison && (sessionComparison.volumeLine || sessionComparison.exerciseLine) && (
+            <div className="mt-2 flex flex-col gap-1">
+              {sessionComparison.volumeLine && (
+                <p className="text-sm text-neutral-300">{sessionComparison.volumeLine}</p>
+              )}
+              {sessionComparison.exerciseLine && (
+                <p className="text-sm text-neutral-300">{sessionComparison.exerciseLine}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Exercise Breakdown */}
