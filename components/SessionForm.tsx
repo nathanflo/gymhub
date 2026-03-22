@@ -239,23 +239,31 @@ export function SessionForm({
         const key = ex.name.trim().toLowerCase();
         if (map.has(key)) continue;
         const exMode = ex.mode ?? "weight_reps";
-        if (exMode === "weight_reps") {
-          // Pick the highest-weight valid set (top set)
-          const top = ex.sets.reduce<{ weight?: number; reps?: number } | null>((best, s) => {
-            if (s.weight === undefined || s.reps === undefined) return best;
-            if (!best || s.weight > (best.weight ?? 0)) return s;
-            return best;
-          }, null);
-          if (top) map.set(key, top);
-        } else {
-          // All other modes: first valid set (unchanged)
-          const firstValid = ex.sets.find((s) => {
-            if (exMode === "reps_only") return s.reps !== undefined;
-            if (exMode === "duration_only") return !!s.duration;
-            return false;
-          });
-          if (firstValid) map.set(key, firstValid);
-        }
+        const firstValid = ex.sets.find((s) => {
+          if (exMode === "weight_reps") return s.weight !== undefined && s.reps !== undefined;
+          if (exMode === "reps_only") return s.reps !== undefined;
+          if (exMode === "duration_only") return !!s.duration;
+          return false;
+        });
+        if (firstValid) map.set(key, firstValid);
+      }
+    }
+    return map;
+  }, [pastSessions]);
+
+  const lastTopSetByName = useMemo(() => {
+    const map = new Map<string, { weight: number; reps: number }>();
+    for (const session of pastSessions) {
+      for (const ex of session.exercises) {
+        const key = ex.name.trim().toLowerCase();
+        if (map.has(key)) continue;
+        if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
+        const top = ex.sets.reduce<{ weight: number; reps: number } | null>((best, s) => {
+          if (s.weight === undefined || s.reps === undefined) return best;
+          if (!best || s.weight > best.weight) return s as { weight: number; reps: number };
+          return best;
+        }, null);
+        if (top) map.set(key, top);
       }
     }
     return map;
@@ -775,6 +783,7 @@ export function SessionForm({
                 onToggleComplete={() => handleToggleComplete(exIdx)}
                 exerciseLibrary={exerciseLibrary}
                 lastSet={lastSetByName.get(ex.name.trim().toLowerCase()) ?? null}
+                lastTopSet={lastTopSetByName.get(ex.name.trim().toLowerCase()) ?? null}
               />
             </div>
           ))}
@@ -887,6 +896,7 @@ function ExerciseBlock({
   onToggleComplete,
   exerciseLibrary,
   lastSet,
+  lastTopSet,
 }: {
   exercise: DraftExercise;
   exerciseIdx: number;
@@ -911,6 +921,7 @@ function ExerciseBlock({
   onToggleComplete: () => void;
   exerciseLibrary: string[];
   lastSet: { weight?: number; reps?: number; duration?: string } | null;
+  lastTopSet: { weight: number; reps: number } | null;
 }) {
   const { mode, unit } = exercise;
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -1073,42 +1084,54 @@ function ExerciseBlock({
           ))}
 
           {(() => {
-            if (!lastSet || !exercise.name.trim()) return null;
+            if (!exercise.name.trim()) return null;
 
-            if (mode === "weight_reps" && lastSet.weight !== undefined && lastSet.reps !== undefined) {
-              // Only show cross-session comparison after exercise is marked done
-              if (!exercise.completed) return null;
-
-              const prevLine = `Previous: ${lastSet.weight} × ${lastSet.reps}`;
-
-              // Current top set: highest valid weight among draft sets
-              const curTop = exercise.sets.reduce<DraftSet | null>((best, s) => {
-                const w = parseFloat(s.weight);
-                if (isNaN(w) || isNaN(parseInt(s.reps, 10))) return best;
-                if (!best || w > parseFloat(best.weight)) return s;
-                return best;
-              }, null);
-
-              const curTopW = curTop ? parseFloat(curTop.weight) : NaN;
-              let deltaLine: string | null = null;
-              if (!isNaN(curTopW)) {
-                const dW = curTopW - lastSet.weight;
-                const sign = dW > 0 ? "+" : "";
-                const label = unit === "plates"
-                  ? `${sign}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"}`
-                  : `${sign}${dW}${unit}`;
-                deltaLine = dW === 0 ? "Top set: same as last time" : `Top set: ${label} vs last time`;
+            if (mode === "weight_reps") {
+              // Previous hint: always shown when not completed (uses first valid set)
+              if (!exercise.completed) {
+                if (!lastSet || lastSet.weight === undefined || lastSet.reps === undefined) return null;
+                return (
+                  <p className="text-xs text-neutral-500 pl-1">
+                    Previous: {lastSet.weight} × {lastSet.reps}
+                  </p>
+                );
               }
 
+              // Completed: show first-valid "Previous" line + top-set delta
+              const prevLine = lastSet && lastSet.weight !== undefined && lastSet.reps !== undefined
+                ? `Previous: ${lastSet.weight} × ${lastSet.reps}`
+                : null;
+
+              let deltaLine: string | null = null;
+              if (lastTopSet) {
+                const curTop = exercise.sets.reduce<DraftSet | null>((best, s) => {
+                  const w = parseFloat(s.weight);
+                  if (isNaN(w) || isNaN(parseInt(s.reps, 10))) return best;
+                  if (!best || w > parseFloat(best.weight)) return s;
+                  return best;
+                }, null);
+                const curTopW = curTop ? parseFloat(curTop.weight) : NaN;
+                if (!isNaN(curTopW)) {
+                  const dW = curTopW - lastTopSet.weight;
+                  const sign = dW > 0 ? "+" : "";
+                  const label = unit === "plates"
+                    ? `${sign}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"}`
+                    : `${sign}${dW}${unit}`;
+                  deltaLine = dW === 0 ? "Top set: same as last time" : `Top set: ${label} vs last time`;
+                }
+              }
+
+              if (!prevLine && !deltaLine) return null;
               return (
                 <div className="pl-1 flex flex-col gap-0.5 mt-0.5">
-                  <p className="text-xs text-neutral-500">{prevLine}</p>
-                  {deltaLine && <p className="text-xs text-neutral-500">{deltaLine}</p>}
+                  {prevLine && <p className="text-xs text-neutral-500">{prevLine}</p>}
+                  {deltaLine && <p className="text-xs font-medium text-neutral-300">{deltaLine}</p>}
                 </div>
               );
             }
 
-            // Other modes — same as before (no completed gate)
+            // Other modes — unchanged
+            if (!lastSet) return null;
             const lastHint =
               mode === "reps_only" && lastSet.reps !== undefined
                 ? `Previous: ${lastSet.reps} reps`
