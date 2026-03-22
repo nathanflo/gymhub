@@ -11,12 +11,13 @@
  * - Muscle group selector
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { WorkoutSession, WorkoutExercise, WorkoutSet, TrackingMode, WeightUnit } from "@/types/session";
 import { WorkoutType, EnergyLevel } from "@/types/workout";
 import { WorkoutTemplate } from "@/types/template";
 import { Field, inputClass, selectClass } from "@/components/Field";
 import { getExerciseLibrary } from "@/lib/exercises";
+import { getSessions } from "@/lib/sessions";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -182,6 +183,7 @@ export function SessionForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [exerciseLibrary, setExerciseLibrary] = useState<string[]>([]);
+  const [pastSessions, setPastSessions] = useState<WorkoutSession[]>([]);
   const [startTime, setStartTime] = useState<string | null>(initialStartTime ?? null);
   const [elapsed, setElapsed] = useState(() => {
     if (initialIsPaused && initialStartTime && initialPauseStartedAt != null) {
@@ -201,6 +203,29 @@ export function SessionForm({
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
   }, []);
+
+  useEffect(() => {
+    getSessions().then(setPastSessions);
+  }, []);
+
+  const lastSetByName = useMemo(() => {
+    const map = new Map<string, { weight?: number; reps?: number; duration?: string }>();
+    for (const session of pastSessions) {
+      for (const ex of session.exercises) {
+        const key = ex.name.trim().toLowerCase();
+        if (map.has(key)) continue;
+        const exMode = ex.mode ?? "weight_reps";
+        const lastValid = [...ex.sets].reverse().find((s) => {
+          if (exMode === "weight_reps") return s.weight !== undefined && s.reps !== undefined;
+          if (exMode === "reps_only") return s.reps !== undefined;
+          if (exMode === "duration_only") return !!s.duration;
+          return false;
+        });
+        if (lastValid) map.set(key, lastValid);
+      }
+    }
+    return map;
+  }, [pastSessions]);
 
   // Autosave draft to localStorage as soon as workout has started
   useEffect(() => {
@@ -710,6 +735,7 @@ export function SessionForm({
                 onOpenNote={() => handleOpenNote(exIdx)}
                 onToggleComplete={() => handleToggleComplete(exIdx)}
                 exerciseLibrary={exerciseLibrary}
+                lastSet={lastSetByName.get(ex.name.trim().toLowerCase()) ?? null}
               />
             </div>
           ))}
@@ -821,6 +847,7 @@ function ExerciseBlock({
   onOpenNote,
   onToggleComplete,
   exerciseLibrary,
+  lastSet,
 }: {
   exercise: DraftExercise;
   exerciseIdx: number;
@@ -844,6 +871,7 @@ function ExerciseBlock({
   onOpenNote: () => void;
   onToggleComplete: () => void;
   exerciseLibrary: string[];
+  lastSet: { weight?: number; reps?: number; duration?: string } | null;
 }) {
   const { mode, unit } = exercise;
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -857,6 +885,20 @@ function ExerciseBlock({
     );
     return [...starts, ...contains].slice(0, 6);
   }, [exercise.name, exerciseLibrary]);
+
+  const appliedPrefillRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const normalized = exercise.name.trim().toLowerCase();
+    if (!lastSet || !normalized) return;
+    if (appliedPrefillRef.current === normalized) return;
+    const firstSet = exercise.sets[0];
+    if (!firstSet) return;
+    if (firstSet.weight !== "" || firstSet.reps !== "") return;
+    appliedPrefillRef.current = normalized;
+    if (lastSet.weight !== undefined) onSetField(0, "weight", String(lastSet.weight));
+    if (lastSet.reps !== undefined) onSetField(0, "reps", String(lastSet.reps));
+  }, [exercise.name, lastSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columnHeaders = () => {
     if (mode === "weight_reps") return <><span className="flex-1 text-xs text-neutral-600">{unit}</span><span className="flex-1 text-xs text-neutral-600">reps</span><span className="w-5" /></>;
@@ -990,6 +1032,19 @@ function ExerciseBlock({
               onRemove={() => onRemoveSet(setIdx)}
             />
           ))}
+
+          {(() => {
+            const lastHint = lastSet && exercise.name.trim()
+              ? mode === "weight_reps" && lastSet.weight !== undefined && lastSet.reps !== undefined
+                ? `Last: ${lastSet.weight} × ${lastSet.reps}`
+                : mode === "reps_only" && lastSet.reps !== undefined
+                ? `Last: ${lastSet.reps} reps`
+                : mode === "duration_only" && lastSet.duration
+                ? `Last: ${lastSet.duration}`
+                : null
+              : null;
+            return lastHint ? <p className="text-xs text-neutral-500 pl-1">{lastHint}</p> : null;
+          })()}
 
           <button
             type="button"
