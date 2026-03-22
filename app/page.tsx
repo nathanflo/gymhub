@@ -6,18 +6,12 @@ import { supabase } from "@/lib/supabase";
 import { getSessions } from "@/lib/sessions";
 import { getBodyweightEntries } from "@/lib/bodyweight";
 import { getWellnessForDate } from "@/lib/wellness";
+import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
 
 const today = new Date().toISOString().slice(0, 10);
-
-function daysAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000);
-  if (diff === 0) return "today";
-  if (diff === 1) return "yesterday";
-  return `${diff} days ago`;
-}
 
 function workoutTimeAgo(isoString: string): string {
   const mins = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
@@ -314,7 +308,7 @@ export default function HomePage() {
         {/* Last session context */}
         <p className="text-sm text-neutral-400 mt-2">
           {lastSession
-            ? `Last session: ${lastSession.title} · ${daysAgo(lastSession.date)}`
+            ? `Last session: ${lastSession.title} · ${relativeDay(lastSession.date)}`
             : "No workouts logged yet — start your first session"}
         </p>
 
