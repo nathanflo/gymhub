@@ -9,9 +9,10 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { saveSession, getSessionById } from "@/lib/sessions";
+import { saveSession, getSessionById, getSessions } from "@/lib/sessions";
 import { getTemplates } from "@/lib/templates";
-import { WorkoutSession } from "@/types/session";
+import { WorkoutSession, WorkoutExercise } from "@/types/session";
+import { WorkoutTemplate } from "@/types/template";
 import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState, emptySessionForm } from "@/components/SessionForm";
 
@@ -33,6 +34,7 @@ function LogPageInner() {
 
   const [initialState, setInitialState] = useState<SessionFormState | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
+  const [loadedFromTemplate, setLoadedFromTemplate] = useState(false);
 
   // Draft resume state
   const [draftData, setDraftData] = useState<DraftData | null | "unchecked">("unchecked");
@@ -70,6 +72,42 @@ function LogPageInner() {
     setDraftData(null);
   }, [resumeParam]);
 
+  function prefillTemplateFromHistory(
+    template: WorkoutTemplate,
+    sessions: WorkoutSession[]
+  ): { exercises: WorkoutExercise[]; anyPrefilled: boolean } {
+    let anyPrefilled = false;
+    const exercises = template.exercises.map((ex) => {
+      const key = ex.name.trim().toLowerCase();
+      const mode = ex.mode ?? "weight_reps";
+      let firstValidSet: WorkoutSession["exercises"][number]["sets"][number] | undefined;
+      for (const session of sessions) {
+        const match = session.exercises.find(
+          (se) => se.name.trim().toLowerCase() === key
+        );
+        if (!match) continue;
+        firstValidSet = match.sets.find((s) => {
+          if (mode === "weight_reps") return s.weight !== undefined && s.reps !== undefined;
+          if (mode === "reps_only") return s.reps !== undefined;
+          if (mode === "duration_only") return !!s.duration;
+          return false;
+        });
+        if (firstValidSet) break;
+      }
+      if (!firstValidSet) return ex;
+      anyPrefilled = true;
+      const [first, ...rest] = ex.sets;
+      return {
+        ...ex,
+        sets: [
+          { ...first, weight: firstValidSet.weight, reps: firstValidSet.reps, duration: firstValidSet.duration },
+          ...rest,
+        ],
+      };
+    });
+    return { exercises, anyPrefilled };
+  }
+
   useEffect(() => {
     async function load() {
       const [todayBw] = await Promise.all([
@@ -82,10 +120,14 @@ function LogPageInner() {
           setInitialState({ ...sessionToFormState(session), notes: "", bodyweight: "" });
         }
       } else if (templateId) {
-        const templates = await getTemplates();
+        const [templates, sessions] = await Promise.all([getTemplates(), getSessions()]);
         const template = templates.find((t) => t.id === templateId);
         if (template) {
-          setInitialState(templateToFormState(template));
+          const { exercises, anyPrefilled } = prefillTemplateFromHistory(template, sessions);
+          setInitialState(templateToFormState({ ...template, exercises }));
+          setLoadedFromTemplate(anyPrefilled);
+        } else {
+          setLoadedFromTemplate(false);
         }
       } else if (todayBw !== undefined) {
         // Fresh session — prefill BW from today's progress entry
@@ -168,6 +210,7 @@ function LogPageInner() {
 
       <SessionForm
         initialState={overrideInitial ?? initialState}
+        fromTemplate={loadedFromTemplate}
         initialStartTime={resumeStartTime}
         initialActiveExIdx={resumeActiveExIdx}
         initialIsPaused={resumeIsPaused}

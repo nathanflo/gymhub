@@ -186,6 +186,7 @@ export function SessionForm({
   initialPauseStartedAt,
   submitLabel = "Save Session",
   showDateEdit = false,
+  fromTemplate = false,
   onSave,
   onCancel,
 }: {
@@ -197,6 +198,7 @@ export function SessionForm({
   initialPauseStartedAt?: number | null;
   submitLabel?: string;
   showDateEdit?: boolean;
+  fromTemplate?: boolean;
   onSave: (session: WorkoutSession) => void;
   onCancel: () => void;
 }) {
@@ -750,6 +752,9 @@ export function SessionForm({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          {fromTemplate && (
+            <p className="text-xs text-neutral-500 -mt-1">Based on your last session</p>
+          )}
           {form.exercises.map((ex, exIdx) => (
             <div
               key={exIdx}
