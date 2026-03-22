@@ -215,7 +215,7 @@ export function SessionForm({
         const key = ex.name.trim().toLowerCase();
         if (map.has(key)) continue;
         const exMode = ex.mode ?? "weight_reps";
-        const lastValid = [...ex.sets].reverse().find((s) => {
+        const lastValid = ex.sets.find((s) => {
           if (exMode === "weight_reps") return s.weight !== undefined && s.reps !== undefined;
           if (exMode === "reps_only") return s.reps !== undefined;
           if (exMode === "duration_only") return !!s.duration;
