@@ -30,6 +30,14 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="preload" href="/ff-mark.svg" as="image" type="image/svg+xml" />
+        {/* Capture recovery flag BEFORE Supabase initializes and clears the hash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            if (window.location.hash.includes('type=recovery')) {
+              sessionStorage.setItem('passwordRecovery', '1');
+            }
+          } catch(e) {}
+        `}} />
       </head>
       <body className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
         <StartupOverlay />
