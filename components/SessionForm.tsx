@@ -872,6 +872,38 @@ export function SessionForm({
 
 // ─── Exercise block ───────────────────────────────────────────────────────────
 
+function computeNextSetSuggestion(
+  sets: DraftSet[],
+  lastTopSet: { weight: number; reps: number },
+  unit: string
+): string | null {
+  const curTop = sets.reduce<{ weight: number; reps: number } | null>((best, s) => {
+    const w = parseFloat(s.weight);
+    const r = parseInt(s.reps, 10);
+    if (isNaN(w) || isNaN(r) || w <= 0 || r <= 0) return best;
+    if (!best || w > best.weight) return { weight: w, reps: r };
+    return best;
+  }, null);
+
+  if (!curTop) return null;
+
+  const prevW = lastTopSet.weight;
+  const prevR = lastTopSet.reps;
+  const curW = curTop.weight;
+  const curR = curTop.reps;
+
+  if (curW < prevW) return `Suggested: match last top set`;
+  if (curW === prevW && curR < prevR) return `Suggested: match last top set`;
+  if (curW === prevW && curR === prevR) {
+    const inc = unit === "lbs" ? 5 : 2.5;
+    const nextW = curW + inc;
+    const repLow = Math.max(6, prevR - 1);
+    return `Suggested: ${nextW}${unit} × ${repLow}–${prevR}`;
+  }
+  if (curW > prevW) return `Suggested: +1 rep`;
+  return `Suggested: +1 rep`;
+}
+
 function ExerciseBlock({
   exercise,
   exerciseIdx,
@@ -1089,11 +1121,18 @@ function ExerciseBlock({
             if (mode === "weight_reps") {
               // Previous hint: always shown when not completed (uses first valid set)
               if (!exercise.completed) {
-                if (!lastSet || lastSet.weight === undefined || lastSet.reps === undefined) return null;
+                const prevLine = lastSet && lastSet.weight !== undefined && lastSet.reps !== undefined
+                  ? `Previous: ${lastSet.weight} × ${lastSet.reps}`
+                  : null;
+                const suggestion = lastTopSet && unit !== "plates"
+                  ? computeNextSetSuggestion(exercise.sets, lastTopSet, unit)
+                  : null;
+                if (!prevLine && !suggestion) return null;
                 return (
-                  <p className="text-xs text-neutral-500 pl-1">
-                    Previous: {lastSet.weight} × {lastSet.reps}
-                  </p>
+                  <div className="pl-1 flex flex-col gap-0.5">
+                    {prevLine && <p className="text-xs text-neutral-500">{prevLine}</p>}
+                    {suggestion && <p className="text-xs text-indigo-400/70">{suggestion}</p>}
+                  </div>
                 );
               }
 
