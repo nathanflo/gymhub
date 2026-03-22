@@ -70,7 +70,12 @@ export default function LoginPage() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen px-6 gap-6">
       <div className="w-full max-w-sm flex flex-col gap-6">
-        <div>
+        <div className="flex flex-col items-center text-center">
+          <img
+            src="/ff-mark.svg"
+            alt="FloForm"
+            className="w-12 h-12 mb-6 opacity-90"
+          />
           <h1 className="text-2xl font-bold text-white">FloForm</h1>
           <p className="text-sm text-neutral-400 mt-1">
             {mode === "signin" ? "Sign in to sync your data across devices" : "Create your account"}
