@@ -1,16 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  // Recovery is confirmed when the callback planted ?recovery=1 in the URL
+  // (also mirrored in sessionStorage as a fallback).
+  const isRecovery =
+    searchParams.get("recovery") === "1" ||
+    (typeof sessionStorage !== "undefined" &&
+      sessionStorage.getItem("passwordRecovery") === "1");
+
+  useEffect(() => {
+    // If there is no recovery marker this page was reached directly without a
+    // valid reset link — send the user somewhere safe.
+    if (!isRecovery) {
+      router.replace("/login");
+    }
+  }, [isRecovery, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,10 +42,14 @@ export default function ResetPasswordPage() {
     if (error) {
       setError(error.message);
     } else {
+      // Clear the recovery marker before navigating away.
+      sessionStorage.removeItem("passwordRecovery");
       setInfo("Password updated. Redirecting…");
       setTimeout(() => router.replace("/"), 1500);
     }
   }
+
+  if (!isRecovery) return null;
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen px-6 gap-6">
@@ -84,5 +104,13 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
