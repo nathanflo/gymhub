@@ -72,10 +72,42 @@ function computeMomentumMessage(sessions: WorkoutSession[]): {
   const lastSession = sessions[0];
   const lastDate = toLocal(new Date(lastSession.date));
   const diffDays = (todayLocal.getTime() - lastDate.getTime()) / 86_400_000;
+  const gapDays = diffDays;
+  const hadRecentMomentum = sessionsThisWeek >= 3;
 
   const sameTypeCount = last7.filter(
     (s) => s.workoutType === lastSession.workoutType
   ).length;
+
+  // P1. Return after gap (today session, but previous was 3+ days ago)
+  if (sessions.length >= 2) {
+    const prev = sessions[1];
+    const prevDate = toLocal(new Date(prev.date));
+    const prevDiff = (todayLocal.getTime() - prevDate.getTime()) / 86_400_000;
+    if (gapDays === 0 && prevDiff >= 3) {
+      return { title: "Back again", subtitle: "Nice to be back" };
+    }
+  }
+
+  // P2. Long inactivity
+  if (gapDays >= 7) {
+    return { title: "Ready when you are", subtitle: "Fresh start — take it at your pace" };
+  }
+
+  // P4. Moderate inactivity
+  if (gapDays >= 4) {
+    return { title: "Picking it up", subtitle: "It's been a few days — ease back in" };
+  }
+
+  // P3. Broken rhythm (2–3 day gap and was recently active)
+  if (gapDays >= 2 && gapDays <= 3 && hadRecentMomentum) {
+    return { title: "Picking it up", subtitle: "You were in a good rhythm — easy to pick back up" };
+  }
+
+  // P5. Short inactivity
+  if (gapDays >= 2) {
+    return { title: "Ready when you are", subtitle: "A couple days off" };
+  }
 
   // A. Trained today
   if (diffDays === 0) {
@@ -264,7 +296,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.12.0</p>
+        <p className="text-xs text-neutral-600">FloForm v1.12.1</p>
       </main>
     );
   }
@@ -415,7 +447,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.12.0</p>
+      <p className="text-xs text-neutral-600">FloForm v1.12.1</p>
     </main>
   );
 }
