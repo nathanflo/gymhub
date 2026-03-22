@@ -48,23 +48,6 @@ function getRestTarget(exerciseName: string): number {
   return 75;
 }
 
-function getSetDiff(cur: DraftSet, prev: DraftSet, unit: WeightUnit): string | null {
-  const curW = parseFloat(cur.weight);
-  const prevW = parseFloat(prev.weight);
-  const curR = parseInt(cur.reps, 10);
-  const prevR = parseInt(prev.reps, 10);
-  if (isNaN(curW) || isNaN(prevW) || isNaN(curR) || isNaN(prevR)) return null;
-  const dW = curW - prevW;
-  const dR = curR - prevR;
-  const sign = (n: number) => n > 0 ? "+" : "";
-  const weightLabel = dW === 0
-    ? "same weight"
-    : unit === "plates"
-    ? `${sign(dW)}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"}`
-    : `${sign(dW)}${dW}${unit}`;
-  const repsLabel = dR === 0 ? "same reps" : `${sign(dR)}${dR} ${Math.abs(dR) === 1 ? "rep" : "reps"}`;
-  return `${weightLabel} · ${repsLabel}`;
-}
 
 // ─── Draft types ──────────────────────────────────────────────────────────────
 // Numeric fields stored as strings to avoid controlled-input NaN issues.
@@ -256,13 +239,23 @@ export function SessionForm({
         const key = ex.name.trim().toLowerCase();
         if (map.has(key)) continue;
         const exMode = ex.mode ?? "weight_reps";
-        const lastValid = ex.sets.find((s) => {
-          if (exMode === "weight_reps") return s.weight !== undefined && s.reps !== undefined;
-          if (exMode === "reps_only") return s.reps !== undefined;
-          if (exMode === "duration_only") return !!s.duration;
-          return false;
-        });
-        if (lastValid) map.set(key, lastValid);
+        if (exMode === "weight_reps") {
+          // Pick the highest-weight valid set (top set)
+          const top = ex.sets.reduce<{ weight?: number; reps?: number } | null>((best, s) => {
+            if (s.weight === undefined || s.reps === undefined) return best;
+            if (!best || s.weight > (best.weight ?? 0)) return s;
+            return best;
+          }, null);
+          if (top) map.set(key, top);
+        } else {
+          // All other modes: first valid set (unchanged)
+          const firstValid = ex.sets.find((s) => {
+            if (exMode === "reps_only") return s.reps !== undefined;
+            if (exMode === "duration_only") return !!s.duration;
+            return false;
+          });
+          if (firstValid) map.set(key, firstValid);
+        }
       }
     }
     return map;
@@ -1068,35 +1061,60 @@ function ExerciseBlock({
             {columnHeaders()}
           </div>
 
-          {exercise.sets.map((set, setIdx) => {
-            const prev = setIdx > 0 ? exercise.sets[setIdx - 1] : null;
-            const diff = prev && mode === "weight_reps" ? getSetDiff(set, prev, unit) : null;
-            return (
-              <div key={setIdx}>
-                <SetRow
-                  set={set}
-                  mode={mode}
-                  canRemove={exercise.sets.length > 1}
-                  onFieldChange={(field, v) => onSetField(setIdx, field, v)}
-                  onRemove={() => onRemoveSet(setIdx)}
-                />
-                {diff && (
-                  <p className="text-xs text-neutral-500 pl-1 -mt-0.5">{diff}</p>
-                )}
-              </div>
-            );
-          })}
+          {exercise.sets.map((set, setIdx) => (
+            <SetRow
+              key={setIdx}
+              set={set}
+              mode={mode}
+              canRemove={exercise.sets.length > 1}
+              onFieldChange={(field, v) => onSetField(setIdx, field, v)}
+              onRemove={() => onRemoveSet(setIdx)}
+            />
+          ))}
 
           {(() => {
-            const lastHint = lastSet && exercise.name.trim()
-              ? mode === "weight_reps" && lastSet.weight !== undefined && lastSet.reps !== undefined
-                ? `Previous: ${lastSet.weight} × ${lastSet.reps}`
-                : mode === "reps_only" && lastSet.reps !== undefined
+            if (!lastSet || !exercise.name.trim()) return null;
+
+            if (mode === "weight_reps" && lastSet.weight !== undefined && lastSet.reps !== undefined) {
+              // Only show cross-session comparison after exercise is marked done
+              if (!exercise.completed) return null;
+
+              const prevLine = `Previous: ${lastSet.weight} × ${lastSet.reps}`;
+
+              // Current top set: highest valid weight among draft sets
+              const curTop = exercise.sets.reduce<DraftSet | null>((best, s) => {
+                const w = parseFloat(s.weight);
+                if (isNaN(w) || isNaN(parseInt(s.reps, 10))) return best;
+                if (!best || w > parseFloat(best.weight)) return s;
+                return best;
+              }, null);
+
+              const curTopW = curTop ? parseFloat(curTop.weight) : NaN;
+              let deltaLine: string | null = null;
+              if (!isNaN(curTopW)) {
+                const dW = curTopW - lastSet.weight;
+                const sign = dW > 0 ? "+" : "";
+                const label = unit === "plates"
+                  ? `${sign}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"}`
+                  : `${sign}${dW}${unit}`;
+                deltaLine = dW === 0 ? "Top set: same as last time" : `Top set: ${label} vs last time`;
+              }
+
+              return (
+                <div className="pl-1 flex flex-col gap-0.5 mt-0.5">
+                  <p className="text-xs text-neutral-500">{prevLine}</p>
+                  {deltaLine && <p className="text-xs text-neutral-500">{deltaLine}</p>}
+                </div>
+              );
+            }
+
+            // Other modes — same as before (no completed gate)
+            const lastHint =
+              mode === "reps_only" && lastSet.reps !== undefined
                 ? `Previous: ${lastSet.reps} reps`
                 : mode === "duration_only" && lastSet.duration
                 ? `Previous: ${lastSet.duration}`
-                : null
-              : null;
+                : null;
             return lastHint ? <p className="text-xs text-neutral-500 pl-1">{lastHint}</p> : null;
           })()}
 
