@@ -198,7 +198,7 @@ export function templateToFormState(t: WorkoutTemplate): SessionFormState {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const WORKOUT_TYPES: WorkoutType[] = ["Push", "Pull", "Legs", "Run", "Full Body", "Other", "Yoga"];
+const WORKOUT_TYPES: WorkoutType[] = ["Push", "Pull", "Legs", "Arms", "Full Body", "Run", "Yoga", "Other"];
 const YOGA_STYLES = ["Flow", "Vinyasa", "Power", "Yin", "Stretch", "Custom"] as const;
 const YOGA_INTENTIONS = ["Recovery", "Mobility", "Flexibility", "Relaxation", "Energy", "Mindfulness"] as const;
 const YOGA_SOURCES = ["Self-guided", "Guided (App/Video)", "Class (Studio)"] as const;
