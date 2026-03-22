@@ -42,88 +42,71 @@ function wellnessSummary(entry: WellnessEntry): string {
   return parts.join(" · ");
 }
 
-function pick<T>(arr: T[]): T {
-  const seed = new Date().toISOString().slice(0, 10);
-  const hash = seed.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return arr[hash % arr.length];
-}
-
-function computeStreak(sessions: WorkoutSession[]): number {
-  if (sessions.length === 0) return 0;
-  const dates = [...new Set(sessions.map(s => s.date.slice(0, 10)))].sort().reverse();
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  if (dates[0] !== todayStr && dates[0] !== yesterdayStr) return 0;
-  let streak = 1;
-  for (let i = 1; i < dates.length; i++) {
-    const prev = new Date(dates[i - 1]);
-    const curr = new Date(dates[i]);
-    if (Math.round((prev.getTime() - curr.getTime()) / 86400000) === 1) streak++;
-    else break;
-  }
-  return streak;
-}
-
-function generateGreeting(sessions: WorkoutSession[], userName: string | null): string {
-  const name = userName ? `, ${userName}` : "";
-  const daysSinceLast = sessions.length > 0
-    ? Math.floor((Date.now() - new Date(sessions[0].date).getTime()) / 86400000)
-    : Infinity;
-  const streak = computeStreak(sessions);
-  const hour = new Date().getHours();
-
-  if (daysSinceLast >= 3) return pick(["Back in it", "Let's get moving"]) + name;
-  if (streak >= 3)        return pick(["On a roll", "Still going"]) + name;
-  if (hour < 12)          return `Good morning${name}`;
-  if (hour < 17)          return `Good afternoon${name}`;
-  return `Good evening${name}`;
-}
-
-function generateInsight(
-  sessions: WorkoutSession[],
-  weeklyCount: number,
-  streak: number,
-  todayWellness: WellnessEntry | undefined
-): string {
-  // 1. Recovery — extreme signals (highest priority)
-  if (todayWellness) {
-    const { sleep, soreness } = todayWellness;
-    const lowRecovery = (sleep != null && sleep < 6) || (soreness != null && soreness >= 4);
-    const goodRecovery = (sleep != null && sleep >= 7) && (soreness != null && soreness <= 2);
-
-    if (lowRecovery) {
-      if (weeklyCount >= 5) return "Strong consistency — watch your recovery";
-      return pick(["Recovery is low — take it lighter today", "Recovery looks low — take it easier today"]);
-    }
-    if (goodRecovery) {
-      if (weeklyCount <= 1) return "Recovered well — good day to restart";
-      return pick(["Recovered well — good day to train hard", "Feeling fresh — make it count"]);
-    }
+function computeMomentumMessage(sessions: WorkoutSession[]): {
+  title: string;
+  subtitle: string | null;
+} {
+  if (!sessions || sessions.length === 0) {
+    return { title: "Ready when you are", subtitle: null };
   }
 
-  // 2. Streak
-  if (streak >= 5) return "5-day streak — strong discipline";
-  if (streak >= 3) return "3-day streak — keep it going";
+  const now = new Date();
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // 3. Strong consistency
-  if (weeklyCount >= 5) return pick([
-    "Strong consistency this week",
-    "You've been consistent this week",
-    "Nice consistency lately",
-  ]);
+  const toLocal = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-  // 4. Training awareness
-  if (sessions.length >= 2 && sessions[0].workoutType === sessions[1].workoutType) {
-    return "Same focus again — stay mindful of recovery";
+  // Sessions in last 7 days
+  const last7 = sessions.filter((s) => {
+    const d = toLocal(new Date(s.date));
+    const diff = (todayLocal.getTime() - d.getTime()) / 86_400_000;
+    return diff >= 0 && diff < 7;
+  });
+
+  const sessionsThisWeek = last7.length;
+
+  const activeDays = new Set(
+    last7.map((s) => toLocal(new Date(s.date)).toISOString().slice(0, 10))
+  ).size;
+
+  const lastSession = sessions[0];
+  const lastDate = toLocal(new Date(lastSession.date));
+  const diffDays = (todayLocal.getTime() - lastDate.getTime()) / 86_400_000;
+
+  const sameTypeCount = last7.filter(
+    (s) => s.workoutType === lastSession.workoutType
+  ).length;
+
+  // A. Trained today
+  if (diffDays === 0) {
+    return { title: "Back again", subtitle: "Building momentum" };
   }
 
-  // 5. Medium / low consistency
-  if (weeklyCount >= 3) return "Nice rhythm this week";
-  if (weeklyCount >= 1) return "Good start — keep showing up";
-  if (weeklyCount === 0 && sessions.length > 0) return "Been a few days — ease back in";
+  // B. Trained yesterday
+  if (diffDays === 1) {
+    return { title: "Picking it up", subtitle: "You trained yesterday" };
+  }
 
-  // 6. Fallback
-  return "Ready when you are";
+  // C. Repeating same workout type this week
+  if (sameTypeCount >= 2) {
+    return {
+      title: "Locked in",
+      subtitle: `${sameTypeCount} ${lastSession.workoutType} sessions this week`,
+    };
+  }
+
+  // D. Very active week
+  if (sessionsThisWeek >= 4) {
+    return { title: "On a roll", subtitle: `${sessionsThisWeek} sessions this week` };
+  }
+
+  // E. Multiple active days
+  if (activeDays >= 3) {
+    return { title: "Still going", subtitle: `${activeDays} active days this week` };
+  }
+
+  // F. Default fallback
+  return { title: "Ready when you are", subtitle: null };
 }
 
 function SessionRow({ session }: { session: WorkoutSession }) {
@@ -202,11 +185,11 @@ export default function HomePage() {
       setLastSession(sessions[0]);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
       const count = sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length;
-      const streak = computeStreak(sessions);
       const profileName = profileResult?.data?.name ?? null;
       setWeeklyCount(count);
-      setGreeting(generateGreeting(sessions, profileName));
-      setInsight(generateInsight(sessions, count, streak, todayWellness));
+      const momentum = computeMomentumMessage(sessions);
+      setGreeting(momentum.title + (profileName ? `, ${profileName}` : ""));
+      setInsight(momentum.subtitle ?? "");
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
@@ -281,7 +264,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.10.1</p>
+        <p className="text-xs text-neutral-600">FloForm v1.11.0</p>
       </main>
     );
   }
@@ -293,10 +276,10 @@ export default function HomePage() {
         <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">
           Today · {dateLabel}
         </p>
-        <h1 className="text-2xl font-bold text-white">{greeting}</h1>
+        <h1 className="text-xl font-semibold text-white">{greeting}</h1>
 
         {/* Insight line */}
-        <p className="text-sm text-neutral-400 mt-1">{insight}</p>
+        {insight && <p className="text-sm text-neutral-400 mt-1">{insight}</p>}
 
         {/* City + weather — city shows immediately, weather fills in when ready */}
         {city && (
@@ -432,7 +415,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.10.1</p>
+      <p className="text-xs text-neutral-600">FloForm v1.11.0</p>
     </main>
   );
 }
