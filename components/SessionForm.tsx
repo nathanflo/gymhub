@@ -27,6 +27,27 @@ function toDateTimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const compoundKeywords = [
+  "bench", "squat", "deadlift", "press", "row",
+  "pull up", "chin up", "pulldown", "leg press",
+];
+const accessoryKeywords = [
+  "curl", "extension", "fly", "raise", "pushdown",
+  "calf", "leg curl", "leg extension", "lateral raise", "tricep", "bicep",
+];
+const coreKeywords = [
+  "plank", "crunch", "sit up", "core",
+  "yoga", "stretch", "stretching", "mobility",
+];
+
+function getRestTarget(exerciseName: string): number {
+  const name = exerciseName.toLowerCase();
+  if (compoundKeywords.some(k => name.includes(k))) return 120;
+  if (accessoryKeywords.some(k => name.includes(k))) return 60;
+  if (coreKeywords.some(k => name.includes(k))) return 45;
+  return 75;
+}
+
 // ─── Draft types ──────────────────────────────────────────────────────────────
 // Numeric fields stored as strings to avoid controlled-input NaN issues.
 
@@ -194,6 +215,8 @@ export function SessionForm({
     return 0;
   });
   const [activeExIdx, setActiveExIdx] = useState(initialActiveExIdx ?? 0);
+  const currentExercise = form.exercises[activeExIdx];
+  const restTarget = currentExercise?.name ? getRestTarget(currentExercise.name) : 60;
   const [savedPulse, setSavedPulse] = useState(false);
   const [isPaused, setIsPaused] = useState(initialIsPaused ?? false);
   const [pausedOffset, setPausedOffset] = useState(initialPausedOffset ?? 0);
@@ -576,9 +599,14 @@ export function SessionForm({
               <span className="text-xs text-indigo-500">in progress</span>
             )}
             {isPaused && (
-              <span className="text-xs text-amber-400/50 tabular-nums">
-                Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
-              </span>
+              <>
+                <span className="text-xs text-amber-400/50 tabular-nums">
+                  Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
+                </span>
+                <span className="text-xs text-amber-400/50 tabular-nums">
+                  · Target {restTarget}s
+                </span>
+              </>
             )}
             {!isPaused && savedPulse && <span className="text-xs text-neutral-500">· Saved</span>}
             {isPaused ? (
