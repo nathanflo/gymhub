@@ -28,6 +28,16 @@ function ResetPasswordForm() {
     }
   }, [isRecovery, router]);
 
+  // Clear the recovery marker whenever this page unmounts, covering the case
+  // where the user exits without completing the form (back navigation, tab
+  // close, etc.). On success, handleSubmit removes it first, so this is a
+  // safe no-op in that path.
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem("passwordRecovery");
+    };
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
