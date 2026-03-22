@@ -21,12 +21,20 @@ function ResetPasswordForm() {
       sessionStorage.getItem("passwordRecovery") === "1");
 
   useEffect(() => {
+    // --- DEBUG (temporary — remove after confirming the flow works) ---
+    console.log("[reset-password] pathname:", window.location.pathname + window.location.search);
+    console.log("[reset-password] sessionStorage.passwordRecovery:", sessionStorage.getItem("passwordRecovery"));
+    console.log("[reset-password] searchParams.recovery:", searchParams.get("recovery"));
+    console.log("[reset-password] isRecovery:", isRecovery);
+    // ------------------------------------------------------------------
+
     // If there is no recovery marker this page was reached directly without a
     // valid reset link — send the user somewhere safe.
     if (!isRecovery) {
+      console.log("[reset-password] no recovery marker — redirecting to /login");
       router.replace("/login");
     }
-  }, [isRecovery, router]);
+  }, [isRecovery, router, searchParams]);
 
   // Clear the recovery marker whenever this page unmounts, covering the case
   // where the user exits without completing the form (back navigation, tab

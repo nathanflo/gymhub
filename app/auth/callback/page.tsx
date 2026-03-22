@@ -3,19 +3,16 @@
 /**
  * Auth callback page – handles magic link and password recovery redirects.
  *
- * Recovery detection problem:
- *   Supabase initializes during module load, processes the URL hash, clears it,
- *   and fires PASSWORD_RECOVERY — all before our useEffect listener is registered.
- *   By the time we subscribe, Supabase re-emits the session as SIGNED_IN (not
- *   PASSWORD_RECOVERY), and the hash is already gone.
- *
- * Fix:
- *   layout.tsx contains an early inline <script> that runs before any JS and
- *   writes sessionStorage.passwordRecovery = "1" if type=recovery is in the hash.
- *   We read that flag here instead of the (already-cleared) hash.
- *
- *   We handle BOTH PASSWORD_RECOVERY and SIGNED_IN as recovery triggers so the
- *   redirect works regardless of which event Supabase actually delivers.
+ * Recovery detection layers (most → least reliable):
+ *  1. layout.tsx early <script> sets sessionStorage.passwordRecovery before
+ *     any JS runs — survives Supabase clearing the hash.
+ *  2. useEffect re-checks the hash AND query params at mount time, in case
+ *     the project uses OTP-style (?type=recovery) instead of hash fragments,
+ *     or in case the early script ran after Supabase already cleared the hash.
+ *  3. PASSWORD_RECOVERY auth event — ideal path, but only fires if a listener
+ *     is registered before Supabase processes the URL.
+ *  4. SIGNED_IN / INITIAL_SESSION with recovery flag — fallback when the
+ *     session is established before our listener subscribes.
  */
 
 import { useEffect } from "react";
@@ -32,19 +29,49 @@ export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Set by the early <script> in layout.tsx before Supabase clears the hash.
-    const isRecoveryLink = sessionStorage.getItem("passwordRecovery") === "1";
-    let handledRecovery = false;
+    const hash = window.location.hash;
+    const search = window.location.search;
+
+    // Re-check hash and query params here in case the early layout script
+    // missed them (e.g. OTP links use ?type=recovery as a query param).
+    const urlIndicatesRecovery =
+      hash.includes("type=recovery") ||
+      new URLSearchParams(search).get("type") === "recovery";
+
+    if (urlIndicatesRecovery) {
+      sessionStorage.setItem("passwordRecovery", "1");
+    }
+
+    const isRecoveryLink =
+      urlIndicatesRecovery ||
+      sessionStorage.getItem("passwordRecovery") === "1";
+
+    // --- DEBUG (temporary — remove after confirming the flow works) ---
+    console.log("[auth/callback] hash:", hash);
+    console.log("[auth/callback] search:", search);
+    console.log("[auth/callback] urlIndicatesRecovery:", urlIndicatesRecovery);
+    console.log("[auth/callback] sessionStorage.passwordRecovery:", sessionStorage.getItem("passwordRecovery"));
+    console.log("[auth/callback] isRecoveryLink:", isRecoveryLink);
+    // ------------------------------------------------------------------
+
+    let handled = false;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // --- DEBUG (temporary) ---
+        console.log("[auth/callback] auth event:", event, "| session:", !!session, "| isRecoveryLink:", isRecoveryLink, "| handled:", handled);
+        // -------------------------
+
         if (event === "PASSWORD_RECOVERY") {
-          handledRecovery = true;
+          handled = true;
           goToResetPassword(router);
-        } else if (event === "SIGNED_IN" && session) {
-          if (isRecoveryLink || handledRecovery) {
-            // Recovery session delivered as SIGNED_IN — still go to reset page.
-            handledRecovery = true;
+        } else if (
+          (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+          session &&
+          !handled
+        ) {
+          handled = true;
+          if (isRecoveryLink) {
             goToResetPassword(router);
           } else {
             await runMigrationIfNeeded(session.user.id);
