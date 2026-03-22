@@ -54,12 +54,29 @@ function detectPR(session: WorkoutSession, allSessions: WorkoutSession[]): strin
   return null;
 }
 
+function generateYogaInsight(session: WorkoutSession): string {
+  const { yogaIntention, yogaClarityRating, yogaMobilityRating, yogaDurationMinutes } = session;
+
+  if (yogaClarityRating && yogaClarityRating >= 4) return "Left feeling clear and grounded";
+  if (yogaIntention === "Recovery") return "Recovery focus, well spent";
+  if (yogaIntention === "Relaxation") return "Took time to reset";
+  if (yogaIntention === "Energy") return "Moved and felt it";
+  if (yogaMobilityRating && yogaMobilityRating >= 4) return "Body opened up nicely today";
+  if (yogaDurationMinutes && yogaDurationMinutes <= 20) return "Short session, still showed up";
+  return "Nice balance of movement and calm";
+}
+
 function generateSubtitle(
   session: WorkoutSession,
   previousSession: WorkoutSession | null,
   prExercise: string | null
 ): string {
   const { workoutType, exercises } = session;
+
+  // ── Yoga sessions ────────────────────────────────────────────────────────
+  if (workoutType === "Yoga") {
+    return generateYogaInsight(session);
+  }
 
   // ── Run sessions: keep existing logic ──────────────────────────────────────
   if (workoutType === "Run") {
@@ -95,6 +112,7 @@ function generateDeltaInsight(
   current: WorkoutSession,
   previous: WorkoutSession
 ): string | null {
+  if (current.workoutType === "Yoga") return null;
   const isRun = current.workoutType === "Run";
   const prevLabel = previous.title?.trim()
     ? `your last ${previous.title} session`
@@ -244,6 +262,10 @@ export default function SummaryPage() {
   }
 
   const isRun = session.workoutType === "Run";
+  const isYoga = session.workoutType === "Yoga";
+  const yogaStyleLabel = session.yogaStyle === "Custom"
+    ? (session.yogaCustomStyle || "Custom")
+    : (session.yogaStyle ?? "Yoga");
   const exerciseCount = session.exercises.length;
   const totalSets = session.exercises.reduce((s, ex) => s + ex.sets.length, 0);
   const totalVolume = session.exercises.reduce((s, ex) =>
@@ -283,96 +305,131 @@ export default function SummaryPage() {
     <>
       {/* ── Share Overlay ──────────────────────────────────────────────── */}
       {shareOpen && (
-        <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col items-center justify-center px-6 overflow-y-auto max-h-screen py-12">
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center px-6 overflow-y-auto max-h-screen py-12
+          ${isYoga ? "bg-stone-100" : "bg-neutral-950"}`}>
           <button
             onClick={() => setShareOpen(false)}
-            className="absolute text-neutral-400 hover:text-white text-2xl leading-none"
+            className={`absolute text-2xl leading-none ${isYoga ? "text-stone-500 hover:text-stone-800" : "text-neutral-400 hover:text-white"}`}
             style={{ top: "calc(env(safe-area-inset-top) + 16px)", right: "20px" }}
             aria-label="Close share overlay"
           >
             ×
           </button>
 
-          <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
-            {/* Brand */}
-            <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-8">
-              FloForm
-            </p>
-
-            {/* Title */}
-            <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
-
-            {/* Headline */}
-            <p className="text-sm italic text-neutral-500 text-center mt-2">{headline}</p>
-
-            {/* Date */}
-            <p className="text-xs text-neutral-500 mt-3">
-              {dateLabel}{workoutDuration ? ` · ${workoutDuration}` : ""}
-            </p>
-            {city && <p className="text-xs text-neutral-500 mt-0.5">{city}</p>}
-
-            {/* Stats row */}
-            <div className="flex gap-8 justify-center mt-8 divide-x divide-neutral-800">
-              {isRun ? (
-                <>
-                  {session.distance !== undefined && (
-                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-4xl font-bold text-white">{session.distance}</span>
-                      <span className="text-xs text-neutral-600">km</span>
-                    </div>
-                  )}
-                  {session.duration && (
-                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-4xl font-bold text-white">{session.duration}</span>
-                      <span className="text-xs text-neutral-600">duration</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                    <span className="text-4xl font-bold text-white">{totalSets}</span>
-                    <span className="text-xs text-neutral-600">sets</span>
-                  </div>
-                  <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                    <span className="text-4xl font-bold text-white">{exerciseCount}</span>
-                    <span className="text-xs text-neutral-600">exercises</span>
-                  </div>
-                  {totalVolume > 0 && (
-                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()}</span>
-                      <span className="text-xs text-neutral-600">kg volume</span>
-                    </div>
-                  )}
-                </>
+          {isYoga ? (
+            <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
+              <p className="text-indigo-400 text-xs font-bold tracking-[0.2em] uppercase mb-8">FloForm</p>
+              <h1 className="text-5xl font-black text-indigo-900 text-center">Yoga</h1>
+              <p className="text-lg font-medium text-indigo-700 text-center mt-1">
+                {yogaStyleLabel}{session.yogaDurationMinutes ? ` · ${session.yogaDurationMinutes} min` : ""}
+              </p>
+              <p className="text-sm italic text-stone-500 text-center mt-3">{headline}</p>
+              {session.yogaIntention && (
+                <p className="text-sm text-indigo-500 mt-2">{session.yogaIntention}</p>
               )}
+              {session.yogaSource && (
+                <p className="text-xs text-stone-400 mt-1">{session.yogaSource}</p>
+              )}
+              <p className="text-xs text-stone-400 mt-3">{dateLabel}</p>
+              {city && <p className="text-xs text-stone-400 mt-0.5">{city}</p>}
+              {(session.yogaMobilityRating || session.yogaFlexibilityRating || session.yogaClarityRating) && (
+                <div className="flex gap-5 mt-6">
+                  {[
+                    { label: "Mobility",    value: session.yogaMobilityRating },
+                    { label: "Flexibility", value: session.yogaFlexibilityRating },
+                    { label: "Clarity",     value: session.yogaClarityRating },
+                  ].filter(r => r.value !== undefined).map(({ label, value }) => (
+                    <div key={label} className="flex flex-col items-center">
+                      <span className="text-2xl font-bold text-indigo-900">{value}/5</span>
+                      <span className="text-xs text-stone-400">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-stone-400 text-center mt-8">floform.fit</p>
             </div>
+          ) : (
+            <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
+              {/* Brand */}
+              <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-8">
+                FloForm
+              </p>
 
-            {/* Energy pill */}
-            <div className="mt-6">
-              <span className={`inline-block px-4 py-1.5 rounded-full font-semibold ${effort.bgColor} ${effort.color}`}>
-                {effort.label}
-              </span>
-            </div>
+              {/* Title */}
+              <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
 
-            {/* Exercise preview (top 3) */}
-            {!isRun && session.exercises.length > 0 && (
-              <div className="flex flex-col items-center gap-1 mt-3">
-                {session.exercises.slice(0, 3).map((ex, i) => (
-                  <p key={i} className="text-sm text-neutral-300">
-                    {ex.name}{" "}
-                    <span className="text-neutral-600">({ex.sets.length} sets)</span>
-                    {ex.name.trim().toLowerCase() === prExercise?.trim().toLowerCase() ? " 🔥" : ""}
-                  </p>
-                ))}
+              {/* Headline */}
+              <p className="text-sm italic text-neutral-500 text-center mt-2">{headline}</p>
+
+              {/* Date */}
+              <p className="text-xs text-neutral-500 mt-3">
+                {dateLabel}{workoutDuration ? ` · ${workoutDuration}` : ""}
+              </p>
+              {city && <p className="text-xs text-neutral-500 mt-0.5">{city}</p>}
+
+              {/* Stats row */}
+              <div className="flex gap-8 justify-center mt-8 divide-x divide-neutral-800">
+                {isRun ? (
+                  <>
+                    {session.distance !== undefined && (
+                      <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                        <span className="text-4xl font-bold text-white">{session.distance}</span>
+                        <span className="text-xs text-neutral-600">km</span>
+                      </div>
+                    )}
+                    {session.duration && (
+                      <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                        <span className="text-4xl font-bold text-white">{session.duration}</span>
+                        <span className="text-xs text-neutral-600">duration</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                      <span className="text-4xl font-bold text-white">{totalSets}</span>
+                      <span className="text-xs text-neutral-600">sets</span>
+                    </div>
+                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                      <span className="text-4xl font-bold text-white">{exerciseCount}</span>
+                      <span className="text-xs text-neutral-600">exercises</span>
+                    </div>
+                    {totalVolume > 0 && (
+                      <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
+                        <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()}</span>
+                        <span className="text-xs text-neutral-600">kg volume</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            )}
 
-            {/* Brand watermark */}
-            <p className="text-xs text-neutral-500 text-center mt-6">
-              floform.fit
-            </p>
-          </div>
+              {/* Energy pill */}
+              <div className="mt-6">
+                <span className={`inline-block px-4 py-1.5 rounded-full font-semibold ${effort.bgColor} ${effort.color}`}>
+                  {effort.label}
+                </span>
+              </div>
+
+              {/* Exercise preview (top 3) */}
+              {!isRun && session.exercises.length > 0 && (
+                <div className="flex flex-col items-center gap-1 mt-3">
+                  {session.exercises.slice(0, 3).map((ex, i) => (
+                    <p key={i} className="text-sm text-neutral-300">
+                      {ex.name}{" "}
+                      <span className="text-neutral-600">({ex.sets.length} sets)</span>
+                      {ex.name.trim().toLowerCase() === prExercise?.trim().toLowerCase() ? " 🔥" : ""}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Brand watermark */}
+              <p className="text-xs text-neutral-500 text-center mt-6">
+                floform.fit
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -416,7 +473,34 @@ export default function SummaryPage() {
         </div>
 
         {/* Key Stats */}
-        {isRun ? (
+        {isYoga ? (
+          <div className="rounded-2xl bg-indigo-950/40 border border-indigo-900/40 px-5 py-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <span className="text-xs text-indigo-400/60">Style</span>
+                <span className="text-2xl font-bold text-indigo-100">{yogaStyleLabel}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-indigo-400/60">Duration</span>
+                <span className="text-2xl font-bold text-indigo-100">
+                  {session.yogaDurationMinutes ? `${session.yogaDurationMinutes} min` : "—"}
+                </span>
+              </div>
+              {session.yogaIntention && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-indigo-400/60">Intention</span>
+                  <span className="text-lg font-medium text-indigo-300">{session.yogaIntention}</span>
+                </div>
+              )}
+              {session.yogaSource && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-indigo-400/60">Source</span>
+                  <span className="text-sm text-indigo-300/70">{session.yogaSource}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : isRun ? (
           <div className="rounded-2xl bg-neutral-800 px-5 py-5">
             <div className="grid grid-cols-2 gap-4">
               {session.distance !== undefined && (
@@ -472,8 +556,32 @@ export default function SummaryPage() {
           )}
         </div>
 
+        {/* Yoga Reflection */}
+        {isYoga && (session.yogaMobilityRating || session.yogaFlexibilityRating || session.yogaClarityRating) && (
+          <div className="rounded-2xl bg-indigo-950/40 border border-indigo-900/40 px-5 py-4 flex flex-col gap-3">
+            <span className="text-xs font-semibold text-indigo-400/60 uppercase tracking-wider">Reflection</span>
+            {[
+              { label: "Mobility",    value: session.yogaMobilityRating },
+              { label: "Flexibility", value: session.yogaFlexibilityRating },
+              { label: "Clarity",     value: session.yogaClarityRating },
+            ].filter(r => r.value !== undefined).map(({ label, value }) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-sm text-indigo-300/80">{label}</span>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(n => (
+                    <span key={n} className={`w-6 h-6 rounded text-xs flex items-center justify-center
+                      ${n <= value! ? "bg-indigo-500 text-white" : "bg-indigo-950/60 text-indigo-800"}`}>
+                      {n}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Exercise Breakdown */}
-        {!isRun && session.exercises.length > 0 && (
+        {!isRun && !isYoga && session.exercises.length > 0 && (
           <div className="flex flex-col gap-4">
             <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
               Breakdown

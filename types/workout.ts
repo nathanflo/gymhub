@@ -8,7 +8,7 @@
  * - playlistId: string          (for Gym Set DJ integration)
  */
 
-export type WorkoutType = "Push" | "Pull" | "Legs" | "Run" | "Full Body" | "Other";
+export type WorkoutType = "Push" | "Pull" | "Legs" | "Run" | "Full Body" | "Other" | "Yoga";
 export type EnergyLevel = "Low" | "Medium" | "High";
 
 export interface Workout {

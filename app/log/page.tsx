@@ -123,9 +123,14 @@ function LogPageInner() {
         const [templates, sessions] = await Promise.all([getTemplates(), getSessions()]);
         const template = templates.find((t) => t.id === templateId);
         if (template) {
-          const { exercises, anyPrefilled } = prefillTemplateFromHistory(template, sessions);
-          setInitialState(templateToFormState({ ...template, exercises }));
-          setLoadedFromTemplate(anyPrefilled);
+          if (template.workoutType === "Yoga") {
+            setInitialState(templateToFormState(template));
+            setLoadedFromTemplate(false);
+          } else {
+            const { exercises, anyPrefilled } = prefillTemplateFromHistory(template, sessions);
+            setInitialState(templateToFormState({ ...template, exercises }));
+            setLoadedFromTemplate(anyPrefilled);
+          }
         } else {
           setLoadedFromTemplate(false);
         }

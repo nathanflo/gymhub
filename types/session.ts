@@ -44,6 +44,16 @@ export interface WorkoutSession {
   duration?: string;        // free text: "31:45" or "45 min"
   intervals?: string;       // e.g. "4 x 400m"
 
+  // Yoga fields — populated when workoutType === "Yoga", exercises is []
+  yogaStyle?: string;            // "Flow" | "Vinyasa" | "Power" | "Yin" | "Stretch" | "Custom"
+  yogaCustomStyle?: string;      // free text when yogaStyle === "Custom"
+  yogaDurationMinutes?: number;  // minutes logged by user
+  yogaIntention?: string;        // "Recovery" | "Mobility" | "Flexibility" | "Relaxation" | "Energy" | "Mindfulness"
+  yogaSource?: string;           // "Self-guided" | "Guided (App/Video)" | "Class (Studio)"
+  yogaMobilityRating?: number;   // 1–5
+  yogaFlexibilityRating?: number;// 1–5
+  yogaClarityRating?: number;    // 1–5
+
   started_at?: string;      // ISO 8601 — when first set was logged or Begin Workout tapped
   ended_at?: string;        // ISO 8601 — when session was saved
 }

@@ -138,5 +138,13 @@ function legacyToFormState(w: Workout): SessionFormState {
     distance: w.distance !== undefined ? String(w.distance) : "",
     duration: w.duration ?? "",
     intervals: w.intervals ?? "",
+    yogaStyle: "Flow",
+    yogaCustomStyle: "",
+    yogaDurationMinutes: "",
+    yogaIntention: "",
+    yogaSource: "",
+    yogaMobilityRating: "",
+    yogaFlexibilityRating: "",
+    yogaClarityRating: "",
   };
 }

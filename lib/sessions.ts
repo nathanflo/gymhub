@@ -7,6 +7,11 @@ import { WorkoutSession } from "@/types/session";
 import { supabase } from "./supabase";
 
 function toSession(row: any): WorkoutSession {
+  const isYoga = row.workout_type === "Yoga";
+  const yogaRaw = isYoga && Array.isArray(row.exercises) && row.exercises[0]?._yogaSession
+    ? row.exercises[0]
+    : null;
+
   return {
     id: row.id,
     date: row.date,
@@ -20,7 +25,15 @@ function toSession(row: any): WorkoutSession {
     intervals: row.intervals ?? undefined,
     started_at: row.started_at ?? undefined,
     ended_at: row.ended_at ?? undefined,
-    exercises: row.exercises,
+    exercises: isYoga ? [] : (row.exercises ?? []),
+    yogaStyle: yogaRaw?.style ?? undefined,
+    yogaCustomStyle: yogaRaw?.customStyle ?? undefined,
+    yogaDurationMinutes: yogaRaw?.durationMinutes ?? undefined,
+    yogaIntention: yogaRaw?.intention ?? undefined,
+    yogaSource: yogaRaw?.source ?? undefined,
+    yogaMobilityRating: yogaRaw?.mobilityRating ?? undefined,
+    yogaFlexibilityRating: yogaRaw?.flexibilityRating ?? undefined,
+    yogaClarityRating: yogaRaw?.clarityRating ?? undefined,
   };
 }
 
@@ -74,7 +87,17 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
     intervals: session.intervals ?? null,
     started_at: session.started_at ?? null,
     ended_at: session.ended_at ?? null,
-    exercises: session.exercises,
+    exercises: session.workoutType === "Yoga"
+      ? [{ _yogaSession: true,
+           style: session.yogaStyle ?? null,
+           customStyle: session.yogaCustomStyle ?? null,
+           durationMinutes: session.yogaDurationMinutes ?? null,
+           intention: session.yogaIntention ?? null,
+           source: session.yogaSource ?? null,
+           mobilityRating: session.yogaMobilityRating ?? null,
+           flexibilityRating: session.yogaFlexibilityRating ?? null,
+           clarityRating: session.yogaClarityRating ?? null }]
+      : session.exercises,
   });
 }
 
@@ -97,7 +120,17 @@ export async function updateSession(updated: WorkoutSession): Promise<void> {
       distance: updated.distance ?? null,
       duration: updated.duration ?? null,
       intervals: updated.intervals ?? null,
-      exercises: updated.exercises,
+      exercises: updated.workoutType === "Yoga"
+        ? [{ _yogaSession: true,
+             style: updated.yogaStyle ?? null,
+             customStyle: updated.yogaCustomStyle ?? null,
+             durationMinutes: updated.yogaDurationMinutes ?? null,
+             intention: updated.yogaIntention ?? null,
+             source: updated.yogaSource ?? null,
+             mobilityRating: updated.yogaMobilityRating ?? null,
+             flexibilityRating: updated.yogaFlexibilityRating ?? null,
+             clarityRating: updated.yogaClarityRating ?? null }]
+        : updated.exercises,
       updated_at: new Date().toISOString(),
     })
     .eq("id", updated.id);

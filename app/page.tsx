@@ -143,8 +143,11 @@ function computeMomentumMessage(sessions: WorkoutSession[]): {
 
 function SessionRow({ session }: { session: WorkoutSession }) {
   const isRun = session.workoutType === "Run";
+  const isYoga = session.workoutType === "Yoga";
   const summary = isRun
     ? `${session.distance ?? "—"} km · ${session.duration ?? "—"}`
+    : isYoga
+    ? `${session.yogaStyle === "Custom" ? (session.yogaCustomStyle || "Custom") : (session.yogaStyle ?? "Yoga")} · ${session.yogaDurationMinutes ? `${session.yogaDurationMinutes} min` : "—"}`
     : session.exercises.slice(0, 2).map(e => e.name).join(", ")
         + (session.exercises.length > 2 ? ` +${session.exercises.length - 2}` : "");
 
@@ -296,7 +299,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.12.1</p>
+        <p className="text-xs text-neutral-600">FloForm v1.12.2</p>
       </main>
     );
   }
@@ -447,7 +450,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.12.1</p>
+      <p className="text-xs text-neutral-600">FloForm v1.12.2</p>
     </main>
   );
 }

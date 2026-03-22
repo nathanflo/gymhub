@@ -80,6 +80,15 @@ export interface SessionFormState {
   duration: string;
   intervals: string;
   dateTime?: string;
+  // Yoga fields
+  yogaStyle: string;
+  yogaCustomStyle: string;
+  yogaDurationMinutes: string;
+  yogaIntention: string;
+  yogaSource: string;
+  yogaMobilityRating: string;
+  yogaFlexibilityRating: string;
+  yogaClarityRating: string;
 }
 
 // ─── Factories ────────────────────────────────────────────────────────────────
@@ -102,6 +111,14 @@ export const emptySessionForm = (): SessionFormState => ({
   distance: "",
   duration: "",
   intervals: "",
+  yogaStyle: "Flow",
+  yogaCustomStyle: "",
+  yogaDurationMinutes: "",
+  yogaIntention: "",
+  yogaSource: "",
+  yogaMobilityRating: "",
+  yogaFlexibilityRating: "",
+  yogaClarityRating: "",
 });
 
 // ─── Converters (for edit mode) ───────────────────────────────────────────────
@@ -115,7 +132,7 @@ export function sessionToFormState(s: WorkoutSession): SessionFormState {
     notes: s.notes,
     bodyweight: s.bodyweight !== undefined ? String(s.bodyweight) : "",
     exercises:
-      s.workoutType === "Run" || !s.exercises.length
+      s.workoutType === "Run" || s.workoutType === "Yoga" || !s.exercises.length
         ? [emptyExercise()]
         : s.exercises.map((ex) => ({
             name: ex.name,
@@ -132,6 +149,14 @@ export function sessionToFormState(s: WorkoutSession): SessionFormState {
     duration: s.duration ?? "",
     intervals: s.intervals ?? "",
     dateTime: toDateTimeLocal(s.date),
+    yogaStyle: s.yogaStyle ?? "Flow",
+    yogaCustomStyle: s.yogaCustomStyle ?? "",
+    yogaDurationMinutes: s.yogaDurationMinutes !== undefined ? String(s.yogaDurationMinutes) : "",
+    yogaIntention: s.yogaIntention ?? "",
+    yogaSource: s.yogaSource ?? "",
+    yogaMobilityRating: s.yogaMobilityRating !== undefined ? String(s.yogaMobilityRating) : "",
+    yogaFlexibilityRating: s.yogaFlexibilityRating !== undefined ? String(s.yogaFlexibilityRating) : "",
+    yogaClarityRating: s.yogaClarityRating !== undefined ? String(s.yogaClarityRating) : "",
   };
 }
 
@@ -144,7 +169,7 @@ export function templateToFormState(t: WorkoutTemplate): SessionFormState {
     notes: "",
     bodyweight: "",
     exercises:
-      t.workoutType === "Run" || !t.exercises.length
+      t.workoutType === "Run" || t.workoutType === "Yoga" || !t.exercises.length
         ? [emptyExercise()]
         : t.exercises.map((ex) => ({
             name: ex.name,
@@ -160,12 +185,23 @@ export function templateToFormState(t: WorkoutTemplate): SessionFormState {
     distance: t.distance !== undefined ? String(t.distance) : "",
     duration: t.duration ?? "",
     intervals: t.intervals ?? "",
+    yogaStyle: "Flow",
+    yogaCustomStyle: "",
+    yogaDurationMinutes: "",
+    yogaIntention: "",
+    yogaSource: "",
+    yogaMobilityRating: "",
+    yogaFlexibilityRating: "",
+    yogaClarityRating: "",
   };
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const WORKOUT_TYPES: WorkoutType[] = ["Push", "Pull", "Legs", "Run", "Full Body", "Other"];
+const WORKOUT_TYPES: WorkoutType[] = ["Push", "Pull", "Legs", "Run", "Full Body", "Other", "Yoga"];
+const YOGA_STYLES = ["Flow", "Vinyasa", "Power", "Yin", "Stretch", "Custom"] as const;
+const YOGA_INTENTIONS = ["Recovery", "Mobility", "Flexibility", "Relaxation", "Energy", "Mindfulness"] as const;
+const YOGA_SOURCES = ["Self-guided", "Guided (App/Video)", "Class (Studio)"] as const;
 const ENERGY_LEVELS: EnergyLevel[] = ["Low", "Medium", "High"];
 
 const MODE_LABELS: Record<TrackingMode, string> = {
@@ -303,6 +339,7 @@ export function SessionForm({
   }, [isPaused, pauseStartedAt]);
 
   const isRun = form.workoutType === "Run";
+  const isYoga = form.workoutType === "Yoga";
 
   // ── Top-level field handler ──────────────────────────────────────────────
   function handleTopLevel(
@@ -486,7 +523,15 @@ export function SessionForm({
       return;
     }
 
-    if (isRun) {
+    if (isYoga) {
+      if (!form.yogaStyle.trim()) { setError("Please select a style."); return; }
+      if (form.yogaStyle === "Custom" && !form.yogaCustomStyle.trim()) {
+        setError("Please enter your custom style."); return;
+      }
+      if (!form.yogaDurationMinutes || parseFloat(form.yogaDurationMinutes) <= 0) {
+        setError("Please enter a duration."); return;
+      }
+    } else if (isRun) {
       if (!form.distance || parseFloat(form.distance) <= 0) {
         setError("Please enter a distance.");
         return;
@@ -534,7 +579,7 @@ export function SessionForm({
       }
     }
 
-    const exercises: WorkoutExercise[] = isRun
+    const exercises: WorkoutExercise[] = isRun || isYoga
       ? []
       : form.exercises.map((ex) => {
           const mode = ex.mode;
@@ -569,6 +614,16 @@ export function SessionForm({
         duration: form.duration.trim(),
         intervals: form.intervals.trim() || undefined,
       }),
+      ...(isYoga && {
+        yogaStyle: form.yogaStyle,
+        yogaCustomStyle: form.yogaStyle === "Custom" ? form.yogaCustomStyle.trim() || undefined : undefined,
+        yogaDurationMinutes: parseFloat(form.yogaDurationMinutes),
+        yogaIntention: form.yogaIntention || undefined,
+        yogaSource: form.yogaSource || undefined,
+        yogaMobilityRating: form.yogaMobilityRating ? parseInt(form.yogaMobilityRating) : undefined,
+        yogaFlexibilityRating: form.yogaFlexibilityRating ? parseInt(form.yogaFlexibilityRating) : undefined,
+        yogaClarityRating: form.yogaClarityRating ? parseInt(form.yogaClarityRating) : undefined,
+      }),
     };
 
     resetPauseState();
@@ -593,7 +648,7 @@ export function SessionForm({
             <span className={`text-sm font-semibold tabular-nums ${isPaused ? "text-indigo-300/50" : "text-indigo-300"}`}>
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
-            {isPaused && (
+            {isPaused && !isYoga && (
               <span className="text-xs text-amber-400/50 tabular-nums">
                 · Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
               </span>
@@ -615,11 +670,11 @@ export function SessionForm({
               {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
             </span>
             {isPaused ? (
-              <span className="text-xs text-amber-500/80">resting</span>
+              <span className="text-xs text-amber-500/80">{isYoga ? "paused" : "resting"}</span>
             ) : (
-              <span className="text-xs text-indigo-500">in progress</span>
+              <span className="text-xs text-indigo-500">{isYoga ? "Session" : "in progress"}</span>
             )}
-            {isPaused && (
+            {isPaused && !isYoga && (
               <>
                 <span className="text-xs text-amber-400/50 tabular-nums">
                   Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
@@ -662,7 +717,7 @@ export function SessionForm({
         <input
           name="title"
           type="text"
-          placeholder={isRun ? "e.g. Morning Run" : "e.g. Chest / Biceps"}
+          placeholder={isYoga ? "e.g. Morning Flow" : isRun ? "e.g. Morning Run" : "e.g. Chest / Biceps"}
           value={form.title}
           onChange={handleTopLevel}
           className={inputClass}
@@ -714,7 +769,94 @@ export function SessionForm({
       </div>
 
       {/* Conditional fields */}
-      {isRun ? (
+      {isYoga ? (
+        <div className="flex flex-col gap-5">
+          {/* Style */}
+          <Field label="Style">
+            <select name="yogaStyle" value={form.yogaStyle} onChange={handleTopLevel} className={selectClass}>
+              {YOGA_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </Field>
+          {form.yogaStyle === "Custom" && (
+            <Field label="Custom style">
+              <input name="yogaCustomStyle" type="text" placeholder="e.g. Restorative"
+                value={form.yogaCustomStyle} onChange={handleTopLevel} className={inputClass} />
+            </Field>
+          )}
+
+          {/* Duration */}
+          <Field label="Duration (min)">
+            <input name="yogaDurationMinutes" type="number" inputMode="numeric" placeholder="e.g. 30"
+              value={form.yogaDurationMinutes} onChange={handleTopLevel} className={inputClass} />
+          </Field>
+
+          {/* Intention chips */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              Intention (optional)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {YOGA_INTENTIONS.map(intention => (
+                <button key={intention} type="button"
+                  onClick={() => setForm(f => ({ ...f, yogaIntention: f.yogaIntention === intention ? "" : intention }))}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                    ${form.yogaIntention === intention
+                      ? "bg-indigo-600 text-white"
+                      : "bg-neutral-800 text-neutral-400 hover:text-neutral-300"}`}>
+                  {intention}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Source */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              Source (optional)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {YOGA_SOURCES.map(source => (
+                <button key={source} type="button"
+                  onClick={() => setForm(f => ({ ...f, yogaSource: f.yogaSource === source ? "" : source }))}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                    ${form.yogaSource === source
+                      ? "bg-indigo-600 text-white"
+                      : "bg-neutral-800 text-neutral-400 hover:text-neutral-300"}`}>
+                  {source}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Reflection ratings */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              Reflection (optional)
+            </span>
+            {[
+              { label: "Mobility",    field: "yogaMobilityRating" as const },
+              { label: "Flexibility", field: "yogaFlexibilityRating" as const },
+              { label: "Clarity",     field: "yogaClarityRating" as const },
+            ].map(({ label, field }) => (
+              <div key={field} className="flex items-center justify-between">
+                <span className="text-sm text-neutral-400 w-24">{label}</span>
+                <div className="flex gap-2">
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} type="button"
+                      onClick={() => setForm(f => ({ ...f, [field]: f[field] === String(n) ? "" : String(n) }))}
+                      className={`w-8 h-8 rounded-lg text-sm font-semibold transition-all
+                        ${form[field] === String(n)
+                          ? "bg-indigo-600 text-white"
+                          : "bg-neutral-800 text-neutral-500 hover:text-neutral-300"}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : isRun ? (
         <div className="flex flex-col gap-3">
           <div className="flex gap-3">
             <Field label="Distance (km)" className="flex-1">
