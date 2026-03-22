@@ -6,7 +6,7 @@ function cookieStorage() {
     d.setFullYear(d.getFullYear() + 1);
     return d.toUTCString();
   };
-  const secure =
+  const secure = () =>
     typeof window !== "undefined" && window.location.protocol === "https:"
       ? "; Secure"
       : "";
@@ -20,11 +20,11 @@ function cookieStorage() {
     },
     setItem(key: string, value: string): void {
       if (typeof document === "undefined") return;
-      document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; expires=${ttl()}; path=/${secure}; SameSite=Lax`;
+      document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; expires=${ttl()}; path=/${secure()}; SameSite=Lax`;
     },
     removeItem(key: string): void {
       if (typeof document === "undefined") return;
-      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${secure}; SameSite=Lax`;
+      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${secure()}; SameSite=Lax`;
     },
   };
 }
