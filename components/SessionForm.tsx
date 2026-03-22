@@ -48,6 +48,24 @@ function getRestTarget(exerciseName: string): number {
   return 75;
 }
 
+function getSetDiff(cur: DraftSet, prev: DraftSet, unit: WeightUnit): string | null {
+  const curW = parseFloat(cur.weight);
+  const prevW = parseFloat(prev.weight);
+  const curR = parseInt(cur.reps, 10);
+  const prevR = parseInt(prev.reps, 10);
+  if (isNaN(curW) || isNaN(prevW) || isNaN(curR) || isNaN(prevR)) return null;
+  const dW = curW - prevW;
+  const dR = curR - prevR;
+  const sign = (n: number) => n > 0 ? "+" : "";
+  const weightLabel = dW === 0
+    ? "same weight"
+    : unit === "plates"
+    ? `${sign(dW)}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"}`
+    : `${sign(dW)}${dW}${unit}`;
+  const repsLabel = dR === 0 ? "same reps" : `${sign(dR)}${dR} ${Math.abs(dR) === 1 ? "rep" : "reps"}`;
+  return `${weightLabel} · ${repsLabel}`;
+}
+
 // ─── Draft types ──────────────────────────────────────────────────────────────
 // Numeric fields stored as strings to avoid controlled-input NaN issues.
 
@@ -1050,16 +1068,24 @@ function ExerciseBlock({
             {columnHeaders()}
           </div>
 
-          {exercise.sets.map((set, setIdx) => (
-            <SetRow
-              key={setIdx}
-              set={set}
-              mode={mode}
-              canRemove={exercise.sets.length > 1}
-              onFieldChange={(field, v) => onSetField(setIdx, field, v)}
-              onRemove={() => onRemoveSet(setIdx)}
-            />
-          ))}
+          {exercise.sets.map((set, setIdx) => {
+            const prev = setIdx > 0 ? exercise.sets[setIdx - 1] : null;
+            const diff = prev && mode === "weight_reps" ? getSetDiff(set, prev, unit) : null;
+            return (
+              <div key={setIdx}>
+                <SetRow
+                  set={set}
+                  mode={mode}
+                  canRemove={exercise.sets.length > 1}
+                  onFieldChange={(field, v) => onSetField(setIdx, field, v)}
+                  onRemove={() => onRemoveSet(setIdx)}
+                />
+                {diff && (
+                  <p className="text-xs text-neutral-500 pl-1 -mt-0.5">{diff}</p>
+                )}
+              </div>
+            );
+          })}
 
           {(() => {
             const lastHint = lastSet && exercise.name.trim()
