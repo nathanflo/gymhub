@@ -157,11 +157,11 @@ function SessionRow({ session }: { session: WorkoutSession }) {
       className="flex items-center justify-between rounded-xl bg-neutral-800 px-4 py-3
                  active:scale-95 transition-all"
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium text-white">{session.title}</span>
         <span className="text-xs text-neutral-400">{summary}</span>
       </div>
-      <p className="text-xs text-neutral-600">{session.workoutType}</p>
+      <p className="text-xs text-neutral-500">{session.workoutType}</p>
     </Link>
   );
 }
@@ -299,7 +299,7 @@ export default function HomePage() {
           Continue as Guest
         </Link>
 
-        <p className="text-xs text-neutral-600">FloForm v1.12.2</p>
+        <p className="text-xs text-neutral-700">FloForm v1.12.2</p>
       </main>
     );
   }
@@ -307,35 +307,35 @@ export default function HomePage() {
   return (
     <main className="px-6 py-8 flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">
-          Today · {dateLabel}
-        </p>
-        <h1 className="text-xl font-semibold text-white">{greeting}</h1>
-
-        {/* Insight line */}
-        {insight && <p className="text-sm text-indigo-300/80 mt-2">{insight}</p>}
-
-        {/* City + weather — city shows immediately, weather fills in when ready */}
-        {city && (
-          <p className="text-xs text-neutral-500 mt-3">
-            {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            Today · {dateLabel}
           </p>
+          <h1 className="text-xl font-semibold text-white">{greeting}</h1>
+        </div>
+
+        {insight && (
+          <p className="text-sm text-indigo-300/90">{insight}</p>
         )}
 
-        {/* Last session context */}
-        <p className="text-sm text-neutral-400 mt-2">
-          {lastSession
-            ? `Last session: ${lastSession.title} · ${relativeDay(lastSession.date)}`
-            : "No workouts logged yet — start your first session"}
-        </p>
-
-        {/* Weekly count */}
-        {weeklyCount > 0 && (
-          <p className="text-xs text-neutral-500 mt-0.5">
-            You&apos;ve trained {weeklyCount} time{weeklyCount !== 1 ? "s" : ""} this week
+        <div className="flex flex-col gap-1">
+          {city && (
+            <p className="text-xs text-neutral-500">
+              {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
+            </p>
+          )}
+          <p className="text-sm text-neutral-400">
+            {lastSession
+              ? `Last session: ${lastSession.title} · ${relativeDay(lastSession.date)}`
+              : "No workouts logged yet — start your first session"}
           </p>
-        )}
+          {weeklyCount > 0 && (
+            <p className="text-xs text-neutral-500">
+              You&apos;ve trained {weeklyCount} time{weeklyCount !== 1 ? "s" : ""} this week
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Primary CTA — in-progress card if draft exists, else normal button */}
@@ -382,8 +382,8 @@ export default function HomePage() {
       })() : (
         <Link
           href="/log"
-          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
-                     transition-all py-5 text-lg font-semibold text-white text-center shadow-lg"
+          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98]
+                     transition-all duration-75 py-5 text-lg font-semibold text-white text-center shadow-lg"
         >
           Start Workout
         </Link>
@@ -397,15 +397,15 @@ export default function HomePage() {
         <div className="flex gap-3">
           <Link
             href="/templates"
-            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
-                       transition-all py-3 text-sm text-white text-center font-medium"
+            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96]
+                       transition-all duration-75 py-2.5 text-sm text-neutral-300 text-center font-normal"
           >
             Start from Template
           </Link>
           <Link
             href="/wellness"
-            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
-                       transition-all py-3 text-sm text-white text-center font-medium"
+            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96]
+                       transition-all duration-75 py-2.5 text-sm text-neutral-300 text-center font-normal"
           >
             Log Wellness
           </Link>
@@ -450,7 +450,7 @@ export default function HomePage() {
       )}
 
       {/* Version stamp */}
-      <p className="text-xs text-neutral-600">FloForm v1.12.2</p>
+      <p className="text-xs text-neutral-700">FloForm v1.12.2</p>
     </main>
   );
 }
