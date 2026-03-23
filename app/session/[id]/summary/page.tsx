@@ -32,9 +32,10 @@ function detectPRs(
     s => s.id !== session.id && s.date < session.date
   );
 
-  // Build session-history best per exercise.
-  // Requires only weight > 0 (restores pre-regression behavior).
-  // repsAtWeight is populated when available, for bonus rep-PR detection.
+  // Build a per-exercise baseline from the MOST RECENT session that contains each exercise.
+  // historicalSessions is already sorted newest-first (getSessions uses ORDER BY date DESC).
+  // Once an exercise is recorded from its most recent session we skip it in older sessions,
+  // so the comparison matches what the live form shows: "vs last time you did this".
   const historicalMap = new Map<string, HistoricalBest>();
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -44,8 +45,9 @@ function detectPRs(
       if ((ex.unit ?? "kg") === "plates") continue;
       const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
       const key = ex.name.trim().toLowerCase();
+      if (historicalMap.has(key)) continue; // most recent session for this exercise already captured
       for (const set of ex.sets) {
-        if (!set.weight || set.weight <= 0) continue; // weight only — restored behavior
+        if (!set.weight || set.weight <= 0) continue;
         const wKg = round2(toKg(set.weight));
         const existing = historicalMap.get(key);
         if (!existing || wKg > existing.weight) {
