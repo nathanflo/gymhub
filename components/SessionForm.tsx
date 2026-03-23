@@ -951,6 +951,7 @@ export function SessionForm({
                 onSetField={(setIdx, field, v) => handleSetField(exIdx, setIdx, field, v)}
                 onAddSet={() => handleAddSet(exIdx)}
                 onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
+                onSetType={(setIdx, type) => handleSetType(exIdx, setIdx, type)}
                 onNote={(v) => handleExerciseNote(exIdx, v)}
                 onOpenNote={() => handleOpenNote(exIdx)}
                 onToggleComplete={() => handleToggleComplete(exIdx)}
@@ -1094,6 +1095,7 @@ function ExerciseBlock({
   onFreeformNote,
   onRemoveExercise,
   onSetField,
+  onSetType,
   onAddSet,
   onRemoveSet,
   onNote,
