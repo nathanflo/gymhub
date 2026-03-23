@@ -170,7 +170,7 @@ function LogPageInner() {
   const headerDate = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   return (
-    <main className="flex flex-col flex-1 px-6 py-8 gap-6">
+    <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
       {/* Resume modal */}
       {draftData && typeof draftData !== "string" && (
         <div className="fixed inset-0 z-50 bg-neutral-950/80 flex items-center justify-center px-6">

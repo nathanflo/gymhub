@@ -43,7 +43,7 @@ export default function FitnessPage() {
   }, []);
 
   return (
-    <main className="px-6 py-8 flex flex-col gap-6">
+    <main className="px-6 pt-8 flex flex-col gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
       <div>
         <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">
           Fitness

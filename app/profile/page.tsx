@@ -106,7 +106,7 @@ export default function ProfilePage() {
     "Save Changes";
 
   return (
-    <main className="px-6 py-8 flex flex-col gap-6">
+    <main className="px-6 pt-8 flex flex-col gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
       {/* Avatar + display name */}
       <div className="flex flex-col items-center gap-3">
         <div className="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center

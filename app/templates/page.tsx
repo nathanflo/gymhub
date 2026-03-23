@@ -30,7 +30,7 @@ export default function TemplatesPage() {
   }
 
   return (
-    <main className="flex flex-col flex-1 px-6 py-8 gap-6">
+    <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
       <div>
         <button onClick={() => router.back()} className="text-sm text-indigo-400 mb-4">
           ← Back

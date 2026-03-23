@@ -78,7 +78,7 @@ export default function WorkoutsPage() {
   const totalCount = sessions.length + workouts.length;
 
   return (
-    <main className="flex flex-col flex-1 px-6 py-8 gap-6">
+    <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
       <div>
         <h1 className="text-2xl font-bold text-white">Workouts</h1>
         <p className="text-sm text-neutral-400 mt-1">

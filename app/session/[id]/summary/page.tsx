@@ -434,7 +434,7 @@ export default function SummaryPage() {
       )}
 
       {/* ── Normal Page ────────────────────────────────────────────────── */}
-      <main className="flex flex-col flex-1 px-6 py-8 gap-6">
+      <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         {/* Top bar */}
         <div className="flex items-center justify-between">
           <button
