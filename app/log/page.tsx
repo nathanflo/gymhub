@@ -7,7 +7,7 @@
  * Pass ?from=<sessionId> to pre-fill the form from a previous session (Duplicate flow).
  */
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveSession, getSessionById, getSessions } from "@/lib/sessions";
 import { getTemplates } from "@/lib/templates";
@@ -44,6 +44,7 @@ function LogPageInner() {
   const [resumeIsPaused, setResumeIsPaused] = useState(false);
   const [resumePausedOffset, setResumePausedOffset] = useState(0);
   const [resumePauseStartedAt, setResumePauseStartedAt] = useState<number | null>(null);
+  const isSaving = useRef(false);
 
   // Check localStorage for an active draft on mount (synchronous)
   useEffect(() => {
@@ -145,6 +146,8 @@ function LogPageInner() {
   }, [fromId, templateId]);
 
   async function handleSave(session: WorkoutSession) {
+    if (isSaving.current) return;
+    isSaving.current = true;
     try {
       await saveSession(session);
       if (session.bodyweight !== undefined && session.bodyweight > 0) {
@@ -160,6 +163,7 @@ function LogPageInner() {
       localStorage.removeItem("activeWorkoutDraft");
       router.push(`/session/${session.id}/summary`);
     } catch (err) {
+      isSaving.current = false;
       console.error(err);
       alert("Session could not be saved. Please try again.");
     }

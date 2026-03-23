@@ -28,19 +28,9 @@ function detectPRs(
   session: WorkoutSession,
   allSessions: WorkoutSession[]
 ): string[] {
-  console.log(`[PR filter] summary session id=${session.id} date=${session.date}`);
-  console.log(`[PR filter] allSessions count=${allSessions.length}`);
-  allSessions.forEach((s, i) => {
-    const idMatch  = s.id === session.id;
-    const dateLt   = s.date < session.date;
-    const included = !idMatch && dateLt;
-    console.log(`[PR filter]   [${i}] id=${s.id} date=${s.date} | idMatch=${idMatch} dateLt=${dateLt} → included=${included}`);
-  });
-
   const historicalSessions = allSessions.filter(
     s => s.id !== session.id && s.date < session.date
   );
-  console.log(`[PR filter] historicalSessions count=${historicalSessions.length}`);
 
   // Build a per-exercise baseline from the MOST RECENT session that contains each exercise.
   // historicalSessions is already sorted newest-first (getSessions uses ORDER BY date DESC).
