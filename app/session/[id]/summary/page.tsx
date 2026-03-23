@@ -505,6 +505,20 @@ export default function SummaryPage() {
           </button>
         </div>
 
+        {/* PR Highlight Block */}
+        {!isYoga && !isRun && prExercises.length > 0 && (
+          <div className="rounded-2xl bg-indigo-600/10 border border-indigo-500/30 px-4 py-3 flex flex-col gap-1">
+            <p className="text-xs uppercase tracking-wide text-indigo-300">
+              new personal records
+            </p>
+            <p className="text-sm font-semibold text-white">
+              {prExercises.length === 1
+                ? `${prExercises[0]} reached a new high`
+                : `${prExercises.length} lifts reached new highs`}
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="border-b border-neutral-800 pb-5">
           <h1 className="text-4xl font-bold text-white">{session.title}</h1>
