@@ -307,7 +307,7 @@ export default function HomePage() {
   return (
     <main className="px-6 py-8 flex flex-col gap-6">
       {/* Hero + primary CTA — grouped tighter to read as one unit */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -384,10 +384,12 @@ export default function HomePage() {
       })() : (
         <Link
           href="/log"
-          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98]
-                     transition-all duration-75 py-5 text-lg font-semibold text-white text-center shadow-lg"
+          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 hover:brightness-105
+                     active:scale-[0.97] active:brightness-110
+                     transition-all duration-75 py-5 text-lg font-semibold text-white text-center
+                     shadow-[0_10px_30px_rgba(99,102,241,0.25)]"
         >
-          Start Workout
+          Start Session
         </Link>
       )}
       </div>{/* end hero+CTA group */}
