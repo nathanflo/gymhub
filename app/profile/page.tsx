@@ -241,7 +241,7 @@ export default function ProfilePage() {
       >
         Sign Out
       </button>
-      <p className="text-xs text-neutral-600 text-center">FloForm v1.12.2</p>
+      <p className="text-xs text-neutral-600 text-center">FloForm v1.14.0</p>
     </main>
   );
 }
