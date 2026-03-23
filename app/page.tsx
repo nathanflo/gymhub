@@ -158,10 +158,10 @@ function SessionRow({ session }: { session: WorkoutSession }) {
                  active:scale-95 transition-all"
     >
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-white">{session.title}</span>
-        <span className="text-xs text-neutral-400">{summary}</span>
+        <span className="text-sm font-medium text-neutral-300">{session.title}</span>
+        <span className="text-xs text-neutral-500">{summary}</span>
       </div>
-      <p className="text-xs text-neutral-500">{session.workoutType}</p>
+      <p className="text-xs text-neutral-600">{session.workoutType}</p>
     </Link>
   );
 }
@@ -306,6 +306,8 @@ export default function HomePage() {
 
   return (
     <main className="px-6 py-8 flex flex-col gap-6">
+      {/* Hero + primary CTA — grouped tighter to read as one unit */}
+      <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -388,6 +390,7 @@ export default function HomePage() {
           Start Workout
         </Link>
       )}
+      </div>{/* end hero+CTA group */}
 
       {/* Quick Actions */}
       <section className="flex flex-col gap-3">
@@ -398,14 +401,14 @@ export default function HomePage() {
           <Link
             href="/templates"
             className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96]
-                       transition-all duration-75 py-2.5 text-sm text-neutral-300 text-center font-normal"
+                       transition-all duration-75 py-2.5 text-sm text-neutral-100 text-center font-medium"
           >
             Start from Template
           </Link>
           <Link
             href="/wellness"
             className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96]
-                       transition-all duration-75 py-2.5 text-sm text-neutral-300 text-center font-normal"
+                       transition-all duration-75 py-2.5 text-sm text-neutral-100 text-center font-medium"
           >
             Log Wellness
           </Link>
