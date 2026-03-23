@@ -636,10 +636,14 @@ export function SessionForm({
       {/* Floating timer pill — persists while scrolling */}
       {startTime && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-none"
+          className="fixed left-1/2 -translate-x-1/2 z-40"
           style={{ bottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
         >
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/90 border border-indigo-500/30 backdrop-blur-sm shadow-lg">
+          <button
+            type="button"
+            onClick={() => isPaused ? handleResume() : handlePause()}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/90 border border-indigo-500/30 backdrop-blur-sm shadow-lg cursor-pointer hover:border-indigo-400/50 transition-colors"
+          >
             <span
               className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                 isPaused ? "bg-amber-400/40" : "bg-indigo-400 animate-pulse"
@@ -653,7 +657,7 @@ export function SessionForm({
                 · Rest {String(Math.floor(restElapsed / 60)).padStart(2, "0")}:{String(restElapsed % 60).padStart(2, "0")}
               </span>
             )}
-          </div>
+          </button>
         </div>
       )}
 
