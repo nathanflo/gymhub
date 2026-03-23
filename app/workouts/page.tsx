@@ -277,24 +277,26 @@ function SessionCard({
           )}
 
           {/* Actions */}
-          <div className="border-t border-neutral-700/50 pt-3 flex flex-wrap justify-end gap-x-4 gap-y-2">
-            <button onClick={onSummary} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
+          <div className="border-t border-neutral-700/50 pt-3 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+            <button onClick={onSummary} className="text-sm text-indigo-400 hover:text-indigo-300 active:scale-[0.96] active:opacity-70 transition-all duration-75 py-1">
               Summary
             </button>
-            <button onClick={onDuplicate} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
+            <button onClick={onDuplicate} className="text-sm text-indigo-400 hover:text-indigo-300 active:scale-[0.96] active:opacity-70 transition-all duration-75 py-1">
               Duplicate
             </button>
             <button
               onClick={handleTemplate}
               disabled={savingTemplate}
-              className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1 disabled:opacity-40"
+              className="text-sm text-indigo-400 hover:text-indigo-300 active:scale-[0.96] active:opacity-70 transition-all duration-75 py-1 disabled:opacity-40"
             >
               {savingTemplate ? 'Saving…' : 'Template'}
             </button>
-            <button onClick={onEdit} className="text-sm text-indigo-400 hover:text-indigo-300 active:opacity-70 transition-colors py-1">
+            <button onClick={onEdit} className="text-sm text-indigo-400 hover:text-indigo-300 active:scale-[0.96] active:opacity-70 transition-all duration-75 py-1">
               Edit
             </button>
-            <button onClick={onDelete} className="text-sm text-neutral-500 hover:text-red-400 active:opacity-70 transition-colors py-1">
+            </div>
+            <button onClick={onDelete} className="text-sm text-neutral-500 hover:text-red-400 active:scale-[0.96] active:opacity-70 transition-all duration-75 py-1">
               Delete
             </button>
           </div>
