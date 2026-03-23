@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { toPng } from "html-to-image";
 import { getSessionById, getSessions } from "@/lib/sessions";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
@@ -277,6 +278,8 @@ export default function SummaryPage() {
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const posterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -355,6 +358,31 @@ export default function SummaryPage() {
     ? generateDeltaInsight(session, previousSession)
     : null;
 
+  async function handleShareImage() {
+    if (!posterRef.current) return;
+    setIsGenerating(true);
+    try {
+      const bgColor = isYoga ? "#f5f5f4" : "#0a0a0a";
+      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, backgroundColor: bgColor });
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "floform-workout.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: session?.title });
+      } else {
+        // Fallback: download
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = "floform-workout.png";
+        a.click();
+      }
+    } catch (err) {
+      console.error("Share failed:", err);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   return (
     <>
       {/* ── Share Overlay ──────────────────────────────────────────────── */}
@@ -371,7 +399,7 @@ export default function SummaryPage() {
           </button>
 
           {isYoga ? (
-            <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
+            <div ref={posterRef} className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
               <p className="text-indigo-400 text-xs font-bold tracking-[0.2em] uppercase mb-8">FloForm</p>
               <h1 className="text-5xl font-black text-indigo-900 text-center">Yoga</h1>
               <p className="text-lg font-medium text-indigo-700 text-center mt-1">
@@ -403,7 +431,7 @@ export default function SummaryPage() {
               <p className="text-xs text-stone-400 text-center mt-8">floform.fit</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-0 w-full max-w-sm my-auto py-10">
+            <div ref={posterRef} className="flex flex-col items-center gap-0 w-full max-w-sm my-auto py-10">
               {/* Brand */}
               <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-6">
                 FloForm
@@ -506,6 +534,16 @@ export default function SummaryPage() {
               </p>
             </div>
           )}
+
+          {/* Share Image button */}
+          <button
+            onClick={handleShareImage}
+            disabled={isGenerating}
+            className="absolute left-1/2 -translate-x-1/2 px-8 py-3 rounded-2xl bg-indigo-600 text-white font-semibold text-sm active:scale-95 transition-all disabled:opacity-50"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 20px)" }}
+          >
+            {isGenerating ? "Preparing…" : "Share Image"}
+          </button>
         </div>
       )}
 
