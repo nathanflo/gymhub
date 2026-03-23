@@ -73,7 +73,7 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
   const user = authSession?.user;
   if (!user) return;
 
-  await supabase.from("workout_sessions").insert({
+  const { error } = await supabase.from("workout_sessions").insert({
     id: session.id,
     user_id: user.id,
     date: session.date,
@@ -99,6 +99,7 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
            clarityRating: session.yogaClarityRating ?? null }]
       : session.exercises,
   });
+  if (error) throw new Error(`Failed to save session: ${error.message}`);
 }
 
 /** Remove a session by id. */
@@ -108,7 +109,7 @@ export async function deleteSession(id: string): Promise<void> {
 
 /** Replace an existing session by id (preserves original date). */
 export async function updateSession(updated: WorkoutSession): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from("workout_sessions")
     .update({
       date: updated.date,
@@ -134,4 +135,5 @@ export async function updateSession(updated: WorkoutSession): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq("id", updated.id);
+  if (error) throw new Error(`Failed to update session: ${error.message}`);
 }

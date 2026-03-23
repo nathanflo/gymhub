@@ -145,19 +145,24 @@ function LogPageInner() {
   }, [fromId, templateId]);
 
   async function handleSave(session: WorkoutSession) {
-    await saveSession(session);
-    if (session.bodyweight !== undefined && session.bodyweight > 0) {
-      const todayBw = await getTodayBodyweight();
-      if (todayBw !== session.bodyweight) {
-        await saveBodyweightEntry({
-          id: crypto.randomUUID(),
-          date: new Date().toISOString(),
-          weight: session.bodyweight,
-        });
+    try {
+      await saveSession(session);
+      if (session.bodyweight !== undefined && session.bodyweight > 0) {
+        const todayBw = await getTodayBodyweight();
+        if (todayBw !== session.bodyweight) {
+          await saveBodyweightEntry({
+            id: crypto.randomUUID(),
+            date: new Date().toISOString(),
+            weight: session.bodyweight,
+          });
+        }
       }
+      localStorage.removeItem("activeWorkoutDraft");
+      router.push(`/session/${session.id}/summary`);
+    } catch (err) {
+      console.error(err);
+      alert("Session could not be saved. Please try again.");
     }
-    localStorage.removeItem("activeWorkoutDraft");
-    router.push(`/session/${session.id}/summary`);
   }
 
   // Show skeleton while checking draft or loading initial state

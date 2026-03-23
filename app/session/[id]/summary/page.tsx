@@ -22,7 +22,7 @@ function getEffortLabel(
   return { label: "Steady", color: "text-emerald-400", bgColor: "bg-emerald-950/60" };
 }
 
-function detectPR(session: WorkoutSession, allSessions: WorkoutSession[]): string | null {
+function detectPRs(session: WorkoutSession, allSessions: WorkoutSession[]): string[] {
   const historical = allSessions.filter(s => s.id !== session.id && s.date < session.date);
 
   const historicalMaxes = new Map<string, number>();
@@ -39,6 +39,7 @@ function detectPR(session: WorkoutSession, allSessions: WorkoutSession[]): strin
     }
   }
 
+  const prs: string[] = [];
   for (const ex of session.exercises) {
     if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
     if ((ex.unit ?? "kg") === "plates") continue;
@@ -48,10 +49,9 @@ function detectPR(session: WorkoutSession, allSessions: WorkoutSession[]): strin
     if (currentMax <= 0) continue;
     const historicalMax = historicalMaxes.get(key);
     if (historicalMax === undefined) continue; // first-ever log — not a PR
-    if (currentMax > historicalMax) return ex.name.trim();
+    if (currentMax > historicalMax) prs.push(ex.name.trim());
   }
-
-  return null;
+  return prs;
 }
 
 function generateYogaInsight(session: WorkoutSession): string {
@@ -69,7 +69,7 @@ function generateYogaInsight(session: WorkoutSession): string {
 function generateSubtitle(
   session: WorkoutSession,
   previousSession: WorkoutSession | null,
-  prExercise: string | null
+  prExercises: string[]
 ): string {
   const { workoutType, exercises } = session;
 
@@ -90,21 +90,33 @@ function generateSubtitle(
   const totalSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
   const totalVolume = exercises.reduce((s, ex) =>
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+  const prevVolume = previousSession
+    ? previousSession.exercises.reduce((s, ex) =>
+        s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0)
+    : 0;
+  const ratio = prevVolume > 0 && totalVolume > 0 ? totalVolume / prevVolume : null;
 
-  // 1. PR
-  if (prExercise) return `New PR: ${prExercise}`;
-
-  // 2. High volume vs previous session
-  if (previousSession) {
-    const prevVolume = previousSession.exercises.reduce((s, ex) =>
-      s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
-    if (prevVolume > 0 && totalVolume > prevVolume * 1.1) return "High volume session";
+  // 1. PEAK tier — multiple PRs, or single PR + high volume
+  const isPeak = prExercises.length >= 2 || (prExercises.length >= 1 && ratio !== null && ratio >= 1.2);
+  if (isPeak) {
+    if (prExercises.length >= 2) return `${prExercises.length} new PRs — huge session`;
+    return "You leveled up today"; // single PR + high volume
   }
 
-  // 3. Short session
+  // 2. Single PR
+  if (prExercises.length === 1) return `New PR — ${prExercises[0]} 🔥`;
+
+  // 3. Volume tiers vs previous session
+  if (ratio !== null) {
+    if (ratio >= 1.2)  return "Your strongest session yet";
+    if (ratio >= 1.1)  return "Strong session";
+    if (ratio <= 0.85) return "Light day";
+  }
+
+  // 4. Short session
   if (totalSets <= 6) return "Quick, efficient work";
 
-  // 4. Default
+  // 5. Default
   return "Solid session";
 }
 
@@ -272,8 +284,8 @@ export default function SummaryPage() {
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
 
   const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
-  const prExercise = detectPR(session, allSessions);
-  const headline = generateSubtitle(session, previousSession, prExercise);
+  const prExercises = detectPRs(session, allSessions);
+  const headline = generateSubtitle(session, previousSession, prExercises);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
   const workoutDuration = session.started_at && session.ended_at
     ? formatDuration(session.started_at, session.ended_at)
@@ -418,7 +430,7 @@ export default function SummaryPage() {
                     <p key={i} className="text-sm text-neutral-300">
                       {ex.name}{" "}
                       <span className="text-neutral-600">({ex.sets.length} sets)</span>
-                      {ex.name.trim().toLowerCase() === prExercise?.trim().toLowerCase() ? " 🔥" : ""}
+                      {prExercises.some(p => p.trim().toLowerCase() === ex.name.trim().toLowerCase()) ? " 🔥" : ""}
                     </p>
                   ))}
                 </div>
@@ -590,7 +602,10 @@ export default function SummaryPage() {
               const mode = ex.mode ?? "weight_reps";
               return (
                 <div key={i} className="rounded-2xl bg-neutral-800 px-5 py-4 flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-white">{ex.name}</p>
+                  <p className="text-sm font-semibold text-white">
+                    {ex.name}
+                    {prExercises.some(p => p.trim().toLowerCase() === ex.name.trim().toLowerCase()) ? " 🔥" : ""}
+                  </p>
                   {mode === "freeform" ? (
                     <p className="text-sm text-neutral-400">{ex.freeformNote}</p>
                   ) : (
