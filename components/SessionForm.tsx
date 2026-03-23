@@ -244,6 +244,8 @@ export function SessionForm({
     initialState ?? emptySessionForm()
   );
   const [error, setError] = useState<string | null>(null);
+  const [actionsNearView, setActionsNearView] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
   const [exerciseLibrary, setExerciseLibrary] = useState<string[]>([]);
   const [pastSessions, setPastSessions] = useState<WorkoutSession[]>([]);
   const [startTime, setStartTime] = useState<string | null>(initialStartTime ?? null);
@@ -652,14 +654,28 @@ export function SessionForm({
     onSave(session);
   }
 
+  // Raise pill when action buttons are visible so pill doesn't overlap them
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setActionsNearView(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <>
       {/* Floating timer pill — persists while scrolling */}
       {startTime && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-40"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+          className="fixed left-1/2 -translate-x-1/2 z-40 transition-[bottom] duration-200"
+          style={{ bottom: actionsNearView
+            ? 'calc(env(safe-area-inset-bottom) + 88px)'
+            : 'calc(env(safe-area-inset-bottom) + 16px)' }}
         >
           <button
             type="button"
@@ -990,7 +1006,7 @@ export function SessionForm({
       {/* Actions — lifecycle-aware */}
       {showDateEdit ? (
         // Edit page — always show Cancel + submitLabel
-        <div className="flex gap-3">
+        <div ref={actionsRef} className="flex gap-3">
           <button
             type="button"
             onClick={onCancel}
@@ -1010,7 +1026,7 @@ export function SessionForm({
         </div>
       ) : startTime ? (
         // Active workout — Cancel + Finish Workout
-        <div className="flex gap-3">
+        <div ref={actionsRef} className="flex gap-3">
           <button
             type="button"
             onClick={onCancel}
