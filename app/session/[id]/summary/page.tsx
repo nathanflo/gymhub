@@ -403,16 +403,16 @@ export default function SummaryPage() {
               <p className="text-xs text-stone-400 text-center mt-8">floform.fit</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
+            <div className="flex flex-col items-center gap-0 w-full max-w-sm my-auto py-10">
               {/* Brand */}
-              <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-8">
+              <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-6">
                 FloForm
               </p>
 
               {/* Title */}
               <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
 
-              {/* PR Hero Insert */}
+              {/* PR Hero Insert — strong sessions */}
               {!isRun && prExercises.length > 0 && (
                 <div className="mt-4 text-center">
                   <p className="text-3xl font-black text-white">
@@ -424,17 +424,27 @@ export default function SummaryPage() {
                 </div>
               )}
 
+              {/* Volume Hero Insert — non-PR sessions */}
+              {!isRun && prExercises.length === 0 && totalVolume > 0 && (
+                <div className="mt-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-300">
+                    {totalVolume.toLocaleString()} kg
+                  </p>
+                  <p className="text-xs text-neutral-600 mt-0.5">total volume</p>
+                </div>
+              )}
+
               {/* Headline */}
-              <p className="text-sm italic text-neutral-500 text-center mt-2">{headline}</p>
+              <p className="text-sm italic text-neutral-500 text-center mt-3">{headline}</p>
 
               {/* Date */}
-              <p className="text-xs text-neutral-500 mt-3">
+              <p className="text-xs text-neutral-500 mt-2">
                 {dateLabel}{workoutDuration ? ` · ${workoutDuration}` : ""}
               </p>
               {city && <p className="text-xs text-neutral-500 mt-0.5">{city}</p>}
 
               {/* Stats row */}
-              <div className="flex gap-8 justify-center mt-8 divide-x divide-neutral-800">
+              <div className="flex gap-8 justify-center mt-7 divide-x divide-neutral-800">
                 {isRun ? (
                   <>
                     {session.distance !== undefined && (
@@ -471,7 +481,7 @@ export default function SummaryPage() {
               </div>
 
               {/* Energy pill */}
-              <div className="mt-6">
+              <div className="mt-5">
                 <span className={`inline-block px-4 py-1.5 rounded-full font-semibold ${effort.bgColor} ${effort.color}`}>
                   {effort.label}
                 </span>
@@ -479,7 +489,7 @@ export default function SummaryPage() {
 
               {/* Exercise preview (top 3) */}
               {!isRun && session.exercises.length > 0 && (
-                <div className="flex flex-col items-center gap-1 mt-3">
+                <div className="flex flex-col items-center gap-1 mt-4">
                   {session.exercises.slice(0, 3).map((ex, i) => (
                     <p key={i} className="text-sm text-neutral-300">
                       {ex.name}{" "}
@@ -491,7 +501,7 @@ export default function SummaryPage() {
               )}
 
               {/* Brand watermark */}
-              <p className="text-xs text-neutral-500 text-center mt-6">
+              <p className="text-xs text-neutral-500 text-center mt-10">
                 floform.fit
               </p>
             </div>
