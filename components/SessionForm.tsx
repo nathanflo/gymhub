@@ -659,9 +659,9 @@ export function SessionForm({
     const check = () => {
       const el = actionsRef.current;
       if (!el) return;
-      // Raise pill when action row is within 160px of the viewport bottom
+      // Raise pill when action row is within 200px of the viewport bottom
       const rect = el.getBoundingClientRect();
-      setActionsNearView(rect.top < window.innerHeight + 160);
+      setActionsNearView(rect.top < window.innerHeight + 200);
     };
     check();
     window.addEventListener("scroll", check, { passive: true });
@@ -678,10 +678,13 @@ export function SessionForm({
       {/* Floating timer pill — persists while scrolling */}
       {startTime && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-40 transition-[bottom] duration-200"
-          style={{ bottom: actionsNearView
-            ? 'calc(env(safe-area-inset-bottom) + 176px)'
-            : 'calc(env(safe-area-inset-bottom) + 16px)' }}
+          className="fixed left-1/2 -translate-x-1/2 z-40"
+          style={{
+            bottom: actionsNearView
+              ? 'calc(env(safe-area-inset-bottom) + 160px)'
+              : 'calc(env(safe-area-inset-bottom) + 16px)',
+            transition: 'bottom 420ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          }}
         >
           <button
             type="button"
