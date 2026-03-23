@@ -412,6 +412,18 @@ export default function SummaryPage() {
               {/* Title */}
               <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
 
+              {/* PR Hero Insert */}
+              {!isRun && prExercises.length > 0 && (
+                <div className="mt-4 text-center">
+                  <p className="text-3xl font-black text-white">
+                    {prExercises.length} PR{prExercises.length === 1 ? "" : "s"}
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    new record{prExercises.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+              )}
+
               {/* Headline */}
               <p className="text-sm italic text-neutral-500 text-center mt-2">{headline}</p>
 
