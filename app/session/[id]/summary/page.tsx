@@ -128,28 +128,38 @@ function generateSubtitle(
     : 0;
   const ratio = prevVolume > 0 && totalVolume > 0 ? totalVolume / prevVolume : null;
 
-  // 1. PEAK tier — multiple PRs, or single PR + high volume
-  const isPeak = prExercises.length >= 2 || (prExercises.length >= 1 && ratio !== null && ratio >= 1.2);
-  if (isPeak) {
-    if (prExercises.length >= 2) return `${prExercises.length} new PRs — huge session`;
-    return "You leveled up today"; // single PR + high volume
-  }
+  // Deterministic picker — same session always yields the same message
+  const pick = (arr: string[]) => arr[session.id.charCodeAt(0) % arr.length];
 
-  // 2. Single PR
-  if (prExercises.length === 1) return `New PR — ${prExercises[0]} 🔥`;
+  // 1. PR tiers (always override volume)
+  if (prExercises.length >= 3) return pick([
+    `${prExercises.length} new PRs — huge session`,
+    "Multiple PRs — breakthrough workout",
+    "You leveled up today",
+  ]);
 
-  // 3. Volume tiers vs previous session
+  if (prExercises.length === 2) return pick([
+    "2 new PRs — strong session",
+    "Progress across multiple lifts",
+  ]);
+
+  if (prExercises.length === 1) return pick([
+    `New PR — ${prExercises[0]} 🔥`,
+    `${prExercises[0]} feeling strong today`,
+  ]);
+
+  // 2. Volume tiers vs previous session
   if (ratio !== null) {
-    if (ratio >= 1.2)  return "Your strongest session yet";
-    if (ratio >= 1.1)  return "Strong session";
-    if (ratio <= 0.85) return "Light day";
+    if (ratio >= 1.2)  return pick(["Your strongest session yet", "Big output today"]);
+    if (ratio >= 1.1)  return pick(["Strong session", "Nice progression"]);
+    if (ratio <= 0.85) return pick(["Light day — still showed up", "Recovery session"]);
   }
 
-  // 4. Short session
+  // 3. Short session
   if (totalSets <= 6) return "Quick, efficient work";
 
-  // 5. Default
-  return "Solid session";
+  // 4. Default
+  return pick(["Good work", "Solid effort", "Consistent work", "Keep stacking it"]);
 }
 
 function generateDeltaInsight(
