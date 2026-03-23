@@ -44,13 +44,14 @@ export default function RootLayout({
           } catch(e) {}
         `}} />
       </head>
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
+      <body className="min-h-[100svh] bg-neutral-950 text-neutral-100 font-sans">
         <StartupOverlay />
         {/*
          * Shell wrapper – keeps max width iPhone-sized and centered on desktop.
-         * Future: consider bottom nav when tabs grow beyond 5 (Wellness, Music, AI).
+         * min-h-[100svh] uses the small viewport height (URL bar visible) to avoid
+         * the Safari 100vh bug where 100vh > visible area, causing phantom scroll.
          */}
-        <div className="mx-auto max-w-md min-h-screen flex flex-col">
+        <div className="mx-auto max-w-md min-h-[100svh] flex flex-col">
           <Nav />
           {children}
         </div>
