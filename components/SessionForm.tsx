@@ -660,7 +660,7 @@ export function SessionForm({
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => setActionsNearView(entry.isIntersecting),
-      { threshold: 0 }
+      { rootMargin: "0px 0px 100px 0px", threshold: 0 }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -674,7 +674,7 @@ export function SessionForm({
         <div
           className="fixed left-1/2 -translate-x-1/2 z-40 transition-[bottom] duration-200"
           style={{ bottom: actionsNearView
-            ? 'calc(env(safe-area-inset-bottom) + 88px)'
+            ? 'calc(env(safe-area-inset-bottom) + 140px)'
             : 'calc(env(safe-area-inset-bottom) + 16px)' }}
         >
           <button
