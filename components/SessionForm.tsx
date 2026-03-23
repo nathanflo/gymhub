@@ -680,7 +680,7 @@ export function SessionForm({
         <div
           className="fixed left-1/2 -translate-x-1/2 z-40 transition-[bottom] duration-200"
           style={{ bottom: actionsNearView
-            ? 'calc(env(safe-area-inset-bottom) + 140px)'
+            ? 'calc(env(safe-area-inset-bottom) + 176px)'
             : 'calc(env(safe-area-inset-bottom) + 16px)' }}
         >
           <button
