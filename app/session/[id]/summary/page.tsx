@@ -32,10 +32,8 @@ function detectPRs(
     s => s.id !== session.id && s.date < session.date
   );
 
-  // Build a per-exercise baseline from the MOST RECENT session that contains each exercise.
-  // historicalSessions is already sorted newest-first (getSessions uses ORDER BY date DESC).
-  // Once an exercise is recorded from its most recent session we skip it in older sessions,
-  // so the comparison matches what the live form shows: "vs last time you did this".
+  // Build the all-time best per exercise across all prior sessions.
+  // Accumulates the highest weight seen; for sets at that weight, the highest reps seen.
   const historicalMap = new Map<string, HistoricalBest>();
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -45,7 +43,6 @@ function detectPRs(
       if ((ex.unit ?? "kg") === "plates") continue;
       const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
       const key = ex.name.trim().toLowerCase();
-      if (historicalMap.has(key)) continue; // most recent session for this exercise already captured
       for (const set of ex.sets) {
         if (!set.weight || set.weight <= 0) continue;
         const wKg = round2(toKg(set.weight));
@@ -79,22 +76,12 @@ function detectPRs(
     if (!curBest) continue;
 
     const historical = historicalMap.get(key);
-    if (historical === undefined) {
-      console.log(`[PR check] ${ex.name}: current=${curBest.weight}kg×${curBest.reps}, historical=none, isPR=false`);
-      continue; // first-ever log across all sources — not a PR
-    }
+    if (historical === undefined) continue; // first-ever log — not a PR
 
     const isWeightPR = curBest.weight > historical.weight;
     const isRepPR    = curBest.weight === historical.weight && curBest.reps > historical.repsAtWeight;
-    const isPR       = isWeightPR || isRepPR;
 
-    console.log(
-      `[PR check] ${ex.name}: current=${curBest.weight}kg×${curBest.reps}, ` +
-      `historical=${historical.weight}kg×${historical.repsAtWeight}, ` +
-      `isPR=${isPR}${isPR ? ` (${isWeightPR ? "weight" : "reps"})` : ""}`
-    );
-
-    if (isPR) prs.push(ex.name.trim());
+    if (isWeightPR || isRepPR) prs.push(ex.name.trim());
   }
   return prs;
 }
