@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getSessionById, getSessions } from "@/lib/sessions";
 import { getWorkouts } from "@/lib/storage";
-import { getPRs, getPRsFromSessions } from "@/lib/progress";
+import { getPRs } from "@/lib/progress";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, Workout } from "@/types/workout";
@@ -24,43 +24,86 @@ function getEffortLabel(
   return { label: "Steady", color: "text-emerald-400", bgColor: "bg-emerald-950/60" };
 }
 
+type HistoricalBest = { weight: number; repsAtWeight: number };
+
 function detectPRs(
   session: WorkoutSession,
   allSessions: WorkoutSession[],
   legacyWorkouts: Workout[]
 ): string[] {
-  // Build historical best per exercise using the same logic as the Progress page:
-  // legacy workouts + all sessions prior to this one, merged (highest weight wins).
   const historicalSessions = allSessions.filter(
     s => s.id !== session.id && s.date < session.date
   );
 
-  const legacyPRList  = getPRs(legacyWorkouts);
-  const sessionPRList = getPRsFromSessions(historicalSessions);
+  // Build all-time best per exercise: { weight, repsAtWeight }
+  // Seed from legacy workouts (weight only, no reps available).
+  const historicalMap = new Map<string, HistoricalBest>();
 
-  const historicalMap = new Map<string, number>();
-  for (const pr of [...legacyPRList, ...sessionPRList]) {
+  for (const pr of getPRs(legacyWorkouts)) {
     const key = pr.exercise.trim().toLowerCase();
     const prev = historicalMap.get(key);
-    if (prev === undefined || pr.weight > prev) historicalMap.set(key, pr.weight);
+    if (!prev || pr.weight > prev.weight) {
+      historicalMap.set(key, { weight: pr.weight, repsAtWeight: 0 });
+    }
   }
 
+  // Overlay with session data — captures both weight and reps at that weight.
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  for (const s of historicalSessions) {
+    for (const ex of s.exercises) {
+      if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
+      if ((ex.unit ?? "kg") === "plates") continue;
+      const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
+      const key = ex.name.trim().toLowerCase();
+      for (const set of ex.sets) {
+        if (!set.weight || set.weight <= 0 || !set.reps || set.reps <= 0) continue;
+        const wKg = round2(toKg(set.weight));
+        const existing = historicalMap.get(key);
+        if (!existing || wKg > existing.weight) {
+          historicalMap.set(key, { weight: wKg, repsAtWeight: set.reps });
+        } else if (existing && wKg === existing.weight && set.reps > existing.repsAtWeight) {
+          existing.repsAtWeight = set.reps;
+        }
+      }
+    }
+  }
+
+  // Compare current session against historical bests.
   const prs: string[] = [];
   for (const ex of session.exercises) {
     if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
     if ((ex.unit ?? "kg") === "plates") continue;
     const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
     const key = ex.name.trim().toLowerCase();
-    const currentMax = Math.max(0, ...ex.sets.filter(s => s.weight && s.weight > 0).map(s => toKg(s.weight!)));
-    if (currentMax <= 0) continue;
-    const historicalMax = historicalMap.get(key);
+
+    // Current top: highest weight; among sets at that weight, highest reps.
+    let curBest: { weight: number; reps: number } | null = null;
+    for (const set of ex.sets) {
+      if (!set.weight || set.weight <= 0 || !set.reps || set.reps <= 0) continue;
+      const wKg = round2(toKg(set.weight));
+      if (!curBest || wKg > curBest.weight || (wKg === curBest.weight && set.reps > curBest.reps)) {
+        curBest = { weight: wKg, reps: set.reps };
+      }
+    }
+    if (!curBest) continue;
+
+    const historical = historicalMap.get(key);
+    if (historical === undefined) {
+      console.log(`[PR check] ${ex.name}: current=${curBest.weight}kg×${curBest.reps}, historical=none, isPR=false`);
+      continue; // first-ever log across all sources — not a PR
+    }
+
+    const isWeightPR = curBest.weight > historical.weight;
+    const isRepPR    = curBest.weight === historical.weight && curBest.reps > historical.repsAtWeight;
+    const isPR       = isWeightPR || isRepPR;
 
     console.log(
-      `[PR check] ${ex.name}: currentMax=${currentMax}kg, historicalMax=${historicalMax ?? "none"}, isPR=${historicalMax !== undefined && currentMax > historicalMax}`
+      `[PR check] ${ex.name}: current=${curBest.weight}kg×${curBest.reps}, ` +
+      `historical=${historical.weight}kg×${historical.repsAtWeight}, ` +
+      `isPR=${isPR}${isPR ? ` (${isWeightPR ? "weight" : "reps"})` : ""}`
     );
 
-    if (historicalMax === undefined) continue; // first-ever log across all sources — not a PR
-    if (currentMax > historicalMax) prs.push(ex.name.trim());
+    if (isPR) prs.push(ex.name.trim());
   }
   return prs;
 }
