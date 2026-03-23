@@ -73,6 +73,11 @@ function LogPageInner() {
     setDraftData(null);
   }, [resumeParam]);
 
+  /**
+   * Pure in-memory prefill — reads session history to seed the first set of each
+   * template exercise with recent values. Does NOT write back to the template record.
+   * Exercises with no matching history are returned unchanged.
+   */
   function prefillTemplateFromHistory(
     template: WorkoutTemplate,
     sessions: WorkoutSession[]

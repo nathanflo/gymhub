@@ -1,6 +1,7 @@
 /**
  * templates.ts – Supabase wrapper for workout templates.
- * Replaces the localStorage implementation from Phase 1–8.
+ * Templates are intentionally immutable: they can be created and deleted
+ * but never updated. To revise a template, delete and recreate it.
  */
 
 import { WorkoutTemplate } from "@/types/template";
