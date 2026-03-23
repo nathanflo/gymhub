@@ -656,14 +656,20 @@ export function SessionForm({
 
   // Raise pill when action buttons are visible so pill doesn't overlap them
   useEffect(() => {
-    const el = actionsRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setActionsNearView(entry.isIntersecting),
-      { rootMargin: "0px 0px 100px 0px", threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    const check = () => {
+      const el = actionsRef.current;
+      if (!el) return;
+      // Raise pill when action row is within 160px of the viewport bottom
+      const rect = el.getBoundingClientRect();
+      setActionsNearView(rect.top < window.innerHeight + 160);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("touchmove", check, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("touchmove", check);
+    };
   }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────
