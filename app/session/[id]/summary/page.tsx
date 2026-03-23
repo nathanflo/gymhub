@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getSessionById, getSessions } from "@/lib/sessions";
+import { getWorkouts } from "@/lib/storage";
+import { getPRs, getPRsFromSessions } from "@/lib/progress";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
-import { EnergyLevel } from "@/types/workout";
+import { EnergyLevel, Workout } from "@/types/workout";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -22,21 +24,25 @@ function getEffortLabel(
   return { label: "Steady", color: "text-emerald-400", bgColor: "bg-emerald-950/60" };
 }
 
-function detectPRs(session: WorkoutSession, allSessions: WorkoutSession[]): string[] {
-  const historical = allSessions.filter(s => s.id !== session.id && s.date < session.date);
+function detectPRs(
+  session: WorkoutSession,
+  allSessions: WorkoutSession[],
+  legacyWorkouts: Workout[]
+): string[] {
+  // Build historical best per exercise using the same logic as the Progress page:
+  // legacy workouts + all sessions prior to this one, merged (highest weight wins).
+  const historicalSessions = allSessions.filter(
+    s => s.id !== session.id && s.date < session.date
+  );
 
-  const historicalMaxes = new Map<string, number>();
-  for (const s of historical) {
-    for (const ex of s.exercises) {
-      if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
-      if ((ex.unit ?? "kg") === "plates") continue;
-      const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
-      const key = ex.name.trim().toLowerCase();
-      for (const set of ex.sets) {
-        if (!set.weight || set.weight <= 0) continue;
-        historicalMaxes.set(key, Math.max(historicalMaxes.get(key) ?? 0, toKg(set.weight)));
-      }
-    }
+  const legacyPRList  = getPRs(legacyWorkouts);
+  const sessionPRList = getPRsFromSessions(historicalSessions);
+
+  const historicalMap = new Map<string, number>();
+  for (const pr of [...legacyPRList, ...sessionPRList]) {
+    const key = pr.exercise.trim().toLowerCase();
+    const prev = historicalMap.get(key);
+    if (prev === undefined || pr.weight > prev) historicalMap.set(key, pr.weight);
   }
 
   const prs: string[] = [];
@@ -47,8 +53,13 @@ function detectPRs(session: WorkoutSession, allSessions: WorkoutSession[]): stri
     const key = ex.name.trim().toLowerCase();
     const currentMax = Math.max(0, ...ex.sets.filter(s => s.weight && s.weight > 0).map(s => toKg(s.weight!)));
     if (currentMax <= 0) continue;
-    const historicalMax = historicalMaxes.get(key);
-    if (historicalMax === undefined) continue; // first-ever log — not a PR
+    const historicalMax = historicalMap.get(key);
+
+    console.log(
+      `[PR check] ${ex.name}: currentMax=${currentMax}kg, historicalMax=${historicalMax ?? "none"}, isPR=${historicalMax !== undefined && currentMax > historicalMax}`
+    );
+
+    if (historicalMax === undefined) continue; // first-ever log across all sources — not a PR
     if (currentMax > historicalMax) prs.push(ex.name.trim());
   }
   return prs;
@@ -233,6 +244,7 @@ export default function SummaryPage() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [previousSession, setPreviousSession] = useState<WorkoutSession | null>(null);
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
+  const [legacyWorkouts, setLegacyWorkouts] = useState<Workout[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
 
@@ -244,8 +256,9 @@ export default function SummaryPage() {
         return;
       }
       setSession(s);
-      const all = await getSessions();
+      const [all, workouts] = await Promise.all([getSessions(), getWorkouts()]);
       setAllSessions(all);
+      setLegacyWorkouts(workouts);
       const prev = all.find(
         (x) => x.id !== s.id && x.workoutType === s.workoutType && x.date < s.date
       ) ?? null;
@@ -284,7 +297,7 @@ export default function SummaryPage() {
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
 
   const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
-  const prExercises = detectPRs(session, allSessions);
+  const prExercises = detectPRs(session, allSessions, legacyWorkouts);
   const headline = generateSubtitle(session, previousSession, prExercises);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
   const workoutDuration = session.started_at && session.ended_at
