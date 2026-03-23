@@ -385,9 +385,9 @@ export default function HomePage() {
         <Link
           href="/log"
           className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 hover:brightness-105
-                     active:scale-[0.97] active:brightness-110
-                     transition-all duration-75 py-5 text-lg font-semibold text-white text-center
-                     shadow-[0_10px_30px_rgba(99,102,241,0.25)]"
+                     active:scale-[0.96] active:brightness-110
+                     transition-all duration-75 ease-out py-5 text-lg font-semibold text-white text-center
+                     border border-indigo-400/20 shadow-[0_6px_18px_rgba(99,102,241,0.25)]"
         >
           Start Session
         </Link>
@@ -395,7 +395,7 @@ export default function HomePage() {
       </div>{/* end hero+CTA group */}
 
       {/* Quick Actions */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3 -mt-2">
         <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
           Quick Actions
         </h2>
