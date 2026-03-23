@@ -1175,8 +1175,8 @@ function ExerciseBlock({
   }, [exercise.name, lastSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columnHeaders = () => {
-    if (mode === "weight_reps") return <><span className="flex-1 text-xs text-neutral-600">{unit}</span><span className="flex-1 text-xs text-neutral-600">reps</span><span className="w-5" /></>;
-    if (mode === "reps_only") return <><span className="flex-1 text-xs text-neutral-600">reps</span><span className="w-5" /></>;
+    if (mode === "weight_reps") return <><span className="flex-1 text-xs text-neutral-600">{unit}</span><span className="flex-1 text-xs text-neutral-600">reps</span><span className="w-6 text-center text-xs text-neutral-500">Type</span><span className="w-5" /></>;
+    if (mode === "reps_only") return <><span className="flex-1 text-xs text-neutral-600">reps</span><span className="w-6 text-center text-xs text-neutral-500">Type</span><span className="w-5" /></>;
     if (mode === "duration_only") return <><span className="flex-1 text-xs text-neutral-600">duration</span><span className="w-5" /></>;
     return null;
   };
@@ -1470,11 +1470,11 @@ function SetRow({
           ? "text-amber-400"
           : set.type === "drop"
           ? "text-blue-400"
-          : "text-neutral-600"
+          : "text-neutral-400"
       }`}
       aria-label="Set type"
     >
-      {set.type === "warmup" ? "W" : set.type === "drop" ? "D" : "·"}
+      {set.type === "warmup" ? "W" : set.type === "drop" ? "D" : "–"}
     </button>
   );
 
