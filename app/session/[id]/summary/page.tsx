@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getSessionById, getSessions } from "@/lib/sessions";
-import { getWorkouts } from "@/lib/storage";
-import { getPRs } from "@/lib/progress";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
-import { EnergyLevel, Workout } from "@/types/workout";
+import { EnergyLevel } from "@/types/workout";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -28,27 +26,18 @@ type HistoricalBest = { weight: number; repsAtWeight: number };
 
 function detectPRs(
   session: WorkoutSession,
-  allSessions: WorkoutSession[],
-  legacyWorkouts: Workout[]
+  allSessions: WorkoutSession[]
 ): string[] {
   const historicalSessions = allSessions.filter(
     s => s.id !== session.id && s.date < session.date
   );
 
-  // Build all-time best per exercise: { weight, repsAtWeight }
-  // Seed from legacy workouts (weight only, no reps available).
+  // Build session-history best per exercise.
+  // Requires only weight > 0 (restores pre-regression behavior).
+  // repsAtWeight is populated when available, for bonus rep-PR detection.
   const historicalMap = new Map<string, HistoricalBest>();
-
-  for (const pr of getPRs(legacyWorkouts)) {
-    const key = pr.exercise.trim().toLowerCase();
-    const prev = historicalMap.get(key);
-    if (!prev || pr.weight > prev.weight) {
-      historicalMap.set(key, { weight: pr.weight, repsAtWeight: 0 });
-    }
-  }
-
-  // Overlay with session data — captures both weight and reps at that weight.
   const round2 = (n: number) => Math.round(n * 100) / 100;
+
   for (const s of historicalSessions) {
     for (const ex of s.exercises) {
       if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
@@ -56,13 +45,13 @@ function detectPRs(
       const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
       const key = ex.name.trim().toLowerCase();
       for (const set of ex.sets) {
-        if (!set.weight || set.weight <= 0 || !set.reps || set.reps <= 0) continue;
+        if (!set.weight || set.weight <= 0) continue; // weight only — restored behavior
         const wKg = round2(toKg(set.weight));
         const existing = historicalMap.get(key);
         if (!existing || wKg > existing.weight) {
-          historicalMap.set(key, { weight: wKg, repsAtWeight: set.reps });
-        } else if (existing && wKg === existing.weight && set.reps > existing.repsAtWeight) {
-          existing.repsAtWeight = set.reps;
+          historicalMap.set(key, { weight: wKg, repsAtWeight: set.reps ?? 0 });
+        } else if (existing && wKg === existing.weight && (set.reps ?? 0) > existing.repsAtWeight) {
+          existing.repsAtWeight = set.reps ?? 0;
         }
       }
     }
@@ -287,7 +276,6 @@ export default function SummaryPage() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [previousSession, setPreviousSession] = useState<WorkoutSession | null>(null);
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
-  const [legacyWorkouts, setLegacyWorkouts] = useState<Workout[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
 
@@ -299,9 +287,8 @@ export default function SummaryPage() {
         return;
       }
       setSession(s);
-      const [all, workouts] = await Promise.all([getSessions(), getWorkouts()]);
+      const all = await getSessions();
       setAllSessions(all);
-      setLegacyWorkouts(workouts);
       const prev = all.find(
         (x) => x.id !== s.id && x.workoutType === s.workoutType && x.date < s.date
       ) ?? null;
@@ -340,7 +327,7 @@ export default function SummaryPage() {
     s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
 
   const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
-  const prExercises = detectPRs(session, allSessions, legacyWorkouts);
+  const prExercises = detectPRs(session, allSessions);
   const headline = generateSubtitle(session, previousSession, prExercises);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
   const workoutDuration = session.started_at && session.ended_at
