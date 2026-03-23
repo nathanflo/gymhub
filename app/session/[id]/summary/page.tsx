@@ -45,6 +45,7 @@ function detectPRs(
       const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
       const key = ex.name.trim().toLowerCase();
       for (const set of ex.sets) {
+        if (set.type === "warmup") continue;
         if (!set.weight || set.weight <= 0) continue;
         const wKg = round2(toKg(set.weight));
         const existing = historicalMap.get(key);
@@ -68,6 +69,7 @@ function detectPRs(
     // Current top: highest weight; among sets at that weight, highest reps.
     let curBest: { weight: number; reps: number } | null = null;
     for (const set of ex.sets) {
+      if (set.type === "warmup") continue;
       if (!set.weight || set.weight <= 0 || !set.reps || set.reps <= 0) continue;
       const wKg = round2(toKg(set.weight));
       if (!curBest || wKg > curBest.weight || (wKg === curBest.weight && set.reps > curBest.reps)) {
@@ -770,6 +772,8 @@ export default function SummaryPage() {
                             : mode === "duration_only" && set.duration
                             ? set.duration
                             : "—"}
+                          {set.type === "warmup" && <span className="text-xs text-amber-400/70 ml-1">Warm-up</span>}
+                          {set.type === "drop" && <span className="text-xs text-blue-400/70 ml-1">Drop</span>}
                         </p>
                       ))}
                     </div>

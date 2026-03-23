@@ -18,6 +18,7 @@ export interface WorkoutSet {
   weight?: number;    // weight_reps mode — stored in the unit specified by exercise.unit
   reps?: number;      // weight_reps and reps_only modes
   duration?: string;  // duration_only mode (free text: "5 min", "45s")
+  type?: "warmup" | "drop";  // undefined = normal set
 }
 
 export interface WorkoutExercise {

@@ -62,6 +62,7 @@ export function getPRsFromSessions(sessions: WorkoutSession[]): PersonalRecord[]
       const toKg = (w: number) => unit === "lbs" ? w * 0.453592 : w;
 
       for (const set of exercise.sets) {
+        if (set.type === "warmup") continue;
         if (!set.weight || set.weight <= 0 || isNaN(set.weight)) continue;
 
         const weightKg = toKg(set.weight);

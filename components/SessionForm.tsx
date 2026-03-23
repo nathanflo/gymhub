@@ -56,6 +56,7 @@ export interface DraftSet {
   weight: string;
   reps: string;
   duration: string;
+  type?: "warmup" | "drop";
 }
 
 export interface DraftExercise {
@@ -143,6 +144,7 @@ export function sessionToFormState(s: WorkoutSession): SessionFormState {
               weight: set.weight !== undefined ? String(set.weight) : "",
               reps: set.reps !== undefined ? String(set.reps) : "",
               duration: set.duration ?? "",
+              type: set.type,
             })),
           })),
     distance: s.distance !== undefined ? String(s.distance) : "",
@@ -445,6 +447,25 @@ export function SessionForm({
     }));
   }
 
+  function handleSetType(
+    exIdx: number,
+    setIdx: number,
+    type: "warmup" | "drop" | undefined
+  ) {
+    setForm((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => {
+        if (i !== exIdx) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((s, j) =>
+            j === setIdx ? { ...s, type } : s
+          ),
+        };
+      }),
+    }));
+  }
+
   function resetPauseState() {
     setIsPaused(false);
     setPausedOffset(0);
@@ -584,8 +605,9 @@ export function SessionForm({
       : form.exercises.map((ex) => {
           const mode = ex.mode;
           const buildSet = (s: DraftSet): WorkoutSet => {
-            if (mode === "weight_reps") return { weight: parseFloat(s.weight), reps: parseInt(s.reps, 10) };
-            if (mode === "reps_only") return { reps: parseInt(s.reps, 10) };
+            const t = s.type ? { type: s.type } : {};
+            if (mode === "weight_reps") return { weight: parseFloat(s.weight), reps: parseInt(s.reps, 10), ...t };
+            if (mode === "reps_only") return { reps: parseInt(s.reps, 10), ...t };
             return { duration: s.duration.trim() };
           };
           return {
@@ -1097,6 +1119,7 @@ function ExerciseBlock({
   onFreeformNote: (v: string) => void;
   onRemoveExercise: () => void;
   onSetField: (setIdx: number, field: keyof DraftSet, v: string) => void;
+  onSetType: (setIdx: number, type: "warmup" | "drop" | undefined) => void;
   onAddSet: () => void;
   onRemoveSet: (setIdx: number) => void;
   onNote: (v: string) => void;
@@ -1262,6 +1285,7 @@ function ExerciseBlock({
               mode={mode}
               canRemove={exercise.sets.length > 1}
               onFieldChange={(field, v) => onSetField(setIdx, field, v)}
+              onTypeChange={(type) => onSetType(setIdx, type)}
               onRemove={() => onRemoveSet(setIdx)}
             />
           ))}
@@ -1384,12 +1408,14 @@ function SetRow({
   mode,
   canRemove,
   onFieldChange,
+  onTypeChange,
   onRemove,
 }: {
   set: DraftSet;
   mode: TrackingMode;
   canRemove: boolean;
   onFieldChange: (field: keyof DraftSet, v: string) => void;
+  onTypeChange: (type: "warmup" | "drop" | undefined) => void;
   onRemove: () => void;
 }) {
   const setInputClass =
@@ -1413,6 +1439,26 @@ function SetRow({
     </button>
   );
 
+  const nextType = (cur: DraftSet["type"]) =>
+    cur === undefined ? "warmup" : cur === "warmup" ? "drop" : undefined;
+
+  const typeBtn = (
+    <button
+      type="button"
+      onClick={() => onTypeChange(nextType(set.type))}
+      className={`w-6 h-6 flex items-center justify-center text-xs font-semibold rounded transition-colors ${
+        set.type === "warmup"
+          ? "text-amber-400"
+          : set.type === "drop"
+          ? "text-blue-400"
+          : "text-neutral-600"
+      }`}
+      aria-label="Set type"
+    >
+      {set.type === "warmup" ? "W" : set.type === "drop" ? "D" : "·"}
+    </button>
+  );
+
   if (mode === "weight_reps") {
     return (
       <div className="flex gap-2 items-center">
@@ -1432,6 +1478,7 @@ function SetRow({
           onChange={(e) => onFieldChange("reps", e.target.value)}
           className={setInputClass}
         />
+        {typeBtn}
         {removeBtn}
       </div>
     );
@@ -1448,12 +1495,13 @@ function SetRow({
           onChange={(e) => onFieldChange("reps", e.target.value)}
           className={setInputClass}
         />
+        {typeBtn}
         {removeBtn}
       </div>
     );
   }
 
-  // duration_only
+  // duration_only — no type toggle
   return (
     <div className="flex gap-2 items-center">
       <input
