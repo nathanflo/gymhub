@@ -44,7 +44,7 @@ export default function RootLayout({
           } catch(e) {}
         `}} />
       </head>
-      <body className="min-h-[100svh] bg-neutral-950 text-neutral-100 font-sans">
+      <body className="bg-neutral-950 text-neutral-100 font-sans">
         <StartupOverlay />
         {/*
          * Shell wrapper – keeps max width iPhone-sized and centered on desktop.

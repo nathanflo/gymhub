@@ -305,7 +305,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="px-6 pt-6 pb-4 flex flex-col gap-6">
+    <main className="px-6 pt-6 flex flex-col gap-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
       {/* Hero + primary CTA — grouped tighter to read as one unit */}
       <div className="flex flex-col gap-3">
       {/* Header — fades up when data arrives */}
