@@ -204,6 +204,31 @@ function generateDeltaInsight(
   return null;
 }
 
+function generateSessionInsight(
+  current: WorkoutSession,
+  previous: WorkoutSession
+): string | null {
+  if (current.workoutType === "Yoga" || current.workoutType === "Run") return null;
+
+  const vol = (s: WorkoutSession) =>
+    s.exercises.reduce((acc, ex) =>
+      acc + ex.sets.reduce((a, set) => a + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+
+  const curVol = vol(current);
+  const prevVol = vol(previous);
+  if (curVol === 0 || prevVol === 0) return null;
+
+  const ratio = curVol / prevVol;
+  const pct = Math.round(Math.abs(ratio - 1) * 100);
+  const label = current.title?.trim().toLowerCase() || "similar";
+
+  if (ratio >= 1.15) return `Up ${pct}% vs your last ${label} session`;
+  if (ratio >= 1.05) return `Slightly ahead of your last ${label} session`;
+  if (ratio >= 0.95) return `Matched your last ${label} session`;
+  if (ratio >= 0.85) return `Slightly lighter than your last ${label} session`;
+  return `Lighter than your last ${label} session`;
+}
+
 function computeSessionComparison(
   current: WorkoutSession,
   previous: WorkoutSession
@@ -356,6 +381,9 @@ export default function SummaryPage() {
     ? null
     : previousSession
     ? generateDeltaInsight(session, previousSession)
+    : null;
+  const sessionInsight = !isRun && !isYoga && previousSession
+    ? generateSessionInsight(session, previousSession)
     : null;
 
   async function handleShareImage() {
@@ -664,6 +692,11 @@ export default function SummaryPage() {
               )}
             </div>
           </div>
+        )}
+
+        {/* Session Insight */}
+        {sessionInsight && (
+          <p className="text-xs text-neutral-500 text-center">{sessionInsight}</p>
         )}
 
         {/* Energy Card */}
