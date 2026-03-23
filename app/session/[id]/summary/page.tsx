@@ -6,7 +6,7 @@ import { toPng } from "html-to-image";
 import { getSessionById, getSessions } from "@/lib/sessions";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
-import { EnergyLevel } from "@/types/workout";
+import { EnergyLevel, WorkoutType } from "@/types/workout";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -220,7 +220,8 @@ function generateSessionInsight(
 
   const ratio = curVol / prevVol;
   const pct = Math.round(Math.abs(ratio - 1) * 100);
-  const label = current.title?.trim().toLowerCase() || "similar";
+  const strengthTypes: WorkoutType[] = ["Push", "Pull", "Legs", "Arms", "Full Body"];
+  const label = strengthTypes.includes(current.workoutType) ? current.workoutType.toLowerCase() : "similar";
 
   if (ratio >= 1.15) return `Up ${pct}% vs your last ${label} session`;
   if (ratio >= 1.05) return `Slightly ahead of your last ${label} session`;
