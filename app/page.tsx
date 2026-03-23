@@ -155,7 +155,7 @@ function SessionRow({ session }: { session: WorkoutSession }) {
     <Link
       href={`/edit/${session.id}`}
       className="flex items-center justify-between rounded-xl bg-neutral-800 px-4 py-3
-                 active:scale-95 transition-all"
+                 active:scale-[0.98] active:brightness-110 transition-all duration-75 ease-out"
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium text-neutral-300">{session.title}</span>
@@ -308,8 +308,8 @@ export default function HomePage() {
     <main className="px-6 pt-6 pb-4 flex flex-col gap-6">
       {/* Hero + primary CTA — grouped tighter to read as one unit */}
       <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
+      {/* Header — fades up when data arrives */}
+      <div className={`flex flex-col gap-4 ${greeting ? 'animate-[floFormFadeUp_180ms_ease-out_both]' : 'opacity-0'}`}>
         <div className="flex flex-col gap-1">
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
             Today · {dateLabel}
@@ -364,7 +364,7 @@ export default function HomePage() {
           <div className="flex gap-2 mt-1">
             <Link
               href="/log?resume=1"
-              className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-center text-sm active:scale-95 transition-all"
+              className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-center text-sm active:scale-[0.96] active:brightness-110 transition-all duration-75 ease-out"
             >
               Resume
             </Link>
@@ -374,7 +374,7 @@ export default function HomePage() {
                 localStorage.removeItem("activeWorkoutDraft");
                 setActiveDraft(null);
               }}
-              className="flex-1 py-3 rounded-xl bg-neutral-700 text-neutral-300 text-sm text-center active:scale-95 transition-all"
+              className="flex-1 py-3 rounded-xl bg-neutral-700 text-neutral-300 text-sm text-center active:scale-[0.96] active:brightness-110 transition-all duration-75 ease-out"
             >
               Start New
             </Link>
@@ -384,10 +384,11 @@ export default function HomePage() {
       })() : (
         <Link
           href="/log"
-          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 hover:brightness-105
+          className={`w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 hover:brightness-105
                      active:scale-[0.96] active:brightness-110
                      transition-all duration-75 ease-out py-5 text-lg font-semibold text-white text-center
-                     border border-indigo-400/20 shadow-[0_6px_18px_rgba(99,102,241,0.25)]"
+                     border border-indigo-400/20 shadow-[0_6px_18px_rgba(99,102,241,0.25)]
+                     ${greeting ? 'animate-[floFormFadeUp_200ms_ease-out_80ms_both]' : 'opacity-0'}`}
         >
           Start Session
         </Link>
@@ -402,15 +403,15 @@ export default function HomePage() {
         <div className="flex gap-3">
           <Link
             href="/templates"
-            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96]
-                       transition-all duration-75 py-2.5 text-sm text-neutral-100 text-center font-medium"
+            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96] active:brightness-110
+                       transition-all duration-75 ease-out py-2.5 text-sm text-neutral-100 text-center font-medium"
           >
             Start from Template
           </Link>
           <Link
             href="/wellness"
-            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96]
-                       transition-all duration-75 py-2.5 text-sm text-neutral-100 text-center font-medium"
+            className="flex-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-[0.96] active:brightness-110
+                       transition-all duration-75 ease-out py-2.5 text-sm text-neutral-100 text-center font-medium"
           >
             Log Wellness
           </Link>
