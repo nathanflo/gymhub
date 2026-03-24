@@ -7,7 +7,7 @@ import { getSessionById, getSessions } from "@/lib/sessions";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
-import { generateSessionMessages } from "@/lib/messaging";
+import { generateSessionMessages, capitalize } from "@/lib/messaging";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -220,13 +220,14 @@ export default function SummaryPage() {
   const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
   const prExercises = detectPRs(session, allSessions);
   const allPriorSessions = allSessions.filter((s) => s.date < session.date);
-  const { title: headline, subtitle: sessionSubtitle } = generateSessionMessages(
+  const { title: headlineRaw, subtitle: sessionSubtitle } = generateSessionMessages(
     session,
     previousSession,
     allPriorSessions,
     prExercises.length,
     prExercises
   );
+  const headline = capitalize(headlineRaw);
   const { dateLabel, timeLabel } = formatDateTime(session.date);
   const workoutDuration = session.started_at && session.ended_at
     ? formatDuration(session.started_at, session.ended_at)

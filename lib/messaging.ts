@@ -57,6 +57,12 @@ export function pickMessage(arr: string[], seed: number): string {
   return arr[((seed % arr.length) + arr.length) % arr.length];
 }
 
+/** Capitalize the first character of a string; leave the rest untouched. */
+export function capitalize(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export function classifySession(
   session: WorkoutSession,
   previousSession: WorkoutSession | null,

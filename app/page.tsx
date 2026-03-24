@@ -8,7 +8,7 @@ import { getBodyweightEntries } from "@/lib/bodyweight";
 import { getWellnessForDate } from "@/lib/wellness";
 import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
-import { computeHomeMomentum } from "@/lib/messaging";
+import { computeHomeMomentum, capitalize } from "@/lib/messaging";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
 
@@ -126,7 +126,14 @@ export default function HomePage() {
       const profileName = profileResult?.data?.name ?? null;
       setWeeklyCount(count);
       const momentum = computeHomeMomentum(sessions);
-      setGreeting(momentum.title + (profileName ? `, ${profileName}` : ""));
+      const now = new Date();
+      const dailySeed =
+        now.getFullYear() * 366 + now.getMonth() * 31 + now.getDate() + sessions.length;
+      const sanitizedName = profileName
+        ? profileName.trim().charAt(0).toUpperCase() + profileName.trim().slice(1)
+        : null;
+      const includeName = !!sanitizedName && dailySeed % 2 === 0;
+      setGreeting(capitalize(momentum.title) + (includeName ? `, ${sanitizedName}` : ""));
       setInsight(momentum.subtitle ?? "");
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
