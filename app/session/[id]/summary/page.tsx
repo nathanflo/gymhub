@@ -7,6 +7,7 @@ import { getSessionById, getSessions } from "@/lib/sessions";
 import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
+import { generateSessionMessages } from "@/lib/messaging";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -89,148 +90,8 @@ function detectPRs(
   return prs;
 }
 
-function generateYogaInsight(session: WorkoutSession): string {
-  const { yogaIntention, yogaClarityRating, yogaMobilityRating, yogaDurationMinutes } = session;
 
-  if (yogaClarityRating && yogaClarityRating >= 4) return "Left feeling clear and grounded";
-  if (yogaIntention === "Recovery") return "Recovery focus, well spent";
-  if (yogaIntention === "Relaxation") return "Took time to reset";
-  if (yogaIntention === "Energy") return "Moved and felt it";
-  if (yogaMobilityRating && yogaMobilityRating >= 4) return "Body opened up nicely today";
-  if (yogaDurationMinutes && yogaDurationMinutes <= 20) return "Short session, still showed up";
-  return "Nice balance of movement and calm";
-}
 
-function generateSubtitle(
-  session: WorkoutSession,
-  previousSession: WorkoutSession | null,
-  prExercises: string[]
-): string {
-  const { workoutType, exercises } = session;
-
-  // ── Yoga sessions ────────────────────────────────────────────────────────
-  if (workoutType === "Yoga") {
-    return generateYogaInsight(session);
-  }
-
-  // ── Run sessions: keep existing logic ──────────────────────────────────────
-  if (workoutType === "Run") {
-    const isLong = (session.distance ?? 0) >= 10;
-    if (session.energyLevel === "High") return isLong ? "Big aerobic effort" : "Pushed the pace today";
-    if (session.energyLevel === "Low")  return "Easy miles, still showing up";
-    return "Steady aerobic effort";
-  }
-
-  // ── Strength sessions: priority chain ──────────────────────────────────────
-  const totalSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
-  const totalVolume = exercises.reduce((s, ex) =>
-    s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
-  const prevVolume = previousSession
-    ? previousSession.exercises.reduce((s, ex) =>
-        s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0)
-    : 0;
-  const ratio = prevVolume > 0 && totalVolume > 0 ? totalVolume / prevVolume : null;
-
-  // Deterministic picker — same session always yields the same message
-  const pick = (arr: string[]) => arr[session.id.charCodeAt(0) % arr.length];
-
-  // 1. PR tiers (always override volume)
-  if (prExercises.length >= 3) return pick([
-    `${prExercises.length} new PRs — huge session`,
-    "Multiple PRs — breakthrough workout",
-    "You leveled up today",
-  ]);
-
-  if (prExercises.length === 2) return pick([
-    "2 new PRs — strong session",
-    "Progress across multiple lifts",
-  ]);
-
-  if (prExercises.length === 1) return pick([
-    `New PR — ${prExercises[0]} 🔥`,
-    `${prExercises[0]} feeling strong today`,
-  ]);
-
-  // 2. Volume tiers vs previous session
-  if (ratio !== null) {
-    if (ratio >= 1.2)  return pick(["Your strongest session yet", "Big output today"]);
-    if (ratio >= 1.1)  return pick(["Strong session", "Nice progression"]);
-    if (ratio <= 0.85) return pick(["Light day — still showed up", "Recovery session"]);
-  }
-
-  // 3. Short session
-  if (totalSets <= 6) return "Quick, efficient work";
-
-  // 4. Default
-  return pick(["Good work", "Solid effort", "Consistent work", "Keep stacking it"]);
-}
-
-function generateDeltaInsight(
-  current: WorkoutSession,
-  previous: WorkoutSession
-): string | null {
-  if (current.workoutType === "Yoga") return null;
-  const isRun = current.workoutType === "Run";
-  const prevLabel = previous.title?.trim()
-    ? `your last ${previous.title} session`
-    : `your last ${current.workoutType.toLowerCase()} session`;
-
-  if (isRun) {
-    const curDist = current.distance ?? 0;
-    const prevDist = previous.distance ?? 0;
-    if (prevDist > 0) {
-      if (curDist > prevDist * 1.1) return "Longer than your last run";
-      if (curDist < prevDist * 0.9) return "Shorter than your last run";
-    }
-    return null;
-  }
-
-  // Strength
-  const vol = (s: WorkoutSession) =>
-    s.exercises.reduce((acc, ex) =>
-      acc + ex.sets.reduce((a, set) => a + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
-  const sets = (s: WorkoutSession) =>
-    s.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
-
-  const curVol = vol(current);
-  const prevVol = vol(previous);
-  const curSets = sets(current);
-  const prevSets = sets(previous);
-
-  if (prevVol > 0) {
-    if (curVol > prevVol * 1.1) return `Volume up from ${prevLabel}`;
-    if (curVol < prevVol * 0.9) return `Lighter than ${prevLabel}`;
-  }
-  if (curSets >= prevSets + 2) return `More sets than ${prevLabel}`;
-  if (curSets <= prevSets - 2) return `Fewer sets than ${prevLabel}`;
-  return null;
-}
-
-function generateSessionInsight(
-  current: WorkoutSession,
-  previous: WorkoutSession
-): string | null {
-  if (current.workoutType === "Yoga" || current.workoutType === "Run") return null;
-
-  const vol = (s: WorkoutSession) =>
-    s.exercises.reduce((acc, ex) =>
-      acc + ex.sets.reduce((a, set) => a + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
-
-  const curVol = vol(current);
-  const prevVol = vol(previous);
-  if (curVol === 0 || prevVol === 0) return null;
-
-  const ratio = curVol / prevVol;
-  const pct = Math.round(Math.abs(ratio - 1) * 100);
-  const strengthTypes: WorkoutType[] = ["Push", "Pull", "Legs", "Arms", "Full Body"];
-  const label = strengthTypes.includes(current.workoutType) ? current.workoutType.toLowerCase() : "similar";
-
-  if (ratio >= 1.15) return `Up ${pct}% vs your last ${label} session`;
-  if (ratio >= 1.05) return `Slightly ahead of your last ${label} session`;
-  if (ratio >= 0.95) return `Matched your last ${label} session`;
-  if (ratio >= 0.85) return `Slightly lighter than your last ${label} session`;
-  return `Lighter than your last ${label} session`;
-}
 
 function computeSessionComparison(
   current: WorkoutSession,
@@ -358,7 +219,14 @@ export default function SummaryPage() {
 
   const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
   const prExercises = detectPRs(session, allSessions);
-  const headline = generateSubtitle(session, previousSession, prExercises);
+  const allPriorSessions = allSessions.filter((s) => s.date < session.date);
+  const { title: headline, subtitle: sessionSubtitle } = generateSessionMessages(
+    session,
+    previousSession,
+    allPriorSessions,
+    prExercises.length,
+    prExercises
+  );
   const { dateLabel, timeLabel } = formatDateTime(session.date);
   const workoutDuration = session.started_at && session.ended_at
     ? formatDuration(session.started_at, session.ended_at)
@@ -378,15 +246,6 @@ export default function SummaryPage() {
 
   const sessionComparison = !isRun && previousSession
     ? computeSessionComparison(session, previousSession)
-    : null;
-  // Suppress the vague header deltaInsight when the numeric block is available
-  const deltaInsight = sessionComparison && (sessionComparison.volumeLine || sessionComparison.exerciseLine)
-    ? null
-    : previousSession
-    ? generateDeltaInsight(session, previousSession)
-    : null;
-  const sessionInsight = !isRun && !isYoga && previousSession
-    ? generateSessionInsight(session, previousSession)
     : null;
 
   async function handleShareImage() {
@@ -614,8 +473,8 @@ export default function SummaryPage() {
         <div className="border-b border-neutral-800 pb-5">
           <h1 className="text-4xl font-bold text-white">{session.title}</h1>
           <p className="text-sm italic text-neutral-500 mt-1">{headline}</p>
-          {deltaInsight && (
-            <p className="text-xs text-neutral-500 mt-0.5">{deltaInsight}</p>
+          {sessionSubtitle && (
+            <p className="text-xs text-neutral-500 mt-0.5">{sessionSubtitle}</p>
           )}
           {summaryInsight && (
             <p className="text-xs text-neutral-500 mt-0.5">{summaryInsight}</p>
@@ -698,9 +557,6 @@ export default function SummaryPage() {
         )}
 
         {/* Session Insight */}
-        {sessionInsight && (
-          <p className="text-xs text-neutral-500 text-center">{sessionInsight}</p>
-        )}
 
         {/* Energy Card */}
         <div className="rounded-2xl bg-neutral-800 px-5 py-4">

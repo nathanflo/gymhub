@@ -8,6 +8,7 @@ import { getBodyweightEntries } from "@/lib/bodyweight";
 import { getWellnessForDate } from "@/lib/wellness";
 import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
+import { computeHomeMomentum } from "@/lib/messaging";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
 
@@ -42,104 +43,6 @@ function wellnessSummary(entry: WellnessEntry): string {
   return parts.join(" · ");
 }
 
-function computeMomentumMessage(sessions: WorkoutSession[]): {
-  title: string;
-  subtitle: string | null;
-} {
-  if (!sessions || sessions.length === 0) {
-    return { title: "Ready when you are", subtitle: null };
-  }
-
-  const now = new Date();
-  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  const toLocal = (d: Date) =>
-    new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-  // Sessions in last 7 days
-  const last7 = sessions.filter((s) => {
-    const d = toLocal(new Date(s.date));
-    const diff = (todayLocal.getTime() - d.getTime()) / 86_400_000;
-    return diff >= 0 && diff < 7;
-  });
-
-  const sessionsThisWeek = last7.length;
-
-  const activeDays = new Set(
-    last7.map((s) => toLocal(new Date(s.date)).toISOString().slice(0, 10))
-  ).size;
-
-  const lastSession = sessions[0];
-  const lastDate = toLocal(new Date(lastSession.date));
-  const diffDays = (todayLocal.getTime() - lastDate.getTime()) / 86_400_000;
-  const gapDays = diffDays;
-  const hadRecentMomentum = sessionsThisWeek >= 3;
-
-  const sameTypeCount = last7.filter(
-    (s) => s.workoutType === lastSession.workoutType
-  ).length;
-
-  // P1. Return after gap (today session, but previous was 3+ days ago)
-  if (sessions.length >= 2) {
-    const prev = sessions[1];
-    const prevDate = toLocal(new Date(prev.date));
-    const prevDiff = (todayLocal.getTime() - prevDate.getTime()) / 86_400_000;
-    if (gapDays === 0 && prevDiff >= 3) {
-      return { title: "Back again", subtitle: "Nice to be back" };
-    }
-  }
-
-  // P2. Long inactivity
-  if (gapDays >= 7) {
-    return { title: "Ready when you are", subtitle: "Fresh start — take it at your pace" };
-  }
-
-  // P4. Moderate inactivity
-  if (gapDays >= 4) {
-    return { title: "Picking it up", subtitle: "It's been a few days — ease back in" };
-  }
-
-  // P3. Broken rhythm (2–3 day gap and was recently active)
-  if (gapDays >= 2 && gapDays <= 3 && hadRecentMomentum) {
-    return { title: "Picking it up", subtitle: "You were in a good rhythm — easy to pick back up" };
-  }
-
-  // P5. Short inactivity
-  if (gapDays >= 2) {
-    return { title: "Ready when you are", subtitle: "A couple days off" };
-  }
-
-  // A. Trained today
-  if (diffDays === 0) {
-    return { title: "Back again", subtitle: "Back in flow" };
-  }
-
-  // B. Trained yesterday
-  if (diffDays === 1) {
-    return { title: "Picking it up", subtitle: "Back in rhythm" };
-  }
-
-  // C. Repeating same workout type this week
-  if (sameTypeCount >= 2) {
-    return {
-      title: "Locked in",
-      subtitle: `${sameTypeCount} ${lastSession.workoutType} sessions this week`,
-    };
-  }
-
-  // D. Very active week
-  if (sessionsThisWeek >= 4) {
-    return { title: "On a roll", subtitle: `${sessionsThisWeek} sessions this week` };
-  }
-
-  // E. Multiple active days
-  if (activeDays >= 3) {
-    return { title: "Still going", subtitle: `${activeDays} active days this week` };
-  }
-
-  // F. Default fallback
-  return { title: "Ready when you are", subtitle: null };
-}
 
 function SessionRow({ session }: { session: WorkoutSession }) {
   const isRun = session.workoutType === "Run";
@@ -222,7 +125,7 @@ export default function HomePage() {
       const count = sessions.filter(s => s.date.slice(0, 10) >= sevenDaysAgo).length;
       const profileName = profileResult?.data?.name ?? null;
       setWeeklyCount(count);
-      const momentum = computeMomentumMessage(sessions);
+      const momentum = computeHomeMomentum(sessions);
       setGreeting(momentum.title + (profileName ? `, ${profileName}` : ""));
       setInsight(momentum.subtitle ?? "");
       setRecentSessions(sessions.slice(0, 2));
