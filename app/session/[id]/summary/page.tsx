@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
+import ShareCard from "@/components/share/ShareCard";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -254,7 +255,7 @@ export default function SummaryPage() {
     setIsGenerating(true);
     try {
       const bgColor = isYoga ? "#f5f5f4" : "#0a0a0a";
-      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, backgroundColor: bgColor });
+      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, backgroundColor: bgColor, width: 360, height: 640 });
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], "floform-workout.png", { type: "image/png" });
@@ -289,142 +290,34 @@ export default function SummaryPage() {
             ×
           </button>
 
-          {isYoga ? (
-            <div ref={posterRef} className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
-              <p className="text-indigo-400 text-xs font-bold tracking-[0.2em] uppercase mb-8">FloForm</p>
-              <h1 className="text-5xl font-black text-indigo-900 text-center">Yoga</h1>
-              <p className="text-lg font-medium text-indigo-700 text-center mt-1">
-                {yogaStyleLabel}{session.yogaDurationMinutes ? ` · ${session.yogaDurationMinutes} min` : ""}
-              </p>
-              <p className="text-sm italic text-stone-500 text-center mt-3">{headline}</p>
-              {session.yogaIntention && (
-                <p className="text-sm text-indigo-500 mt-2">{session.yogaIntention}</p>
-              )}
-              {session.yogaSource && (
-                <p className="text-xs text-stone-400 mt-1">{session.yogaSource}</p>
-              )}
-              <p className="text-xs text-stone-400 mt-3">{dateLabel}</p>
-              {city && <p className="text-xs text-stone-400 mt-0.5">{city}</p>}
-              {(session.yogaMobilityRating || session.yogaFlexibilityRating || session.yogaClarityRating) && (
-                <div className="flex gap-5 mt-6">
-                  {[
-                    { label: "Mobility",    value: session.yogaMobilityRating },
-                    { label: "Flexibility", value: session.yogaFlexibilityRating },
-                    { label: "Clarity",     value: session.yogaClarityRating },
-                  ].filter(r => r.value !== undefined).map(({ label, value }) => (
-                    <div key={label} className="flex flex-col items-center">
-                      <span className="text-2xl font-bold text-indigo-900">{value}/5</span>
-                      <span className="text-xs text-stone-400">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-stone-400 text-center mt-8">floform.fit</p>
+          {/* Share card — true 360×640, scaled to 0.78 for overlay preview */}
+          <div
+            style={{
+              width: 360 * 0.78,
+              height: 640 * 0.78,
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ transform: "scale(0.78)", transformOrigin: "top left" }}>
+              <ShareCard
+                ref={posterRef}
+                session={session}
+                isYoga={isYoga}
+                isRun={isRun}
+                headline={headline}
+                prExercises={prExercises}
+                totalSets={totalSets}
+                totalVolume={totalVolume}
+                exerciseCount={exerciseCount}
+                dateLabel={dateLabel}
+                workoutDuration={workoutDuration}
+                city={city}
+                effort={effort}
+                yogaStyleLabel={yogaStyleLabel}
+              />
             </div>
-          ) : (
-            <div ref={posterRef} className="flex flex-col items-center gap-0 w-full max-w-sm my-auto py-10">
-              {/* Brand */}
-              <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-6">
-                FloForm
-              </p>
-
-              {/* Title */}
-              <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
-
-              {/* PR Hero Insert — strong sessions */}
-              {!isRun && prExercises.length > 0 && (
-                <div className="mt-4 text-center">
-                  <p className="text-3xl font-black text-white">
-                    {prExercises.length} PR{prExercises.length === 1 ? "" : "s"}
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    new record{prExercises.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-              )}
-
-              {/* Volume Hero Insert — non-PR sessions */}
-              {!isRun && prExercises.length === 0 && totalVolume > 0 && (
-                <div className="mt-4 text-center">
-                  <p className="text-2xl font-bold text-neutral-300">
-                    {totalVolume.toLocaleString()} kg
-                  </p>
-                  <p className="text-xs text-neutral-600 mt-0.5">total volume</p>
-                </div>
-              )}
-
-              {/* Headline */}
-              <p className="text-sm italic text-neutral-500 text-center mt-3">{headline}</p>
-
-              {/* Date */}
-              <p className="text-xs text-neutral-500 mt-2">
-                {dateLabel}{workoutDuration ? ` · ${workoutDuration}` : ""}
-              </p>
-              {city && <p className="text-xs text-neutral-500 mt-0.5">{city}</p>}
-
-              {/* Stats row */}
-              <div className="flex gap-8 justify-center mt-7 divide-x divide-neutral-800">
-                {isRun ? (
-                  <>
-                    {session.distance !== undefined && (
-                      <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                        <span className="text-4xl font-bold text-white">{session.distance}</span>
-                        <span className="text-xs text-neutral-600">km</span>
-                      </div>
-                    )}
-                    {session.duration && (
-                      <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                        <span className="text-4xl font-bold text-white">{session.duration}</span>
-                        <span className="text-xs text-neutral-600">duration</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-4xl font-bold text-white">{totalSets}</span>
-                      <span className="text-xs text-neutral-600">sets</span>
-                    </div>
-                    <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                      <span className="text-4xl font-bold text-white">{exerciseCount}</span>
-                      <span className="text-xs text-neutral-600">exercises</span>
-                    </div>
-                    {totalVolume > 0 && (
-                      <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                        <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-600">kg volume</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Energy pill */}
-              <div className="mt-5">
-                <span className={`inline-block px-4 py-1.5 rounded-full font-semibold ${effort.bgColor} ${effort.color}`}>
-                  {effort.label}
-                </span>
-              </div>
-
-              {/* Exercise preview (top 3) */}
-              {!isRun && session.exercises.length > 0 && (
-                <div className="flex flex-col items-center gap-1 mt-4">
-                  {session.exercises.slice(0, 3).map((ex, i) => (
-                    <p key={i} className="text-sm text-neutral-300">
-                      {ex.name}{" "}
-                      <span className="text-neutral-600">({ex.sets.length} sets)</span>
-                      {prExercises.some(p => p.trim().toLowerCase() === ex.name.trim().toLowerCase()) ? " 🔥" : ""}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {/* Brand watermark */}
-              <p className="text-xs text-neutral-500 text-center mt-10">
-                floform.fit
-              </p>
-            </div>
-          )}
+          </div>
 
           {/* Share Image button */}
           <button
