@@ -139,7 +139,7 @@ export default function HomePage() {
       setInsight(momentum.subtitle ?? "");
       if (isAnniversaryDay) {
         setGreeting("Happy one week, FloForm!!");
-        setInsight("thanks for being here early");
+        setInsight("thanks for being here early :)");
       }
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
@@ -227,7 +227,7 @@ export default function HomePage() {
       <div className={`flex flex-col gap-4 ${greeting ? 'animate-[floFormFadeUp_180ms_ease-out_both]' : 'opacity-0'}`}>
         <div className="flex flex-col gap-1 relative">
           {isAnniversaryDay && (
-            <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-56 h-12 rounded-full bg-indigo-500 blur-2xl animate-[floFormGlowPulse_2000ms_ease-in-out_300ms_both]" />
+            <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-64 h-16 rounded-full bg-indigo-500/70 blur-3xl animate-[floFormGlowPulse_2000ms_ease-in-out_300ms_both]" />
           )}
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider relative">
             Today · {dateLabel}
