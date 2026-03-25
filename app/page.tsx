@@ -13,6 +13,8 @@ import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
 
 const today = new Date().toISOString().slice(0, 10);
+const ANNIVERSARY_DATE = "2026-03-25";
+const isAnniversaryDay = today === ANNIVERSARY_DATE;
 
 function workoutTimeAgo(isoString: string): string {
   const mins = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
@@ -135,6 +137,10 @@ export default function HomePage() {
       const includeName = !!sanitizedName && dailySeed % 2 === 0;
       setGreeting(capitalize(momentum.title) + (includeName ? `, ${sanitizedName}` : ""));
       setInsight(momentum.subtitle ?? "");
+      if (isAnniversaryDay) {
+        setGreeting("Happy one week, FloForm!!");
+        setInsight("thanks for being here early");
+      }
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
@@ -219,11 +225,16 @@ export default function HomePage() {
       <div className="flex flex-col gap-3">
       {/* Header — fades up when data arrives */}
       <div className={`flex flex-col gap-4 ${greeting ? 'animate-[floFormFadeUp_180ms_ease-out_both]' : 'opacity-0'}`}>
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+        <div className="flex flex-col gap-1 relative">
+          {isAnniversaryDay && (
+            <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-56 h-12 rounded-full bg-indigo-500 blur-2xl animate-[floFormGlowPulse_2000ms_ease-in-out_300ms_both]" />
+          )}
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider relative">
             Today · {dateLabel}
           </p>
-          <h1 className="text-xl font-semibold text-white">{greeting}</h1>
+          <h1 className={`text-xl font-semibold relative ${isAnniversaryDay ? "text-indigo-100" : "text-white"}`}>
+            {greeting}
+          </h1>
         </div>
 
         {insight && (
