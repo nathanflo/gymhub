@@ -221,18 +221,20 @@ export default function HomePage() {
 
   return (
     <main className="px-6 pt-6 flex flex-col gap-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+      {/* Anniversary glow — fixed to viewport top so it covers nav + hero with no gap */}
+      {isAnniversaryDay && (
+        <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-indigo-400 blur-3xl animate-[floFormGlowPulse_1600ms_ease-out_200ms_both]" />
+      )}
+
       {/* Hero + primary CTA — grouped tighter to read as one unit */}
       <div className="flex flex-col gap-3">
       {/* Header — fades up when data arrives */}
       <div className={`flex flex-col gap-4 ${greeting ? 'animate-[floFormFadeUp_180ms_ease-out_both]' : 'opacity-0'}`}>
-        <div className="flex flex-col gap-1 relative">
-          {isAnniversaryDay && (
-            <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-64 h-16 rounded-full bg-indigo-400 blur-3xl animate-[floFormGlowPulse_1600ms_ease-out_200ms_both]" />
-          )}
-          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider relative">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
             Today · {dateLabel}
           </p>
-          <h1 className={`text-xl font-semibold relative ${isAnniversaryDay ? "text-indigo-100" : "text-white"}`}>
+          <h1 className={`text-xl font-semibold ${isAnniversaryDay ? "text-indigo-100" : "text-white"}`}>
             {greeting}
           </h1>
         </div>
