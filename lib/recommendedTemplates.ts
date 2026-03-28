@@ -14,6 +14,24 @@ export interface RecommendedTemplate {
   exercises: RecommendedExercise[];
 }
 
+import { WorkoutTemplate } from "@/types/template";
+import { WorkoutType } from "@/types/workout";
+
+export function recommendedToWorkoutTemplate(rec: RecommendedTemplate): WorkoutTemplate {
+  return {
+    id: rec.id,
+    name: rec.name,
+    workoutType: rec.workoutType as WorkoutType,
+    exercises: rec.exercises.map((ex) => ({
+      name: ex.name,
+      mode: "weight_reps" as const,
+      unit: "kg" as const,
+      sets: Array.from({ length: ex.sets }, () => ({})),
+      freeformNote: "",
+    })),
+  };
+}
+
 export const RECOMMENDED_TEMPLATES: RecommendedTemplate[] = [
   {
     id: "rec-push",

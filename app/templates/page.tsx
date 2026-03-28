@@ -87,7 +87,10 @@ export default function TemplatesPage() {
 function RecommendedCard({ template }: { template: RecommendedTemplate }) {
   const exerciseCount = template.exercises.length;
   return (
-    <div className="rounded-2xl bg-neutral-800 border border-neutral-700/60 p-4 flex flex-col gap-2">
+    <Link
+      href={`/templates/recommended/${template.id}`}
+      className="rounded-2xl bg-neutral-800 border border-neutral-700/60 p-4 flex flex-col gap-2 active:scale-[0.98] active:brightness-110 transition-all duration-75 ease-out"
+    >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-bold text-white">{template.name}</h2>
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -99,7 +102,7 @@ function RecommendedCard({ template }: { template: RecommendedTemplate }) {
       <p className="text-xs text-neutral-500">
         {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} · {template.estimatedDuration}
       </p>
-    </div>
+    </Link>
   );
 }
 

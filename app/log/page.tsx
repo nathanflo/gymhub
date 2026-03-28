@@ -11,6 +11,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveSession, getSessionById, getSessions } from "@/lib/sessions";
 import { getTemplates } from "@/lib/templates";
+import { RECOMMENDED_TEMPLATES, recommendedToWorkoutTemplate } from "@/lib/recommendedTemplates";
 import { WorkoutSession, WorkoutExercise } from "@/types/session";
 import { WorkoutTemplate } from "@/types/template";
 import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
@@ -30,6 +31,7 @@ function LogPageInner() {
   const searchParams = useSearchParams();
   const fromId = searchParams.get("from");
   const templateId = searchParams.get("template");
+  const recId = searchParams.get("rec");
   const resumeParam = searchParams.get("resume");
 
   const [initialState, setInitialState] = useState<SessionFormState | undefined>(undefined);
@@ -140,6 +142,15 @@ function LogPageInner() {
         } else {
           setLoadedFromTemplate(false);
         }
+      } else if (recId) {
+        const rec = RECOMMENDED_TEMPLATES.find((t) => t.id === recId);
+        if (rec) {
+          const template = recommendedToWorkoutTemplate(rec);
+          const sessions = await getSessions();
+          const { exercises, anyPrefilled } = prefillTemplateFromHistory(template, sessions);
+          setInitialState(templateToFormState({ ...template, exercises }));
+          setLoadedFromTemplate(anyPrefilled);
+        }
       } else if (todayBw !== undefined) {
         // Fresh session — prefill BW from today's progress entry
         setInitialState({ ...emptySessionForm(), bodyweight: String(todayBw) });
@@ -148,7 +159,7 @@ function LogPageInner() {
       setLoaded(true);
     }
     load();
-  }, [fromId, templateId]);
+  }, [fromId, templateId, recId]);
 
   async function handleSave(session: WorkoutSession) {
     if (isSaving.current) return;
