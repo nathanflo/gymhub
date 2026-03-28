@@ -28,6 +28,7 @@ export interface WorkoutExercise {
   sets: WorkoutSet[];
   freeformNote?: string;   // freeform mode only; sets is [] in this case
   note?: string;           // per-exercise note (all modes)
+  target?: string;         // optional guidance text from recommended templates (e.g. "8–12 reps")
 }
 
 export interface WorkoutSession {

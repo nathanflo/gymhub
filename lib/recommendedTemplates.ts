@@ -28,6 +28,7 @@ export function recommendedToWorkoutTemplate(rec: RecommendedTemplate): WorkoutT
       unit: "kg" as const,
       sets: Array.from({ length: ex.sets }, () => ({})),
       freeformNote: "",
+      target: ex.suggestedRepRange,
     })),
   };
 }

@@ -65,7 +65,8 @@ export interface DraftExercise {
   unit: WeightUnit;
   sets: DraftSet[];
   freeformNote: string;
-  note?: string;  // undefined = hidden, "" or string = textarea shown
+  note?: string;    // undefined = hidden, "" or string = textarea shown
+  target?: string;  // guidance from recommended templates (e.g. "8–12 reps")
   completed?: boolean;  // draft-only, not persisted to WorkoutExercise
 }
 
@@ -178,6 +179,7 @@ export function templateToFormState(t: WorkoutTemplate): SessionFormState {
             mode: ex.mode ?? "weight_reps",
             unit: ex.unit ?? "kg",
             freeformNote: ex.freeformNote ?? "",
+            target: ex.target,
             sets: ex.sets.map((set) => ({
               weight: set.weight !== undefined ? String(set.weight) : "",
               reps: set.reps !== undefined ? String(set.reps) : "",
@@ -1288,6 +1290,11 @@ function ExerciseBlock({
           </select>
         )}
       </div>
+
+      {/* Target guidance — recommended templates only */}
+      {exercise.target && (
+        <p className="text-xs text-indigo-400/80 pl-1">Target: {exercise.target}</p>
+      )}
 
       {/* Freeform textarea or set rows */}
       {mode === "freeform" ? (
