@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * Templates page — list of saved workout templates.
- * Save templates from the Workouts page; start sessions from here.
+ * Templates page — curated recommended templates + user-saved templates.
  */
 
 import { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import Link from "next/link";
 import { getTemplates, deleteTemplate } from "@/lib/templates";
 import { formatExerciseSummary } from "@/lib/progress";
 import { WorkoutTemplate } from "@/types/template";
+import { RECOMMENDED_TEMPLATES, RecommendedTemplate } from "@/lib/recommendedTemplates";
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -31,48 +31,79 @@ export default function TemplatesPage() {
 
   return (
     <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+      {/* Header */}
       <div>
         <button onClick={() => router.back()} className="text-sm text-indigo-400 mb-4">
           ← Back
         </button>
         <h1 className="text-2xl font-bold text-white">Templates</h1>
-        <p className="text-sm text-neutral-400 mt-1">
-          {templates.length === 0
-            ? "No templates saved yet."
-            : `${templates.length} saved`}
-        </p>
       </div>
 
-      {templates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center">
-          <p className="text-neutral-500">
-            Save a template from any session in Workouts.
-          </p>
-          <Link
-            href="/workouts"
-            className="rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
-                       transition-all px-8 py-4 text-base font-semibold text-white"
-          >
-            Go to Workouts
-          </Link>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4 pb-8">
-          {templates.map((t) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              onDelete={() => handleDelete(t.id)}
-              onStart={() => handleStart(t.id)}
-            />
+      {/* Recommended */}
+      <section className="flex flex-col gap-3">
+        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Recommended</p>
+        <div className="flex flex-col gap-3">
+          {RECOMMENDED_TEMPLATES.map((t) => (
+            <RecommendedCard key={t.id} template={t} />
           ))}
         </div>
-      )}
+      </section>
+
+      {/* Your Templates */}
+      <section className="flex flex-col gap-3 pb-8">
+        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+          Your Templates
+          {templates.length > 0 && (
+            <span className="normal-case font-normal text-neutral-600 ml-2">{templates.length}</span>
+          )}
+        </p>
+        {templates.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            Save a template from any session in{" "}
+            <Link href="/workouts" className="text-indigo-400 hover:text-indigo-300">
+              Workouts
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {templates.map((t) => (
+              <TemplateCard
+                key={t.id}
+                template={t}
+                onDelete={() => handleDelete(t.id)}
+                onStart={() => handleStart(t.id)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
 
-// ─── Template card ────────────────────────────────────────────────────────────
+// ─── Recommended card ─────────────────────────────────────────────────────────
+
+function RecommendedCard({ template }: { template: RecommendedTemplate }) {
+  const exerciseCount = template.exercises.length;
+  return (
+    <div className="rounded-2xl bg-neutral-800 border border-neutral-700/60 p-4 flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-bold text-white">{template.name}</h2>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className="text-xs text-indigo-400/60 font-medium">starter</span>
+          <Badge>{template.workoutType}</Badge>
+        </div>
+      </div>
+      <p className="text-sm text-neutral-400">{template.description}</p>
+      <p className="text-xs text-neutral-500">
+        {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} · {template.estimatedDuration}
+      </p>
+    </div>
+  );
+}
+
+// ─── User template card ────────────────────────────────────────────────────────
 
 function TemplateCard({
   template,
