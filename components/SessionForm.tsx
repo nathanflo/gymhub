@@ -227,6 +227,7 @@ export function SessionForm({
   submitLabel = "Save Session",
   showDateEdit = false,
   fromTemplate = false,
+  isRecommended = false,
   onSave,
   onCancel,
 }: {
@@ -239,6 +240,7 @@ export function SessionForm({
   submitLabel?: string;
   showDateEdit?: boolean;
   fromTemplate?: boolean;
+  isRecommended?: boolean;
   onSave: (session: WorkoutSession) => void;
   onCancel: () => void;
 }) {
@@ -776,6 +778,15 @@ export function SessionForm({
           className={inputClass}
         />
       </Field>
+
+      {/* Recommended session guidance */}
+      {isRecommended && (
+        <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-4 py-3">
+          <p className="text-sm text-indigo-200">
+            Follow the targets — adjust weight so the last reps feel challenging.
+          </p>
+        </div>
+      )}
 
       {/* Date & Time (edit page only) */}
       {showDateEdit && (

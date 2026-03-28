@@ -241,6 +241,7 @@ function LogPageInner() {
       <SessionForm
         initialState={overrideInitial ?? initialState}
         fromTemplate={loadedFromTemplate}
+        isRecommended={!!recId}
         initialStartTime={resumeStartTime}
         initialActiveExIdx={resumeActiveExIdx}
         initialIsPaused={resumeIsPaused}
