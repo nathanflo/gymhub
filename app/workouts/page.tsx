@@ -18,6 +18,7 @@ import { formatExerciseSummary } from "@/lib/progress";
 import { saveTemplateIfNew } from "@/lib/templates";
 import { WorkoutSession } from "@/types/session";
 import { Workout } from "@/types/workout";
+import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 import { WorkoutTemplate } from "@/types/template";
 
 type ListItem =
@@ -147,6 +148,7 @@ function SessionCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [templateMsg, setTemplateMsg] = useState<string | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [insightExercise, setInsightExercise] = useState<string | null>(null);
 
   async function handleTemplate() {
     setSavingTemplate(true);
@@ -161,6 +163,7 @@ function SessionCard({
   const extraCount = session.exercises.length - 2;
 
   return (
+    <>
     <div className="rounded-2xl bg-neutral-800 border border-neutral-700 p-4 flex flex-col gap-2">
       {/* Clickable header */}
       <button
@@ -212,7 +215,13 @@ function SessionCard({
                 : "";
             return (
               <p key={i} className="text-sm text-neutral-300">
-                <span className="font-medium text-white">{ex.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setInsightExercise(ex.name)}
+                  className="font-medium text-white text-left hover:text-indigo-300 active:opacity-80 transition-colors"
+                >
+                  {ex.name}
+                </button>
                 {summary && (
                   <span className="text-neutral-400"> {mode === "freeform" ? `— ${summary}` : summary}</span>
                 )}
@@ -246,7 +255,13 @@ function SessionCard({
                     : "";
                 return (
                   <p key={i} className="text-sm text-neutral-300">
-                    <span className="font-medium text-white">{ex.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setInsightExercise(ex.name)}
+                      className="font-medium text-white text-left hover:text-indigo-300 active:opacity-80 transition-colors"
+                    >
+                      {ex.name}
+                    </button>
                     {summary && (
                       <span className="text-neutral-400"> {mode === "freeform" ? `— ${summary}` : summary}</span>
                     )}
@@ -303,6 +318,13 @@ function SessionCard({
         </>
       )}
     </div>
+    {insightExercise && (
+      <ExerciseInsightSheet
+        exerciseName={insightExercise}
+        onClose={() => setInsightExercise(null)}
+      />
+    )}
+    </>
   );
 }
 

@@ -9,6 +9,7 @@ import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import ShareCard from "@/components/share/ShareCard";
+import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
 function getEffortLabel(
   energyLevel: EnergyLevel,
@@ -167,6 +168,7 @@ export default function SummaryPage() {
   const [previousSession, setPreviousSession] = useState<WorkoutSession | null>(null);
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
+  const [insightExercise, setInsightExercise] = useState<string | null>(null);
   const [city, setCity] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
@@ -610,10 +612,14 @@ export default function SummaryPage() {
               const mode = ex.mode ?? "weight_reps";
               return (
                 <div key={i} className="rounded-2xl bg-neutral-800 px-5 py-4 flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-white">
+                  <button
+                    type="button"
+                    onClick={() => setInsightExercise(ex.name)}
+                    className="text-sm font-semibold text-white text-left hover:text-indigo-300 active:opacity-80 transition-colors"
+                  >
                     {ex.name}
                     {prExercises.some(p => p.trim().toLowerCase() === ex.name.trim().toLowerCase()) ? " 🔥" : ""}
-                  </p>
+                  </button>
                   {mode === "freeform" ? (
                     <p className="text-sm text-neutral-400">{ex.freeformNote}</p>
                   ) : (
@@ -658,6 +664,12 @@ export default function SummaryPage() {
 
 
       </main>
+      {insightExercise && (
+        <ExerciseInsightSheet
+          exerciseName={insightExercise}
+          onClose={() => setInsightExercise(null)}
+        />
+      )}
     </>
   );
 }
