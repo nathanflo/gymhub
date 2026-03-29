@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const subPages = [
-  { href: "/workouts", label: "History", subtitle: "Browse past sessions" },
-  { href: "/progress", label: "Progress", subtitle: "Bodyweight & personal records" },
+  { href: "/workouts",  label: "History",   subtitle: "Browse past sessions" },
+  { href: "/progress",  label: "Progress",  subtitle: "Bodyweight & personal records" },
   { href: "/templates", label: "Templates", subtitle: "Saved workout templates" },
+  { href: "/programs",  label: "Programs",  subtitle: "Follow a simple routine" },
 ];
 
 function workoutTimeAgo(isoString: string): string {
