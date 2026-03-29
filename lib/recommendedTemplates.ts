@@ -59,7 +59,7 @@ export const RECOMMENDED_TEMPLATES: RecommendedTemplate[] = [
     exercises: [
       { name: "Lat Pulldown", sets: 3, suggestedRepRange: "8–12 reps" },
       { name: "Seated Row",   sets: 3, suggestedRepRange: "8–12 reps" },
-      { name: "Face Pull",    sets: 2, suggestedRepRange: "12–15 reps" },
+      { name: "Rear Delt Fly", sets: 2, suggestedRepRange: "12–15 reps" },
       { name: "Bicep Curl",   sets: 3, suggestedRepRange: "10–15 reps" },
     ],
   },
@@ -71,8 +71,8 @@ export const RECOMMENDED_TEMPLATES: RecommendedTemplate[] = [
     estimatedDuration: "50–65 min",
     coachingNote: "Warm up thoroughly before heavy sets. Keep core braced on all compound movements.",
     exercises: [
-      { name: "Squat or Leg Press", sets: 3, suggestedRepRange: "6–10 reps" },
-      { name: "Romanian Deadlift",  sets: 3, suggestedRepRange: "8–10 reps" },
+      { name: "Leg Press",    sets: 3, suggestedRepRange: "6–10 reps" },
+      { name: "Goblet Squat", sets: 3, suggestedRepRange: "10–12 reps" },
       { name: "Leg Extension",      sets: 2, suggestedRepRange: "10–15 reps" },
       { name: "Hamstring Curl",     sets: 2, suggestedRepRange: "10–15 reps" },
       { name: "Calf Raise",         sets: 2, suggestedRepRange: "12–20 reps" },
@@ -89,7 +89,7 @@ export const RECOMMENDED_TEMPLATES: RecommendedTemplate[] = [
       { name: "Squat",             sets: 3, suggestedRepRange: "8–12 reps" },
       { name: "Bench Press",       sets: 3, suggestedRepRange: "8–12 reps" },
       { name: "Seated Row",        sets: 3, suggestedRepRange: "8–12 reps" },
-      { name: "Romanian Deadlift", sets: 3, suggestedRepRange: "8–10 reps" },
+      { name: "Hamstring Curl",    sets: 3, suggestedRepRange: "10–12 reps" },
       { name: "Plank",             sets: 2, suggestedRepRange: "30–45 sec" },
     ],
   },

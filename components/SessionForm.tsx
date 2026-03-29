@@ -18,7 +18,7 @@ import { WorkoutTemplate } from "@/types/template";
 import { Field, inputClass, selectClass } from "@/components/Field";
 import { getExerciseLibrary } from "@/lib/exercises";
 import { getSessions } from "@/lib/sessions";
-import { EXERCISE_ALTERNATIVES } from "@/lib/exerciseAlternatives";
+import { getExerciseAlternatives } from "@/lib/exerciseAlternatives";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1594,7 +1594,7 @@ function SwapSheet({
   onClose: () => void;
 }) {
   const key = exerciseName.trim();
-  const alternatives = EXERCISE_ALTERNATIVES[key] ?? [];
+  const alternatives = getExerciseAlternatives(key);
 
   return (
     <>
