@@ -24,6 +24,8 @@ import { inputClass, selectClass } from "@/components/Field";
 type WorkoutRow = { id: string; name: string; linkedTemplateId: string };
 type Mode = "list" | "create" | { kind: "edit"; program: CustomProgram };
 
+const ARNOLD_VARIANT_KEY = "floform_arnold_variant";
+
 export default function ProgramsPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("list");
@@ -32,6 +34,17 @@ export default function ProgramsPage() {
   const [expandedStarterId, setExpandedStarterId] = useState<string | null>(null);
   const [expandedCustomId, setExpandedCustomId] = useState<string | null>(null);
   const [templateOptions, setTemplateOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [arnoldVariant, setArnoldVariant] = useState<"standard" | "advanced">(() => {
+    const active = getActiveProgram();
+    if (active?.id === "ARNOLD") {
+      return active.variant === "advanced" ? "advanced" : "standard";
+    }
+    try {
+      const stored = localStorage.getItem(ARNOLD_VARIANT_KEY);
+      if (stored === "advanced" || stored === "standard") return stored;
+    } catch {}
+    return "standard";
+  });
   // Create/edit form
   const [editName, setEditName] = useState("");
   const [editWorkouts, setEditWorkouts] = useState<WorkoutRow[]>([]);
@@ -46,10 +59,16 @@ export default function ProgramsPage() {
     });
   }, []);
 
+  function handleSetArnoldVariant(v: "standard" | "advanced") {
+    setArnoldVariant(v);
+    localStorage.setItem(ARNOLD_VARIANT_KEY, v);
+  }
+
   // ── Starter program actions ────────────────────────────────────────────────
   function handleActivateStarter(id: StarterProgramId) {
-    setActiveStarterProgram(id);
-    setActiveProgramState({ id, kind: "starter", currentIndex: 0 });
+    const variant = id === "ARNOLD" && arnoldVariant === "advanced" ? "advanced" as const : undefined;
+    setActiveStarterProgram(id, variant);
+    setActiveProgramState({ id, kind: "starter", currentIndex: 0, ...(variant ? { variant } : {}) });
     setExpandedStarterId(null);
     router.push("/");
   }
@@ -357,6 +376,27 @@ export default function ProgramsPage() {
                         </div>
                       ))}
                     </div>
+                    {program.id === "ARNOLD" && (
+                      <div className="flex flex-col gap-2">
+                        <span className="text-xs text-neutral-500">Mode</span>
+                        <div className="flex gap-2">
+                          {(["standard", "advanced"] as const).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => handleSetArnoldVariant(v)}
+                              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+                                arnoldVariant === v
+                                  ? "bg-indigo-600 text-white"
+                                  : "bg-neutral-700/60 text-neutral-400"
+                              }`}
+                            >
+                              {v === "standard" ? "Standard" : "Advanced"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleActivateStarter(program.id)}

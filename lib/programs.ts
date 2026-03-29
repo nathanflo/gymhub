@@ -53,6 +53,7 @@ export interface ActiveProgram {
   id: string;                     // StarterProgramId or custom program UUID
   kind: "starter" | "custom";
   currentIndex: number;
+  variant?: "standard" | "advanced";  // Arnold-only
 }
 
 const STORAGE_KEY = "floform_active_program";
@@ -98,8 +99,19 @@ export function getActiveProgram(): ActiveProgram | null {
   } catch { return null; }
 }
 
-export function setActiveStarterProgram(id: StarterProgramId): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ id, kind: "starter", currentIndex: 0 }));
+const ARNOLD_ADVANCED_TEMPLATE_IDS: Record<string, string> = {
+  "rec-arnold-chest-back":     "rec-arnold-advanced-chest-back",
+  "rec-arnold-shoulders-arms": "rec-arnold-advanced-shoulders-arms",
+  "rec-arnold-legs":           "rec-arnold-advanced-legs",
+};
+
+export function setActiveStarterProgram(id: StarterProgramId, variant?: "standard" | "advanced"): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    id,
+    kind: "starter",
+    currentIndex: 0,
+    ...(variant ? { variant } : {}),
+  }));
 }
 
 export function setActiveCustomProgram(id: string): void {
@@ -144,6 +156,9 @@ export function getCurrentWorkoutInfo(
     if (!program) return null;
     const idx = active.currentIndex % program.workouts.length;
     const workout = program.workouts[idx];
+    if (active.id === "ARNOLD" && active.variant === "advanced" && workout.linkedTemplateId) {
+      return { name: workout.name, linkedTemplateId: ARNOLD_ADVANCED_TEMPLATE_IDS[workout.linkedTemplateId] };
+    }
     return { name: workout.name, linkedTemplateId: workout.linkedTemplateId };
   } else {
     const program = getCustomPrograms().find(p => p.id === active.id);
