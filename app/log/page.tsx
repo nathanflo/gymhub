@@ -35,6 +35,7 @@ function LogPageInner() {
   const recId = searchParams.get("rec");
   const resumeParam = searchParams.get("resume");
   const programParam = searchParams.get("program");
+  const programTitle = searchParams.get("programTitle");
 
   const [initialState, setInitialState] = useState<SessionFormState | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
@@ -153,6 +154,8 @@ function LogPageInner() {
           setInitialState(templateToFormState({ ...template, exercises }));
           setLoadedFromTemplate(anyPrefilled);
         }
+      } else if (programTitle) {
+        setInitialState({ ...emptySessionForm(), title: programTitle });
       } else if (todayBw !== undefined) {
         // Fresh session — prefill BW from today's progress entry
         setInitialState({ ...emptySessionForm(), bodyweight: String(todayBw) });
@@ -161,7 +164,7 @@ function LogPageInner() {
       setLoaded(true);
     }
     load();
-  }, [fromId, templateId, recId]);
+  }, [fromId, templateId, recId, programTitle]);
 
   async function handleSave(session: WorkoutSession) {
     if (isSaving.current) return;

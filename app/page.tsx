@@ -9,7 +9,7 @@ import { getWellnessForDate } from "@/lib/wellness";
 import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
 import { computeHomeMomentum, capitalize } from "@/lib/messaging";
-import { getActiveProgram, getCurrentWorkoutName, ActiveProgram } from "@/lib/programs";
+import { getActiveProgram, getCurrentWorkoutInfo, ActiveProgram } from "@/lib/programs";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
@@ -230,10 +230,19 @@ export default function HomePage() {
     );
   }
 
-  const programWorkoutName = activeProgram ? getCurrentWorkoutName(activeProgram) : null;
-  const programRecTemplate = programWorkoutName
-    ? RECOMMENDED_TEMPLATES.find(t => t.name === programWorkoutName) ?? null
-    : null;
+  const programWorkoutInfo = activeProgram ? getCurrentWorkoutInfo(activeProgram) : null;
+
+  function getProgramSessionUrl(info: { name: string; linkedTemplateId?: string }): string {
+    if (info.linkedTemplateId) {
+      const isRec = RECOMMENDED_TEMPLATES.some(t => t.id === info.linkedTemplateId);
+      return isRec
+        ? `/log?rec=${info.linkedTemplateId}&program=1`
+        : `/log?template=${info.linkedTemplateId}&program=1`;
+    }
+    const matchingRec = RECOMMENDED_TEMPLATES.find(t => t.name === info.name);
+    if (matchingRec) return `/log?rec=${matchingRec.id}&program=1`;
+    return `/log?program=1&programTitle=${encodeURIComponent(info.name)}`;
+  }
 
   return (
     <main className="px-6 pt-6 flex flex-col gap-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
@@ -357,18 +366,18 @@ export default function HomePage() {
       </section>
 
       {/* Program — Today card */}
-      {programRecTemplate && (
+      {programWorkoutInfo && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
             Today
           </h2>
           <div className="rounded-xl bg-neutral-800 border border-neutral-700/60 px-4 py-3 flex flex-col gap-3">
             <div className="flex flex-col gap-0.5">
-              <p className="text-base font-semibold text-white">{programRecTemplate.name}</p>
+              <p className="text-base font-semibold text-white">{programWorkoutInfo.name}</p>
               <p className="text-xs text-neutral-500">From your program</p>
             </div>
             <Link
-              href={`/log?rec=${programRecTemplate.id}&program=1`}
+              href={getProgramSessionUrl(programWorkoutInfo)}
               className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.96] active:brightness-110
                          transition-all duration-75 ease-out py-3 text-sm font-semibold text-white text-center"
             >
