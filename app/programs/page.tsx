@@ -213,7 +213,7 @@ export default function ProgramsPage() {
                 <input
                   type="text"
                   className={`${inputClass} flex-1 text-sm`}
-                  placeholder="e.g. Chest & Back"
+                  placeholder={["e.g. Back & Triceps", "e.g. Legs & Shoulders", "e.g. Chest & Biceps"][i] ?? "e.g. Arms"}
                   value={row.name}
                   onChange={e => updateRow(row.id, "name", e.target.value)}
                 />
