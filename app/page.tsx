@@ -9,6 +9,8 @@ import { getWellnessForDate } from "@/lib/wellness";
 import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
 import { computeHomeMomentum, capitalize } from "@/lib/messaging";
+import { getActiveProgram, getCurrentWorkoutName, ActiveProgram } from "@/lib/programs";
+import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
 
@@ -82,6 +84,7 @@ export default function HomePage() {
   const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
   const [insight, setInsight] = useState<string>("Ready when you are");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [activeProgram, setActiveProgramState] = useState<ActiveProgram | null>(null);
   const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string; isPaused?: boolean; pausedOffset?: number; pauseStartedAt?: number | null } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -105,6 +108,14 @@ export default function HomePage() {
         setActiveDraft(null);
       }
     } catch { setActiveDraft(null); }
+  }, []);
+
+  // Sync active program on mount and whenever the page becomes visible again
+  useEffect(() => {
+    function sync() { setActiveProgramState(getActiveProgram()); }
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
   useEffect(() => {
@@ -218,6 +229,11 @@ export default function HomePage() {
       </main>
     );
   }
+
+  const programWorkoutName = activeProgram ? getCurrentWorkoutName(activeProgram) : null;
+  const programRecTemplate = programWorkoutName
+    ? RECOMMENDED_TEMPLATES.find(t => t.name === programWorkoutName) ?? null
+    : null;
 
   return (
     <main className="px-6 pt-6 flex flex-col gap-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
@@ -339,6 +355,28 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Program — Today card */}
+      {programRecTemplate && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            Today
+          </h2>
+          <div className="rounded-xl bg-neutral-800 border border-neutral-700/60 px-4 py-3 flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-base font-semibold text-white">{programRecTemplate.name}</p>
+              <p className="text-xs text-neutral-500">From your program</p>
+            </div>
+            <Link
+              href={`/log?rec=${programRecTemplate.id}&program=1`}
+              className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.96] active:brightness-110
+                         transition-all duration-75 ease-out py-3 text-sm font-semibold text-white text-center"
+            >
+              Start Session
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Today Snapshot */}
       {(todayBw || todayWellness) && (

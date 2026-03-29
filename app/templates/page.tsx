@@ -37,6 +37,12 @@ export default function TemplatesPage() {
           ← Back
         </button>
         <h1 className="text-2xl font-bold text-white">Templates</h1>
+        <Link
+          href="/programs"
+          className="inline-block mt-2 text-sm text-neutral-500 hover:text-neutral-400 transition-colors"
+        >
+          Want structure? <span className="text-indigo-400">Explore Programs</span>
+        </Link>
       </div>
 
       {/* Recommended */}

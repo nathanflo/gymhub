@@ -15,6 +15,7 @@ import { RECOMMENDED_TEMPLATES, recommendedToWorkoutTemplate } from "@/lib/recom
 import { WorkoutSession, WorkoutExercise } from "@/types/session";
 import { WorkoutTemplate } from "@/types/template";
 import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
+import { advanceActiveProgram } from "@/lib/programs";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState, emptySessionForm } from "@/components/SessionForm";
 
 type DraftData = {
@@ -33,6 +34,7 @@ function LogPageInner() {
   const templateId = searchParams.get("template");
   const recId = searchParams.get("rec");
   const resumeParam = searchParams.get("resume");
+  const programParam = searchParams.get("program");
 
   const [initialState, setInitialState] = useState<SessionFormState | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
@@ -177,6 +179,9 @@ function LogPageInner() {
         }
       }
       localStorage.removeItem("activeWorkoutDraft");
+      if (programParam === "1") {
+        advanceActiveProgram();
+      }
       router.push(`/session/${session.id}/summary`);
     } catch (err) {
       isSaving.current = false;
