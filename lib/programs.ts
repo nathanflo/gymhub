@@ -1,4 +1,4 @@
-export type StarterProgramId = "FULL_BODY" | "PPL" | "ARNOLD";
+export type StarterProgramId = "FULL_BODY" | "PPL" | "ARNOLD" | "UPPER_LOWER";
 
 export interface ProgramDefinition {
   id: StarterProgramId;
@@ -33,6 +33,18 @@ export const PROGRAMS: ProgramDefinition[] = [
       { name: "Legs",             linkedTemplateId: "rec-arnold-legs" },
     ],
     cadenceLabel: "3 workouts · rotating split",
+  },
+  {
+    id: "UPPER_LOWER",
+    name: "Upper / Lower",
+    description: "Balanced rotating split",
+    workouts: [
+      { name: "Upper A", linkedTemplateId: "rec-upper-a" },
+      { name: "Lower A", linkedTemplateId: "rec-lower-a" },
+      { name: "Upper B", linkedTemplateId: "rec-upper-b" },
+      { name: "Lower B", linkedTemplateId: "rec-lower-b" },
+    ],
+    cadenceLabel: "4 workouts · rotating split",
   },
 ];
 
