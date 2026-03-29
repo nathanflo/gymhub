@@ -49,7 +49,7 @@ export default function TemplatesPage() {
       <section className="flex flex-col gap-3">
         <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Recommended</p>
         <div className="flex flex-col gap-3">
-          {RECOMMENDED_TEMPLATES.map((t) => (
+          {RECOMMENDED_TEMPLATES.filter(t => !t.hidden).map((t) => (
             <RecommendedCard key={t.id} template={t} />
           ))}
         </div>

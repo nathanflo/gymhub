@@ -12,6 +12,7 @@ export interface RecommendedTemplate {
   estimatedDuration: string;
   coachingNote: string;
   exercises: RecommendedExercise[];
+  hidden?: true;  // if set, excluded from the Recommended list on the Templates page
 }
 
 import { WorkoutTemplate } from "@/types/template";
@@ -107,6 +108,55 @@ export const RECOMMENDED_TEMPLATES: RecommendedTemplate[] = [
       { name: "Fast interval", sets: 8, suggestedRepRange: "30 sec hard" },
       { name: "Easy interval", sets: 8, suggestedRepRange: "60 sec easy" },
       { name: "Cool-down",     sets: 1, suggestedRepRange: "5 min easy" },
+    ],
+  },
+  // ── Arnold Split templates (hidden from Recommended list; linked via program) ─
+  {
+    id: "rec-arnold-chest-back",
+    hidden: true,
+    name: "Arnold — Chest & Back",
+    workoutType: "Push",
+    description: "Arnold-inspired upper-body session pairing chest and back.",
+    estimatedDuration: "45–60 min",
+    coachingNote: "Move with control and keep the pace steady through both push and pull work.",
+    exercises: [
+      { name: "Bench Press",      sets: 3, suggestedRepRange: "8–12 reps" },
+      { name: "Incline DB Press", sets: 3, suggestedRepRange: "8–12 reps" },
+      { name: "Seated Row",       sets: 3, suggestedRepRange: "8–12 reps" },
+      { name: "Lat Pulldown",     sets: 2, suggestedRepRange: "12–15 reps" },
+      { name: "Rear Delt Fly",    sets: 2, suggestedRepRange: "12–15 reps" },
+    ],
+  },
+  {
+    id: "rec-arnold-shoulders-arms",
+    hidden: true,
+    name: "Arnold — Shoulders & Arms",
+    workoutType: "Push",
+    description: "Arnold-inspired upper-body session focused on delts, biceps, and triceps.",
+    estimatedDuration: "45–60 min",
+    coachingNote: "Keep reps smooth and avoid rushing through the smaller muscle groups.",
+    exercises: [
+      { name: "Shoulder Press",            sets: 3, suggestedRepRange: "8–12 reps" },
+      { name: "Lateral Raise",             sets: 3, suggestedRepRange: "12–15 reps" },
+      { name: "Tricep Pushdown",           sets: 3, suggestedRepRange: "10–12 reps" },
+      { name: "Overhead Tricep Extension", sets: 2, suggestedRepRange: "10–12 reps" },
+      { name: "Bicep Curl",                sets: 3, suggestedRepRange: "10–12 reps" },
+      { name: "Hammer Curl",               sets: 2, suggestedRepRange: "10–12 reps" },
+    ],
+  },
+  {
+    id: "rec-arnold-legs",
+    hidden: true,
+    name: "Arnold — Legs",
+    workoutType: "Legs",
+    description: "Arnold-inspired lower-body session with beginner-friendly machine and staple movements.",
+    estimatedDuration: "45–60 min",
+    coachingNote: "Start controlled, use full range of motion, and keep each lower-body set deliberate.",
+    exercises: [
+      { name: "Leg Press",      sets: 3, suggestedRepRange: "8–12 reps" },
+      { name: "Hamstring Curl", sets: 3, suggestedRepRange: "12–15 reps" },
+      { name: "Goblet Squat",   sets: 2, suggestedRepRange: "10–12 reps" },
+      { name: "Calf Raise",     sets: 2, suggestedRepRange: "12–20 reps" },
     ],
   },
 ];

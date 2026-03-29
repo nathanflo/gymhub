@@ -4,7 +4,7 @@ export interface ProgramDefinition {
   id: StarterProgramId;
   name: string;
   description: string;
-  workouts: string[];
+  workouts: Array<{ name: string; linkedTemplateId?: string }>;
   cadenceLabel: string;
 }
 
@@ -13,21 +13,25 @@ export const PROGRAMS: ProgramDefinition[] = [
     id: "FULL_BODY",
     name: "Full Body",
     description: "Simple and balanced",
-    workouts: ["Full Body"],
+    workouts: [{ name: "Full Body" }],
     cadenceLabel: "1 workout · repeat as you go",
   },
   {
     id: "PPL",
     name: "Push / Pull / Legs",
     description: "Focused rotating split",
-    workouts: ["Push", "Pull", "Legs"],
+    workouts: [{ name: "Push" }, { name: "Pull" }, { name: "Legs" }],
     cadenceLabel: "3 workouts · rotating split",
   },
   {
     id: "ARNOLD",
     name: "Arnold Split",
     description: "Classic high-volume bodybuilding split",
-    workouts: ["Chest & Back", "Shoulders & Arms", "Legs"],
+    workouts: [
+      { name: "Chest & Back",     linkedTemplateId: "rec-arnold-chest-back" },
+      { name: "Shoulders & Arms", linkedTemplateId: "rec-arnold-shoulders-arms" },
+      { name: "Legs",             linkedTemplateId: "rec-arnold-legs" },
+    ],
     cadenceLabel: "3 workouts · rotating split",
   },
 ];
@@ -139,7 +143,8 @@ export function getCurrentWorkoutInfo(
     const program = PROGRAMS.find(p => p.id === active.id);
     if (!program) return null;
     const idx = active.currentIndex % program.workouts.length;
-    return { name: program.workouts[idx] };
+    const workout = program.workouts[idx];
+    return { name: workout.name, linkedTemplateId: workout.linkedTemplateId };
   } else {
     const program = getCustomPrograms().find(p => p.id === active.id);
     if (!program || program.workouts.length === 0) return null;

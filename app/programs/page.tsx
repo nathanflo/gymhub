@@ -346,10 +346,10 @@ export default function ProgramsPage() {
                 {isExpanded && (
                   <div className="border-t border-neutral-700/50 px-4 pb-4 flex flex-col gap-4">
                     <div className="flex items-center gap-2 flex-wrap pt-3">
-                      {program.workouts.map((name, i) => (
-                        <div key={name} className="flex items-center gap-2">
+                      {program.workouts.map((w, i) => (
+                        <div key={w.name} className="flex items-center gap-2">
                           <span className="text-sm font-medium text-neutral-200 bg-neutral-700 rounded-lg px-3 py-1">
-                            {name}
+                            {w.name}
                           </span>
                           {i < program.workouts.length - 1 && (
                             <span className="text-neutral-600 text-xs">→</span>
