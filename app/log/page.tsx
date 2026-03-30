@@ -15,7 +15,7 @@ import { RECOMMENDED_TEMPLATES, recommendedToWorkoutTemplate } from "@/lib/recom
 import { WorkoutSession, WorkoutExercise } from "@/types/session";
 import { WorkoutTemplate } from "@/types/template";
 import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
-import { advanceActiveProgram } from "@/lib/programs";
+import { advanceActiveProgram, getActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState, emptySessionForm } from "@/components/SessionForm";
 
 type DraftData = {
@@ -50,6 +50,10 @@ function LogPageInner() {
   const [resumePausedOffset, setResumePausedOffset] = useState(0);
   const [resumePauseStartedAt, setResumePauseStartedAt] = useState<number | null>(null);
   const isSaving = useRef(false);
+  const [completionModal, setCompletionModal] = useState<{
+    nextWorkout: string | null;
+    summaryUrl: string;
+  } | null>(null);
 
   // Check localStorage for an active draft on mount (synchronous)
   useEffect(() => {
@@ -182,10 +186,25 @@ function LogPageInner() {
         }
       }
       localStorage.removeItem("activeWorkoutDraft");
+
+      const summaryUrl = `/session/${session.id}/summary`;
+
       if (programParam === "1") {
+        const active = getActiveProgram();
+        let nextWorkoutName: string | null = null;
+        if (active) {
+          const isStarter = active.kind === "starter";
+          const def = isStarter ? PROGRAMS.find(p => p.id === active.id) : null;
+          const custom = !isStarter ? getCustomPrograms().find(p => p.id === active.id) : null;
+          const total = def?.workouts.length ?? custom?.workouts.length ?? 1;
+          const nextIdx = (active.currentIndex + 1) % total;
+          nextWorkoutName = def?.workouts[nextIdx]?.name ?? custom?.workouts[nextIdx]?.name ?? null;
+        }
         advanceActiveProgram();
+        setCompletionModal({ nextWorkout: nextWorkoutName, summaryUrl });
+      } else {
+        setCompletionModal({ nextWorkout: null, summaryUrl });
       }
-      router.push(`/session/${session.id}/summary`);
     } catch (err) {
       isSaving.current = false;
       console.error(err);
@@ -239,6 +258,35 @@ function LogPageInner() {
               className="w-full py-3 rounded-xl bg-neutral-800 text-neutral-300"
             >
               Start New
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Completion modal */}
+      {completionModal && (
+        <div className="fixed inset-0 z-50 bg-neutral-950/80 flex items-center justify-center px-6">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-white font-bold text-xl">
+                {completionModal.nextWorkout ? "Session complete" : "Session saved"}
+              </p>
+              {completionModal.nextWorkout && (
+                <p className="text-sm text-neutral-400">
+                  Next:{" "}
+                  <span className="text-neutral-200">{completionModal.nextWorkout}</span>
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                const url = completionModal.summaryUrl;
+                setCompletionModal(null);
+                router.push(url);
+              }}
+              className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold"
+            >
+              Done
             </button>
           </div>
         </div>

@@ -9,7 +9,7 @@ import { getWellnessForDate } from "@/lib/wellness";
 import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
 import { computeHomeMomentum, capitalize } from "@/lib/messaging";
-import { getActiveProgram, getCurrentWorkoutInfo, ActiveProgram } from "@/lib/programs";
+import { getActiveProgram, getCurrentWorkoutInfo, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
@@ -232,6 +232,27 @@ export default function HomePage() {
 
   const programWorkoutInfo = activeProgram ? getCurrentWorkoutInfo(activeProgram) : null;
 
+  let programName: string | null = null;
+  let programTotal: number | null = null;
+  if (activeProgram) {
+    if (activeProgram.kind === "starter") {
+      const def = PROGRAMS.find(p => p.id === activeProgram.id);
+      if (def) {
+        programName = def.name + (activeProgram.id === "ARNOLD" && activeProgram.variant === "advanced" ? " (Advanced)" : "");
+        programTotal = def.workouts.length;
+      }
+    } else {
+      const custom = getCustomPrograms().find(p => p.id === activeProgram.id);
+      if (custom) {
+        programName = custom.name;
+        programTotal = custom.workouts.length;
+      }
+    }
+  }
+  const programDayLabel = programTotal !== null
+    ? `Day ${(activeProgram?.currentIndex ?? 0) + 1} of ${programTotal}`
+    : null;
+
   function getProgramSessionUrl(info: { name: string; linkedTemplateId?: string }): string {
     if (info.linkedTemplateId) {
       const isRec = RECOMMENDED_TEMPLATES.some(t => t.id === info.linkedTemplateId);
@@ -373,8 +394,13 @@ export default function HomePage() {
           </h2>
           <div className="rounded-xl bg-neutral-800 border border-neutral-700/60 px-4 py-3 flex flex-col gap-3">
             <div className="flex flex-col gap-0.5">
+              {programName && (
+                <p className="text-xs text-neutral-500">{programName}</p>
+              )}
+              {programDayLabel && (
+                <p className="text-[11px] text-neutral-600">{programDayLabel}</p>
+              )}
               <p className="text-base font-semibold text-white">{programWorkoutInfo.name}</p>
-              <p className="text-xs text-neutral-500">From your program</p>
             </div>
             <Link
               href={getProgramSessionUrl(programWorkoutInfo)}
