@@ -19,6 +19,7 @@ import { Field, inputClass, selectClass } from "@/components/Field";
 import { getExerciseLibrary } from "@/lib/exercises";
 import { getSessions } from "@/lib/sessions";
 import { getExerciseAlternatives } from "@/lib/exerciseAlternatives";
+import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,7 @@ export function SessionForm({
   const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(initialPauseStartedAt ?? null);
   const [restElapsed, setRestElapsed] = useState(0);
   const [swapIndex, setSwapIndex] = useState<number | null>(null);
+  const [insightExercise, setInsightExercise] = useState<string | null>(null);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -996,6 +998,7 @@ export function SessionForm({
                 onOpenNote={() => handleOpenNote(exIdx)}
                 onToggleComplete={() => handleToggleComplete(exIdx)}
                 onSwap={() => setSwapIndex(exIdx)}
+                onInsights={() => setInsightExercise(form.exercises[exIdx].name)}
                 exerciseLibrary={exerciseLibrary}
                 lastSet={lastSetByName.get(ex.name.trim().toLowerCase()) ?? null}
                 lastTopSet={lastTopSetByName.get(ex.name.trim().toLowerCase()) ?? null}
@@ -1090,6 +1093,14 @@ export function SessionForm({
           onClose={() => setSwapIndex(null)}
         />
       )}
+
+      {/* Exercise insights sheet */}
+      {insightExercise !== null && (
+        <ExerciseInsightSheet
+          exerciseName={insightExercise}
+          onClose={() => setInsightExercise(null)}
+        />
+      )}
   </>
   );
 }
@@ -1152,6 +1163,7 @@ function ExerciseBlock({
   onOpenNote,
   onToggleComplete,
   onSwap,
+  onInsights,
   exerciseLibrary,
   lastSet,
   lastTopSet,
@@ -1179,6 +1191,7 @@ function ExerciseBlock({
   onOpenNote: () => void;
   onToggleComplete: () => void;
   onSwap: () => void;
+  onInsights: () => void;
   exerciseLibrary: string[];
   lastSet: { weight?: number; reps?: number; duration?: string } | null;
   lastTopSet: { weight: number; reps: number } | null;
@@ -1241,6 +1254,17 @@ function ExerciseBlock({
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           className={`${inputClass} py-2 text-sm font-medium`}
         />
+        <button
+          type="button"
+          onClick={() => {
+            const name = exercise.name?.trim();
+            if (!name) return;
+            onInsights();
+          }}
+          className={`shrink-0 text-xs transition-colors ${lastSet ? "text-neutral-400" : "text-neutral-500"} hover:text-white`}
+        >
+          Insights
+        </button>
         {canRemove && (
           <button
             type="button"
