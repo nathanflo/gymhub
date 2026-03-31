@@ -25,6 +25,12 @@ export function ExerciseInsightSheet({
     });
   }, [exerciseName]);
 
+  const lastTop = insights?.lastSession ? topSetOf(insights.lastSession.sets) : null;
+  const prevTop = insights?.previousSession ? topSetOf(insights.previousSession.sets) : null;
+  const lastDisplaySets = insights?.lastSession
+    ? insights.lastSession.sets.slice(-3)
+    : [];
+
   return (
     <>
       {/* Backdrop */}
@@ -50,53 +56,56 @@ export function ExerciseInsightSheet({
             No history found for this exercise.
           </p>
         ) : (
-          <div className="px-5 py-4 flex flex-col gap-5">
+          <div className="px-5 py-5 flex flex-col gap-6">
+            {/* Today's reference */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                Today's reference
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-neutral-400">Last</span>
+                  <span className="text-sm font-semibold text-white">
+                    {lastTop ? formatSet(lastTop) : "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-neutral-400">Best set</span>
+                  <span className="text-sm font-semibold text-white">
+                    {insights.bestSet
+                      ? `${insights.bestSet.weight}kg × ${insights.bestSet.reps}`
+                      : "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-neutral-400">Heaviest</span>
+                  <span className="text-sm font-semibold text-white">
+                    {insights.bestWeight !== null ? `${insights.bestWeight}kg` : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Last session */}
             {insights.lastSession && (
-              <Section label={`Last session — ${shortDate(insights.lastSession.date)}`}>
-                {insights.lastSession.sets.map((set, i) => {
-                  const top = topSetOf(insights.lastSession!.sets);
-                  const isTop = set === top;
-                  return (
-                    <p
-                      key={i}
-                      className={`text-sm ${isTop ? "text-white font-medium" : "text-neutral-400"}`}
-                    >
-                      {formatSet(set)}
-                    </p>
-                  );
-                })}
-              </Section>
-            )}
-
-            {/* Previous session */}
-            {insights.previousSession && (
-              <Section label={`Previous — ${shortDate(insights.previousSession.date)}`}>
-                {insights.previousSession.sets.map((set, i) => (
-                  <p key={i} className="text-sm text-neutral-400">
+              <Section label={`Last — ${shortDate(insights.lastSession.date)}`}>
+                {lastDisplaySets.map((set, i) => (
+                  <p
+                    key={i}
+                    className={`text-sm ${set === lastTop ? "text-white font-medium" : "text-neutral-400"}`}
+                  >
                     {formatSet(set)}
                   </p>
                 ))}
               </Section>
             )}
 
-            {/* Bests */}
-            {(insights.bestWeight !== null || insights.bestSet !== null) && (
-              <Section label="Bests">
-                {insights.bestWeight !== null && (
-                  <p className="text-sm text-neutral-300">
-                    Heaviest:{" "}
-                    <span className="text-white font-medium">{insights.bestWeight}kg</span>
-                  </p>
-                )}
-                {insights.bestSet !== null && (
-                  <p className="text-sm text-neutral-300">
-                    Best set:{" "}
-                    <span className="text-white font-medium">
-                      {insights.bestSet.weight}kg × {insights.bestSet.reps}
-                    </span>
-                  </p>
-                )}
+            {/* Previous — top set only */}
+            {insights.previousSession && (
+              <Section label={`Previous — ${shortDate(insights.previousSession.date)}`}>
+                <p className="text-sm text-neutral-400">
+                  {prevTop ? formatSet(prevTop) : "—"}
+                </p>
               </Section>
             )}
 
