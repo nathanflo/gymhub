@@ -56,33 +56,33 @@ export function ExerciseInsightSheet({
             No history found for this exercise.
           </p>
         ) : (
-          <div className="px-5 py-5 flex flex-col gap-6">
-            {/* Today's reference */}
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Today's reference
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs text-neutral-400">Last</span>
-                  <span className="text-sm font-semibold text-white">
-                    {lastTop ? formatSet(lastTop) : "—"}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs text-neutral-400">Best set</span>
-                  <span className="text-sm font-semibold text-white">
+          <div className="px-5 pt-5 pb-6 flex flex-col gap-7">
+            {/* Today's reference — hero card */}
+            <div className="bg-neutral-800/50 border border-white/5 rounded-2xl px-4 py-4 flex flex-col gap-2.5">
+              <p className="text-[11px] text-neutral-600 tracking-wide">Today's reference</p>
+              {/* Primary: last top set */}
+              <div className="flex flex-col">
+                <span className="text-[11px] text-neutral-500 tracking-wide">Last session</span>
+                <span className="text-xl font-semibold tracking-tight text-white">
+                  {lastTop ? formatSet(lastTop) : "—"}
+                </span>
+              </div>
+              {/* Secondary: best + heaviest inline */}
+              <div className="flex items-center gap-5 text-sm text-neutral-400">
+                <span>
+                  Best:{" "}
+                  <span className="text-neutral-300 font-medium">
                     {insights.bestSet
                       ? `${insights.bestSet.weight}kg × ${insights.bestSet.reps}`
                       : "—"}
                   </span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs text-neutral-400">Heaviest</span>
-                  <span className="text-sm font-semibold text-white">
+                </span>
+                <span>
+                  Heaviest:{" "}
+                  <span className="text-neutral-300 font-medium">
                     {insights.bestWeight !== null ? `${insights.bestWeight}kg` : "—"}
                   </span>
-                </div>
+                </span>
               </div>
             </div>
 
@@ -92,7 +92,7 @@ export function ExerciseInsightSheet({
                 {lastDisplaySets.map((set, i) => (
                   <p
                     key={i}
-                    className={`text-sm ${set === lastTop ? "text-white font-medium" : "text-neutral-400"}`}
+                    className={`text-sm ${set === lastTop ? "text-white font-medium" : "text-neutral-500"}`}
                   >
                     {formatSet(set)}
                   </p>
@@ -115,8 +115,8 @@ export function ExerciseInsightSheet({
                 const top = topSetOf(snap.sets);
                 return (
                   <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-500">{shortDate(snap.date)}</span>
-                    <span className="text-sm text-neutral-300">{top ? formatSet(top) : "—"}</span>
+                    <span className="text-sm text-neutral-600">{shortDate(snap.date)}</span>
+                    <span className="text-sm text-neutral-400">{top ? formatSet(top) : "—"}</span>
                   </div>
                 );
               })}
@@ -130,8 +130,8 @@ export function ExerciseInsightSheet({
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">{label}</p>
+    <div className="flex flex-col gap-1.5 border-t border-white/5 pt-4">
+      <p className="text-[11px] text-neutral-500 tracking-wide">{label}</p>
       {children}
     </div>
   );
