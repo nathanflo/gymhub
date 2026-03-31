@@ -1042,15 +1042,15 @@ export function SessionForm({
               </div>
               {/* Interval builder */}
               <div className="flex flex-col gap-2">
-                <span className="text-[11px] text-neutral-500 tracking-wide">Set your work + recovery pattern</span>
+                <span className="text-[11px] text-neutral-500 tracking-wide">Define your interval pattern</span>
                 <div className="bg-neutral-800/50 border border-white/5 rounded-2xl px-4 py-4">
                   <div className="flex gap-3">
-                    <Field label="Run" className="flex-1">
-                      <input name="runIntervalWork" type="text" placeholder="1:00"
+                    <Field label="Work" className="flex-1">
+                      <input name="runIntervalWork" type="text" placeholder="e.g. 3:00 (incline walk)"
                         value={form.runIntervalWork} onChange={handleTopLevel} className={inputClass} />
                     </Field>
-                    <Field label="Walk / Recover" className="flex-1">
-                      <input name="runIntervalRecover" type="text" placeholder="1:00"
+                    <Field label="Recover" className="flex-1">
+                      <input name="runIntervalRecover" type="text" placeholder="e.g. 1:00 (easy jog)"
                         value={form.runIntervalRecover} onChange={handleTopLevel} className={inputClass} />
                     </Field>
                     <Field label="Repeat" className="w-20">
