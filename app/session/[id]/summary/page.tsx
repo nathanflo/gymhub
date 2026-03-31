@@ -535,6 +535,12 @@ export default function SummaryPage() {
                   <span className="text-4xl font-bold text-white">{session.duration}</span>
                 </div>
               )}
+              {session.intervals && (
+                <div className="flex flex-col col-span-2">
+                  <span className="text-xs text-neutral-600">Intervals</span>
+                  <span className="text-xl font-semibold text-white">{session.intervals}</span>
+                </div>
+              )}
             </div>
           </div>
         ) : (

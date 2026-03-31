@@ -202,6 +202,7 @@ function SessionCard({
           {session.distance !== undefined && `${session.distance} km`}
           {session.distance !== undefined && session.duration && " · "}
           {session.duration}
+          {!session.distance && !session.duration && session.intervals && session.intervals}
         </p>
       ) : (
         <div className="flex flex-col gap-1">

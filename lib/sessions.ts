@@ -8,9 +8,10 @@ import { supabase } from "./supabase";
 
 function toSession(row: any): WorkoutSession {
   const isYoga = row.workout_type === "Yoga";
-  const yogaRaw = isYoga && Array.isArray(row.exercises) && row.exercises[0]?._yogaSession
-    ? row.exercises[0]
-    : null;
+  const isRun = row.workout_type === "Run";
+  const rawExercises = Array.isArray(row.exercises) ? row.exercises : [];
+  const yogaRaw = isYoga && rawExercises[0]?._yogaSession ? rawExercises[0] : null;
+  const runMeta = isRun && rawExercises[0]?._runMeta ? rawExercises[0] : null;
 
   return {
     id: row.id,
@@ -25,7 +26,7 @@ function toSession(row: any): WorkoutSession {
     intervals: row.intervals ?? undefined,
     started_at: row.started_at ?? undefined,
     ended_at: row.ended_at ?? undefined,
-    exercises: isYoga ? [] : (row.exercises ?? []),
+    exercises: isYoga || runMeta ? [] : rawExercises,
     yogaStyle: yogaRaw?.style ?? undefined,
     yogaCustomStyle: yogaRaw?.customStyle ?? undefined,
     yogaDurationMinutes: yogaRaw?.durationMinutes ?? undefined,
@@ -34,6 +35,12 @@ function toSession(row: any): WorkoutSession {
     yogaMobilityRating: yogaRaw?.mobilityRating ?? undefined,
     yogaFlexibilityRating: yogaRaw?.flexibilityRating ?? undefined,
     yogaClarityRating: yogaRaw?.clarityRating ?? undefined,
+    runSubtype: runMeta?.subtype ?? undefined,
+    runIntervalWork: runMeta?.work ?? undefined,
+    runIntervalRecover: runMeta?.recover ?? undefined,
+    runIntervalRepeat: runMeta?.repeat ?? undefined,
+    runIncline: runMeta?.incline ?? undefined,
+    runSpeed: runMeta?.speed ?? undefined,
   };
 }
 
@@ -97,6 +104,14 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
            mobilityRating: session.yogaMobilityRating ?? null,
            flexibilityRating: session.yogaFlexibilityRating ?? null,
            clarityRating: session.yogaClarityRating ?? null }]
+      : session.workoutType === "Run" && session.runSubtype
+      ? [{ _runMeta: true,
+           subtype: session.runSubtype,
+           work: session.runIntervalWork ?? null,
+           recover: session.runIntervalRecover ?? null,
+           repeat: session.runIntervalRepeat ?? null,
+           incline: session.runIncline ?? null,
+           speed: session.runSpeed ?? null }]
       : session.exercises,
   });
   if (error) throw new Error(`Failed to save session: ${error.message}`);
@@ -131,6 +146,14 @@ export async function updateSession(updated: WorkoutSession): Promise<void> {
              mobilityRating: updated.yogaMobilityRating ?? null,
              flexibilityRating: updated.yogaFlexibilityRating ?? null,
              clarityRating: updated.yogaClarityRating ?? null }]
+        : updated.workoutType === "Run" && updated.runSubtype
+        ? [{ _runMeta: true,
+             subtype: updated.runSubtype,
+             work: updated.runIntervalWork ?? null,
+             recover: updated.runIntervalRecover ?? null,
+             repeat: updated.runIntervalRepeat ?? null,
+             incline: updated.runIncline ?? null,
+             speed: updated.runSpeed ?? null }]
         : updated.exercises,
       updated_at: new Date().toISOString(),
     })

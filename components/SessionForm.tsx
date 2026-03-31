@@ -83,6 +83,13 @@ export interface SessionFormState {
   distance: string;
   duration: string;
   intervals: string;
+  // Structured run fields (V2)
+  runSubtype: "easy" | "intervals" | "incline" | "tempo" | "long" | "custom";
+  runIntervalWork: string;
+  runIntervalRecover: string;
+  runIntervalRepeat: string;
+  runIncline: string;
+  runSpeed: string;
   dateTime?: string;
   // Yoga fields
   yogaStyle: string;
@@ -115,6 +122,12 @@ export const emptySessionForm = (): SessionFormState => ({
   distance: "",
   duration: "",
   intervals: "",
+  runSubtype: "easy",
+  runIntervalWork: "",
+  runIntervalRecover: "",
+  runIntervalRepeat: "",
+  runIncline: "",
+  runSpeed: "",
   yogaStyle: "Flow",
   yogaCustomStyle: "",
   yogaDurationMinutes: "",
@@ -153,6 +166,12 @@ export function sessionToFormState(s: WorkoutSession): SessionFormState {
     distance: s.distance !== undefined ? String(s.distance) : "",
     duration: s.duration ?? "",
     intervals: s.intervals ?? "",
+    runSubtype: s.runSubtype ?? "custom",
+    runIntervalWork: s.runIntervalWork ?? "",
+    runIntervalRecover: s.runIntervalRecover ?? "",
+    runIntervalRepeat: s.runIntervalRepeat !== undefined ? String(s.runIntervalRepeat) : "",
+    runIncline: s.runIncline !== undefined ? String(s.runIncline) : "",
+    runSpeed: s.runSpeed ?? "",
     dateTime: toDateTimeLocal(s.date),
     yogaStyle: s.yogaStyle ?? "Flow",
     yogaCustomStyle: s.yogaCustomStyle ?? "",
@@ -191,6 +210,12 @@ export function templateToFormState(t: WorkoutTemplate): SessionFormState {
     distance: t.distance !== undefined ? String(t.distance) : "",
     duration: t.duration ?? "",
     intervals: t.intervals ?? "",
+    runSubtype: "easy",
+    runIntervalWork: "",
+    runIntervalRecover: "",
+    runIntervalRepeat: "",
+    runIncline: "",
+    runSpeed: "",
     yogaStyle: "Flow",
     yogaCustomStyle: "",
     yogaDurationMinutes: "",
@@ -202,9 +227,26 @@ export function templateToFormState(t: WorkoutTemplate): SessionFormState {
   };
 }
 
+// ─── Run helpers ──────────────────────────────────────────────────────────────
+
+function buildRunSummary(form: SessionFormState): string | undefined {
+  if (form.runSubtype === "intervals") {
+    const base = `${form.runIntervalWork} / ${form.runIntervalRecover} × ${form.runIntervalRepeat}`;
+    return form.runIncline ? `${base} · ${form.runIncline}% incline` : base;
+  }
+  if (form.runSubtype === "incline" && form.runIncline) {
+    return `${form.runIncline}% incline`;
+  }
+  return form.intervals.trim() || undefined;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const WORKOUT_TYPES: WorkoutType[] = ["Push", "Pull", "Legs", "Arms", "Full Body", "Run", "Yoga", "Other"];
+const RUN_SUBTYPE_LABELS = {
+  easy: "Easy Run", intervals: "Intervals", incline: "Incline Walk",
+  tempo: "Tempo", long: "Long Run", custom: "Custom",
+} as const;
 const YOGA_STYLES = ["Flow", "Vinyasa", "Power", "Yin", "Stretch", "Custom"] as const;
 const YOGA_INTENTIONS = ["Recovery", "Mobility", "Flexibility", "Relaxation", "Energy", "Mindfulness"] as const;
 const YOGA_SOURCES = ["Self-guided", "Guided (App/Video)", "Class (Studio)"] as const;
@@ -563,13 +605,17 @@ export function SessionForm({
         setError("Please enter a duration."); return;
       }
     } else if (isRun) {
-      if (!form.distance || parseFloat(form.distance) <= 0) {
-        setError("Please enter a distance.");
-        return;
-      }
-      if (!form.duration.trim()) {
-        setError("Please enter a duration.");
-        return;
+      if (form.runSubtype === "intervals") {
+        if (!form.runIntervalWork.trim()) { setError("Please enter a work duration."); return; }
+        if (!form.runIntervalRecover.trim()) { setError("Please enter a recovery duration."); return; }
+        const rep = parseInt(form.runIntervalRepeat);
+        if (!rep || rep < 1) { setError("Please enter a repeat count."); return; }
+      } else if (form.runSubtype === "long" || form.runSubtype === "custom") {
+        if (!form.distance || parseFloat(form.distance) <= 0) { setError("Please enter a distance."); return; }
+        if (!form.duration.trim()) { setError("Please enter a duration."); return; }
+      } else {
+        // easy, tempo, incline
+        if (!form.duration.trim()) { setError("Please enter a duration."); return; }
       }
     } else {
       if (form.exercises.length === 0) {
@@ -642,9 +688,24 @@ export function SessionForm({
       started_at: startTime ?? undefined,
       ended_at: new Date().toISOString(),
       ...(isRun && {
-        distance: parseFloat(form.distance),
-        duration: form.duration.trim(),
-        intervals: form.intervals.trim() || undefined,
+        distance: form.runSubtype !== "intervals" && form.distance
+          ? parseFloat(form.distance) : undefined,
+        duration: form.runSubtype !== "intervals"
+          ? form.duration.trim() || undefined : undefined,
+        intervals: buildRunSummary(form),
+        runSubtype: form.runSubtype,
+        ...(form.runSubtype === "intervals" ? {
+          runIntervalWork: form.runIntervalWork.trim(),
+          runIntervalRecover: form.runIntervalRecover.trim(),
+          runIntervalRepeat: parseInt(form.runIntervalRepeat),
+          runIncline: form.runIncline ? parseFloat(form.runIncline) : undefined,
+          runSpeed: form.runSpeed.trim() || undefined,
+        } : form.runSubtype === "incline" ? {
+          runIncline: form.runIncline ? parseFloat(form.runIncline) : undefined,
+          runSpeed: form.runSpeed.trim() || undefined,
+        } : form.runSubtype === "tempo" ? {
+          runSpeed: form.runSpeed.trim() || undefined,
+        } : {}),
       }),
       ...(isYoga && {
         yogaStyle: form.yogaStyle,
@@ -925,40 +986,163 @@ export function SessionForm({
           </div>
         </div>
       ) : isRun ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-3">
-            <Field label="Distance (km)" className="flex-1">
-              <input
-                name="distance"
-                type="number"
-                inputMode="decimal"
-                placeholder="e.g. 5"
-                value={form.distance}
-                onChange={handleTopLevel}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Duration" className="flex-1">
-              <input
-                name="duration"
-                type="text"
-                placeholder="e.g. 31:45 or 45 min"
-                value={form.duration}
-                onChange={handleTopLevel}
-                className={inputClass}
-              />
-            </Field>
+        <div className="flex flex-col gap-5">
+          {/* Run subtype selector */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Run type</label>
+            <div className="flex flex-wrap gap-2">
+              {(["easy", "intervals", "incline", "tempo", "long", "custom"] as const).map((sub) => (
+                <button
+                  key={sub}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, runSubtype: sub }))}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    form.runSubtype === sub
+                      ? "bg-indigo-600 text-white"
+                      : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+                  }`}
+                >
+                  {RUN_SUBTYPE_LABELS[sub]}
+                </button>
+              ))}
+            </div>
           </div>
-          <Field label="Intervals (optional)">
-            <input
-              name="intervals"
-              type="text"
-              placeholder="e.g. 4 x 400m"
-              value={form.intervals}
-              onChange={handleTopLevel}
-              className={inputClass}
-            />
-          </Field>
+
+          {/* Subtype-specific fields */}
+          {form.runSubtype === "easy" && (
+            <div className="flex gap-3">
+              <Field label="Duration" className="flex-1">
+                <input name="duration" type="text" placeholder="e.g. 31:45 or 45 min"
+                  value={form.duration} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+              <Field label="Distance (km) — optional" className="flex-1">
+                <input name="distance" type="number" inputMode="decimal" placeholder="e.g. 5"
+                  value={form.distance} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+            </div>
+          )}
+
+          {form.runSubtype === "intervals" && (
+            <div className="flex flex-col gap-4">
+              {/* Quick presets */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-neutral-500 tracking-wide">Quick presets</span>
+                <div className="flex gap-2 flex-wrap">
+                  <button type="button"
+                    onClick={() => setForm((f) => ({ ...f, runIntervalWork: "3:00", runIntervalRecover: "1:00", runIntervalRepeat: "6", runIncline: "6" }))}
+                    className="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400 hover:text-neutral-200 transition-colors">
+                    3:00 incline + 1:00 run × 6
+                  </button>
+                  <button type="button"
+                    onClick={() => setForm((f) => ({ ...f, runIntervalWork: "1:00", runIntervalRecover: "1:00", runIntervalRepeat: "8", runIncline: "" }))}
+                    className="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400 hover:text-neutral-200 transition-colors">
+                    1:00 / 1:00 × 8
+                  </button>
+                </div>
+              </div>
+              {/* Interval builder */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] text-neutral-500 tracking-wide">Set your work + recovery pattern</span>
+                <div className="bg-neutral-800/50 border border-white/5 rounded-2xl px-4 py-4">
+                  <div className="flex gap-3">
+                    <Field label="Run" className="flex-1">
+                      <input name="runIntervalWork" type="text" placeholder="1:00"
+                        value={form.runIntervalWork} onChange={handleTopLevel} className={inputClass} />
+                    </Field>
+                    <Field label="Walk / Recover" className="flex-1">
+                      <input name="runIntervalRecover" type="text" placeholder="1:00"
+                        value={form.runIntervalRecover} onChange={handleTopLevel} className={inputClass} />
+                    </Field>
+                    <Field label="Repeat" className="w-20">
+                      <input name="runIntervalRepeat" type="number" inputMode="numeric" placeholder="8"
+                        value={form.runIntervalRepeat} onChange={handleTopLevel} className={inputClass} />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+              {/* Optional: incline + speed */}
+              <div className="flex gap-3">
+                <Field label="Incline % (optional)" className="flex-1">
+                  <input name="runIncline" type="number" inputMode="decimal" placeholder="e.g. 6"
+                    value={form.runIncline} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+                <Field label="Speed note (optional)" className="flex-1">
+                  <input name="runSpeed" type="text" placeholder="e.g. 6.5 km/h"
+                    value={form.runSpeed} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+              </div>
+            </div>
+          )}
+
+          {form.runSubtype === "incline" && (
+            <div className="flex flex-col gap-3">
+              <Field label="Duration">
+                <input name="duration" type="text" placeholder="e.g. 30 min"
+                  value={form.duration} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+              <div className="flex gap-3">
+                <Field label="Incline %" className="flex-1">
+                  <input name="runIncline" type="number" inputMode="decimal" placeholder="e.g. 6"
+                    value={form.runIncline} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+                <Field label="Speed (optional)" className="flex-1">
+                  <input name="runSpeed" type="text" placeholder="e.g. 6.5 km/h"
+                    value={form.runSpeed} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+              </div>
+            </div>
+          )}
+
+          {form.runSubtype === "tempo" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <Field label="Duration" className="flex-1">
+                  <input name="duration" type="text" placeholder="e.g. 25 min"
+                    value={form.duration} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+                <Field label="Distance (km) — optional" className="flex-1">
+                  <input name="distance" type="number" inputMode="decimal" placeholder="e.g. 5"
+                    value={form.distance} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+              </div>
+              <Field label="Pace / effort note (optional)">
+                <input name="runSpeed" type="text" placeholder="e.g. 5:10 /km, threshold effort"
+                  value={form.runSpeed} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+            </div>
+          )}
+
+          {form.runSubtype === "long" && (
+            <div className="flex gap-3">
+              <Field label="Distance (km)" className="flex-1">
+                <input name="distance" type="number" inputMode="decimal" placeholder="e.g. 10"
+                  value={form.distance} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+              <Field label="Duration" className="flex-1">
+                <input name="duration" type="text" placeholder="e.g. 58:10"
+                  value={form.duration} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+            </div>
+          )}
+
+          {form.runSubtype === "custom" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <Field label="Distance (km)" className="flex-1">
+                  <input name="distance" type="number" inputMode="decimal" placeholder="e.g. 5"
+                    value={form.distance} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+                <Field label="Duration" className="flex-1">
+                  <input name="duration" type="text" placeholder="e.g. 31:45 or 45 min"
+                    value={form.duration} onChange={handleTopLevel} className={inputClass} />
+                </Field>
+              </div>
+              <Field label="Intervals (optional)">
+                <input name="intervals" type="text" placeholder="e.g. 4 x 400m"
+                  value={form.intervals} onChange={handleTopLevel} className={inputClass} />
+              </Field>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-4">

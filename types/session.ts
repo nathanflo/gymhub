@@ -44,7 +44,15 @@ export interface WorkoutSession {
   // Run fields — populated when workoutType === "Run", exercises is []
   distance?: number;        // km
   duration?: string;        // free text: "31:45" or "45 min"
-  intervals?: string;       // e.g. "4 x 400m"
+  intervals?: string;       // human-readable summary e.g. "1:00 / 1:00 × 8"
+
+  // Structured run fields (V2)
+  runSubtype?: "easy" | "intervals" | "incline" | "tempo" | "long" | "custom";
+  runIntervalWork?: string;    // work phase duration e.g. "1:00"
+  runIntervalRecover?: string; // recovery phase duration e.g. "1:00"
+  runIntervalRepeat?: number;  // repeat count e.g. 8
+  runIncline?: number;         // incline percent e.g. 6
+  runSpeed?: string;           // speed/pace note e.g. "6.5 km/h" or "5:10 /km"
 
   // Yoga fields — populated when workoutType === "Yoga", exercises is []
   yogaStyle?: string;            // "Flow" | "Vinyasa" | "Power" | "Yin" | "Stretch" | "Custom"
