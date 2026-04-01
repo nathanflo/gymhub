@@ -44,6 +44,7 @@ export default function ProfilePage() {
   const [locationResults,   setLocationResults]   = useState<LocationSearchResult[]>([]);
   const [locationSearching, setLocationSearching] = useState(false);
   const [locationNoResults, setLocationNoResults] = useState(false);
+  const [locationFallback,  setLocationFallback]  = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -91,14 +92,35 @@ export default function ProfilePage() {
   }
 
   async function handleLocationSearch() {
-    if (!locationSearch.trim()) return;
+    const raw = locationSearch.trim();
+    if (!raw) return;
+
+    // Normalize: collapse spaces, capitalize each word
+    const normalized = raw
+      .replace(/\s+/g, " ")
+      .split(" ")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
     setLocationSearching(true);
     setLocationNoResults(false);
+    setLocationFallback(false);
     setLocationResults([]);
     try {
-      const results = await searchLocations(locationSearch.trim());
-      setLocationResults(results);
-      if (results.length === 0) setLocationNoResults(true);
+      const results = await searchLocations(normalized);
+      if (results.length > 0) {
+        setLocationResults(results);
+      } else {
+        // Retry with first word only
+        const firstWord = normalized.split(" ")[0];
+        const fallback = firstWord !== normalized ? await searchLocations(firstWord) : [];
+        if (fallback.length > 0) {
+          setLocationResults(fallback);
+          setLocationFallback(true);
+        } else {
+          setLocationNoResults(true);
+        }
+      }
     } catch {
       setLocationNoResults(true);
     } finally {
@@ -111,6 +133,7 @@ export default function ProfilePage() {
     setLocationSearch("");
     setLocationResults([]);
     setLocationNoResults(false);
+    setLocationFallback(false);
   }
 
   async function handleSignOut() {
@@ -260,7 +283,7 @@ export default function ProfilePage() {
               type="text"
               placeholder="Search for a place…"
               value={locationSearch}
-              onChange={e => { setLocationSearch(e.target.value); setLocationResults([]); setLocationNoResults(false); }}
+              onChange={e => { setLocationSearch(e.target.value); setLocationResults([]); setLocationNoResults(false); setLocationFallback(false); }}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleLocationSearch(); } }}
             />
             <button
@@ -287,6 +310,9 @@ export default function ProfilePage() {
                 </button>
               ))}
             </div>
+          )}
+          {locationFallback && locationResults.length > 0 && (
+            <p className="text-xs text-neutral-500 px-1">No exact match — showing closest places</p>
           )}
           {locationNoResults && (
             <p className="text-xs text-neutral-500 px-1">No results found — try a different spelling.</p>
