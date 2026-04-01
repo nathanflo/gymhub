@@ -422,8 +422,9 @@ export default function SummaryPage() {
 
     const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
     const allPriorSessions = allSessions.filter((s) => s.date < session.date);
+    const sessionIndex     = buildSessionIndex(allSessions);
     const historicalBest   = buildHistoricalBestMap(
-      allSessions.filter((s) => s.id !== session.id && s.date < session.date)
+      sessionIndex.sortedSessions.filter((s) => s.id !== session.id && s.date < session.date)
     );
     const prExercises = detectPRs(session, historicalBest);
 
@@ -463,8 +464,7 @@ export default function SummaryPage() {
     };
     const subtypeLabel = runSubtypeLabel[session.runSubtype ?? "custom"] ?? "run";
 
-    const subtype      = session.runSubtype ?? "custom";
-    const sessionIndex = buildSessionIndex(allSessions);
+    const subtype = session.runSubtype ?? "custom";
     const allSameSubtype   = isRun ? (sessionIndex.runsBySubtype.get(subtype) ?? []) : [];
     const priorSameSubtype = allSameSubtype.filter(
       (s) => s.id !== session.id && s.date < session.date

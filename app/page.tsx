@@ -9,6 +9,11 @@ import { getWellnessForDate } from "@/lib/wellness";
 import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
 import { computeHomeMomentum, capitalize } from "@/lib/messaging";
+import { parseLocation, formatLocationLabel } from "@/lib/location";
+
+// In-memory cache for legacy city-name → coordinates lookups.
+// Prevents re-geocoding on every navigation for users without stored lat/lon.
+const legacyGeoCache = new Map<string, { lat: number; lon: number }>();
 import { getActiveProgram, getCurrentWorkoutInfo, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
@@ -81,6 +86,8 @@ export default function HomePage() {
   const [todayBw, setTodayBw] = useState<BodyweightEntry | undefined>(undefined);
   const [todayWellness, setTodayWellness] = useState<WellnessEntry | undefined>(undefined);
   const [city, setCity] = useState<string | null>(null);
+  const [savedLat, setSavedLat] = useState<number | null>(null);
+  const [savedLon, setSavedLon] = useState<number | null>(null);
   const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
   const [insight, setInsight] = useState<string>("Ready when you are");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -155,7 +162,12 @@ export default function HomePage() {
       setRecentSessions(sessions.slice(0, 2));
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
-      if (profileResult?.data?.city) setCity(profileResult.data.city);
+      if (profileResult?.data?.city) {
+        const loc = parseLocation(profileResult.data.city);
+        if (loc.label) setCity(formatLocationLabel(loc.label));
+        if (loc.lat !== null) setSavedLat(loc.lat);
+        if (loc.lon !== null) setSavedLon(loc.lon);
+      }
     }
     load();
   }, []);
@@ -166,14 +178,33 @@ export default function HomePage() {
     let cancelled = false;
     async function fetchWeather() {
       try {
-        const geoRes = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city!)}&count=1&language=en&format=json`
-        );
-        const geoData = await geoRes.json();
-        const loc = geoData?.results?.[0];
-        if (!loc || cancelled) return;
+        let lat = savedLat;
+        let lon = savedLon;
+
+        if (lat === null || lon === null) {
+          // Legacy path: geocode by city name string
+          const cached = legacyGeoCache.get(city!);
+          if (cached) {
+            lat = cached.lat;
+            lon = cached.lon;
+          } else {
+            const geoRes = await fetch(
+              `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city!)}&count=1&language=en&format=json`
+            );
+            const geoData = await geoRes.json();
+            const loc = geoData?.results?.[0];
+            if (!loc || cancelled) return;
+            const resolvedLat: number = loc.latitude;
+            const resolvedLon: number = loc.longitude;
+            lat = resolvedLat;
+            lon = resolvedLon;
+            legacyGeoCache.set(city!, { lat: resolvedLat, lon: resolvedLon });
+          }
+        }
+
+        if (lat === null || lon === null || cancelled) return;
         const wxRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weathercode&temperature_unit=celsius`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&temperature_unit=celsius`
         );
         const wxData = await wxRes.json();
         const temp = wxData?.current?.temperature_2m;
@@ -181,12 +212,12 @@ export default function HomePage() {
         if (temp == null || code == null || cancelled) return;
         setWeather({ temp: Math.round(temp), label: weatherLabel(code) });
       } catch {
-        // silently fail — city name alone will show
+        // silently fail — city label alone will show
       }
     }
     fetchWeather();
     return () => { cancelled = true; };
-  }, [city]);
+  }, [city, savedLat, savedLon]);
 
   const dateLabel = new Date().toLocaleDateString("en-GB", {
     weekday: "short",

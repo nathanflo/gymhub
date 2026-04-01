@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { getProfile, saveProfile } from "@/lib/profiles";
 import { UserProfile } from "@/types/profile";
 import { inputClass, selectClass, Field } from "@/components/Field";
+import { parseLocation, stringifyLocation, searchLocations, formatLocationLabel, LocationSearchResult } from "@/lib/location";
 
 const emptyForm: UserProfile = {
   name: "",
@@ -37,6 +38,12 @@ export default function ProfilePage() {
   // Raw string values for numeric inputs
   const [heightStr, setHeightStr] = useState("");
   const [weightStr, setWeightStr] = useState("");
+
+  // Location search state
+  const [locationSearch,    setLocationSearch]    = useState("");
+  const [locationResults,   setLocationResults]   = useState<LocationSearchResult[]>([]);
+  const [locationSearching, setLocationSearching] = useState(false);
+  const [locationNoResults, setLocationNoResults] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -83,6 +90,29 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleLocationSearch() {
+    if (!locationSearch.trim()) return;
+    setLocationSearching(true);
+    setLocationNoResults(false);
+    setLocationResults([]);
+    try {
+      const results = await searchLocations(locationSearch.trim());
+      setLocationResults(results);
+      if (results.length === 0) setLocationNoResults(true);
+    } catch {
+      setLocationNoResults(true);
+    } finally {
+      setLocationSearching(false);
+    }
+  }
+
+  function handleLocationSelect(r: LocationSearchResult) {
+    setForm(f => ({ ...f, city: stringifyLocation(r) }));
+    setLocationSearch("");
+    setLocationResults([]);
+    setLocationNoResults(false);
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.push("/");
@@ -98,6 +128,9 @@ export default function ProfilePage() {
       </main>
     );
   }
+
+  const parsedCityRaw = parseLocation(form.city).label;
+  const parsedCity = parsedCityRaw ? formatLocationLabel(parsedCityRaw) : null;
 
   const saveLabel =
     saveState === "saving" ? "Saving…" :
@@ -212,15 +245,53 @@ export default function ProfilePage() {
           </select>
         </Field>
 
-        <Field label="City">
-          <input
-            className={inputClass}
-            type="text"
-            placeholder="e.g. London"
-            value={form.city ?? ""}
-            onChange={e => setForm(f => ({ ...f, city: e.target.value || null }))}
-          />
-        </Field>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            Location
+          </span>
+          {parsedCity && (
+            <div className="text-sm text-neutral-300 rounded-xl bg-neutral-800/60 px-3 py-2.5">
+              {parsedCity}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              className={`${inputClass} flex-1`}
+              type="text"
+              placeholder="Search for a place…"
+              value={locationSearch}
+              onChange={e => { setLocationSearch(e.target.value); setLocationResults([]); setLocationNoResults(false); }}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleLocationSearch(); } }}
+            />
+            <button
+              type="button"
+              disabled={!locationSearch.trim() || locationSearching}
+              onClick={handleLocationSearch}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 text-sm font-medium text-white
+                         disabled:opacity-50 active:scale-95 transition-all"
+            >
+              {locationSearching ? "…" : "Search"}
+            </button>
+          </div>
+          {locationResults.length > 0 && (
+            <div className="flex flex-col rounded-xl overflow-hidden border border-neutral-700">
+              {locationResults.map((r, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleLocationSelect(r)}
+                  className="text-left px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-700
+                             active:bg-neutral-600 border-b border-neutral-800 last:border-b-0 transition-colors"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {locationNoResults && (
+            <p className="text-xs text-neutral-500 px-1">No results found — try a different spelling.</p>
+          )}
+        </div>
       </section>
 
       {/* Save button */}
