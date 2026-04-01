@@ -51,6 +51,19 @@ export async function searchLocations(query: string): Promise<LocationSearchResu
   }));
 }
 
+function normalizeAliasKey(query: string): string {
+  return query.toLowerCase().trim().replace(/[,.]/g, "").replace(/\s+/g, " ");
+}
+
+const locationAliases: Record<string, string[]> = {
+  "bedford new york": ["Bedford Hills", "Katonah"],
+  "bedford ny":       ["Bedford Hills", "Katonah"],
+};
+
+export function getAliasQueries(query: string): string[] {
+  return locationAliases[normalizeAliasKey(query)] ?? [];
+}
+
 /**
  * Shorten a full location label for display. Stored label is never modified.
  * "Bedford, New York, United States of America" → "Bedford, New York"

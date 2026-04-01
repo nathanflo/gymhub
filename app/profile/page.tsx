@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { getProfile, saveProfile } from "@/lib/profiles";
 import { UserProfile } from "@/types/profile";
 import { inputClass, selectClass, Field } from "@/components/Field";
-import { parseLocation, stringifyLocation, searchLocations, formatLocationLabel, LocationSearchResult } from "@/lib/location";
+import { parseLocation, stringifyLocation, searchLocations, formatLocationLabel, LocationSearchResult, getAliasQueries } from "@/lib/location";
 
 const emptyForm: UserProfile = {
   name: "",
@@ -45,6 +45,8 @@ export default function ProfilePage() {
   const [locationSearching, setLocationSearching] = useState(false);
   const [locationNoResults, setLocationNoResults] = useState(false);
   const [locationFallback,  setLocationFallback]  = useState(false);
+  const [locationAliasMatch, setLocationAliasMatch] = useState(false);
+  const [locationAliasQuery, setLocationAliasQuery] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -105,13 +107,34 @@ export default function ProfilePage() {
     setLocationSearching(true);
     setLocationNoResults(false);
     setLocationFallback(false);
+    setLocationAliasMatch(false);
+    setLocationAliasQuery("");
     setLocationResults([]);
     try {
       const results = await searchLocations(normalized);
       if (results.length > 0) {
         setLocationResults(results);
       } else {
-        // Retry with first word only
+        // Step 2: alias fallback for known ambiguous places
+        const aliasQueries = getAliasQueries(normalized);
+        if (aliasQueries.length > 0) {
+          const sets = await Promise.all(aliasQueries.map(q => searchLocations(q)));
+          const seen = new Set<string>();
+          const aliasResults: LocationSearchResult[] = [];
+          for (const set of sets) {
+            if (set[0] && !seen.has(set[0].label)) {
+              seen.add(set[0].label);
+              aliasResults.push(set[0]);
+            }
+          }
+          if (aliasResults.length > 0) {
+            setLocationResults(aliasResults);
+            setLocationAliasMatch(true);
+            setLocationAliasQuery(raw);
+            return;
+          }
+        }
+        // Step 3: first-word broad fallback
         const firstWord = normalized.split(" ")[0];
         const fallback = firstWord !== normalized ? await searchLocations(firstWord) : [];
         if (fallback.length > 0) {
@@ -134,6 +157,8 @@ export default function ProfilePage() {
     setLocationResults([]);
     setLocationNoResults(false);
     setLocationFallback(false);
+    setLocationAliasMatch(false);
+    setLocationAliasQuery("");
   }
 
   async function handleSignOut() {
@@ -283,7 +308,7 @@ export default function ProfilePage() {
               type="text"
               placeholder="Search for a place…"
               value={locationSearch}
-              onChange={e => { setLocationSearch(e.target.value); setLocationResults([]); setLocationNoResults(false); setLocationFallback(false); }}
+              onChange={e => { setLocationSearch(e.target.value); setLocationResults([]); setLocationNoResults(false); setLocationFallback(false); setLocationAliasMatch(false); setLocationAliasQuery(""); }}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleLocationSearch(); } }}
             />
             <button
@@ -310,6 +335,9 @@ export default function ProfilePage() {
                 </button>
               ))}
             </div>
+          )}
+          {locationAliasMatch && locationResults.length > 0 && (
+            <p className="text-xs text-neutral-500 px-1">Showing nearby matches for {locationAliasQuery}</p>
           )}
           {locationFallback && locationResults.length > 0 && (
             <p className="text-xs text-neutral-500 px-1">No exact match — showing closest places</p>
