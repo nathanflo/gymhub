@@ -240,6 +240,25 @@ function buildRunSummary(form: SessionFormState): string | undefined {
   return form.intervals.trim() || undefined;
 }
 
+/** Parse "3:00" or "0:45" → total seconds. Returns 0 for invalid input. */
+function parseIntervalTime(str: string): number {
+  const parts = str.trim().split(":");
+  if (parts.length === 2) {
+    const m = parseInt(parts[0], 10);
+    const s = parseInt(parts[1], 10);
+    if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
+  }
+  const secs = parseInt(str, 10);
+  return isNaN(secs) ? 0 : secs;
+}
+
+/** Format seconds → "m:ss" (e.g. 134 → "2:14"). */
+function formatIntervalTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const WORKOUT_TYPES: WorkoutType[] = ["Push", "Pull", "Legs", "Arms", "Full Body", "Run", "Yoga", "Other"];
@@ -315,6 +334,7 @@ export function SessionForm({
   const [restElapsed, setRestElapsed] = useState(0);
   const [swapIndex, setSwapIndex] = useState<number | null>(null);
   const [insightExercise, setInsightExercise] = useState<string | null>(null);
+  const [liveIntervalActive, setLiveIntervalActive] = useState(false);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -1257,15 +1277,40 @@ export function SessionForm({
           </button>
         </div>
       ) : (
-        // Pre-start — single full-width Begin button
-        <button
-          type="button"
-          onClick={() => { setStartTime(new Date().toISOString()); resetPauseState(); }}
-          className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
-                     transition-all py-5 text-lg font-semibold text-white shadow-lg"
-        >
-          Begin Workout
-        </button>
+        // Pre-start — optionally "Start Live Intervals" then "Begin Workout"
+        <div className="flex flex-col gap-3">
+          {isRun && form.runSubtype === "intervals" && (
+            <button
+              type="button"
+              onClick={() => {
+                const workSecs = parseIntervalTime(form.runIntervalWork);
+                const recoverSecs = parseIntervalTime(form.runIntervalRecover);
+                const rep = parseInt(form.runIntervalRepeat);
+                if (!workSecs || !recoverSecs || !rep || rep < 1) {
+                  setError("Please fill in Work, Recover, and Repeat before starting live intervals.");
+                  return;
+                }
+                setError(null);
+                setStartTime(new Date().toISOString());
+                resetPauseState();
+                setLiveIntervalActive(true);
+              }}
+              className="w-full rounded-2xl bg-neutral-800 border border-white/5 py-4
+                         text-base font-semibold text-indigo-400 hover:text-indigo-300
+                         active:scale-[0.98] transition-all"
+            >
+              Start Live Intervals
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => { setStartTime(new Date().toISOString()); resetPauseState(); }}
+            className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95
+                       transition-all py-5 text-lg font-semibold text-white shadow-lg"
+          >
+            Begin Workout
+          </button>
+        </div>
       )}
     </div>
 
@@ -1283,6 +1328,16 @@ export function SessionForm({
         <ExerciseInsightSheet
           exerciseName={insightExercise}
           onClose={() => setInsightExercise(null)}
+        />
+      )}
+
+      {/* Live interval overlay */}
+      {liveIntervalActive && (
+        <LiveIntervalOverlay
+          work={form.runIntervalWork}
+          recover={form.runIntervalRecover}
+          repeat={parseInt(form.runIntervalRepeat)}
+          onClose={() => setLiveIntervalActive(false)}
         />
       )}
   </>
@@ -1840,5 +1895,137 @@ function SwapSheet({
         )}
       </div>
     </>
+  );
+}
+
+// ─── Live interval overlay ────────────────────────────────────────────────────
+
+function LiveIntervalOverlay({
+  work,
+  recover,
+  repeat,
+  onClose,
+}: {
+  work: string;
+  recover: string;
+  repeat: number;
+  onClose: () => void;
+}) {
+  const [phase, setPhase] = useState<"work" | "recover">("work");
+  const [timeRemaining, setTimeRemaining] = useState(() => parseIntervalTime(work));
+  const [currentInterval, setCurrentInterval] = useState(1);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+
+  // Countdown tick
+  useEffect(() => {
+    if (isPaused || isComplete || timeRemaining <= 0) return;
+    const id = setTimeout(() => setTimeRemaining((t) => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [timeRemaining, isPaused, isComplete]);
+
+  // Phase transition when time hits 0
+  useEffect(() => {
+    if (timeRemaining > 0 || isPaused || isComplete) return;
+    if (phase === "work") {
+      setPhase("recover");
+      setTimeRemaining(parseIntervalTime(recover));
+    } else {
+      if (currentInterval >= repeat) {
+        setIsComplete(true);
+      } else {
+        setCurrentInterval((i) => i + 1);
+        setPhase("work");
+        setTimeRemaining(parseIntervalTime(work));
+      }
+    }
+  }, [timeRemaining, phase, isPaused, isComplete, currentInterval, repeat, work, recover]);
+
+  function handleSkip() {
+    if (phase === "work") {
+      setPhase("recover");
+      setTimeRemaining(parseIntervalTime(recover));
+    } else {
+      if (currentInterval >= repeat) {
+        setIsComplete(true);
+      } else {
+        setCurrentInterval((i) => i + 1);
+        setPhase("work");
+        setTimeRemaining(parseIntervalTime(work));
+      }
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-neutral-950 flex flex-col"
+      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {/* Top: label + summary */}
+      <div className="px-6 pt-6 flex flex-col gap-0.5">
+        <p className="text-[11px] text-neutral-600 tracking-widest uppercase">Intervals</p>
+        <p className="text-sm text-neutral-500">{work} / {recover} × {repeat}</p>
+      </div>
+
+      {/* Center: phase + timer + progress */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-5">
+        {isComplete ? (
+          <p className="text-2xl font-bold text-white">Intervals complete</p>
+        ) : (
+          <>
+            <p className={`text-sm font-semibold tracking-widest uppercase ${
+              phase === "work" ? "text-white" : "text-indigo-300"
+            }`}>
+              {phase === "work" ? "Work" : "Recover"}
+            </p>
+            <p className="text-7xl font-bold tracking-tight text-white tabular-nums">
+              {formatIntervalTime(timeRemaining)}
+            </p>
+            <p className="text-sm text-neutral-500">
+              Interval {currentInterval} of {repeat}
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Bottom: controls */}
+      <div className="px-6 pb-8 flex flex-col gap-3">
+        {isComplete ? (
+          <button
+            onClick={onClose}
+            className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-semibold text-base
+                       active:scale-[0.98] transition-all"
+          >
+            Back to session
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => setIsPaused((p) => !p)}
+              className="w-full py-4 rounded-2xl bg-neutral-800 text-white font-semibold text-base
+                         active:scale-[0.98] transition-all"
+            >
+              {isPaused ? "Resume" : "Pause"}
+            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSkip}
+                className="flex-1 py-3 rounded-2xl bg-neutral-800/60 text-neutral-400 text-sm
+                           active:scale-[0.98] transition-all"
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => { if (window.confirm("End interval session?")) onClose(); }}
+                className="flex-1 py-3 rounded-2xl bg-neutral-800/60 text-neutral-500 text-sm
+                           active:scale-[0.98] transition-all"
+              >
+                End
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
