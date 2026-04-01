@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toPng } from "html-to-image";
 import { getSessionById, getSessions } from "@/lib/sessions";
@@ -179,12 +179,10 @@ type RunInsights = {
 
 function computeRunInsights(
   session: WorkoutSession,
-  allSessions: WorkoutSession[]
+  allSessions: WorkoutSession[],
+  priorSameSubtype: WorkoutSession[]
 ): RunInsights {
   const subtype = session.runSubtype ?? "custom";
-  const priorSameSubtype = allSessions
-    .filter(s => s.id !== session.id && s.date < session.date && s.runSubtype === subtype)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const prev = priorSameSubtype[0] ?? null;
   const comparisonLines: string[] = [];
@@ -278,12 +276,11 @@ type RunSuggestion = { title: string; detail?: string } | null;
 
 function computeSuggestedNextRun(
   session: WorkoutSession,
-  allSessions: WorkoutSession[]
+  allSessions: WorkoutSession[],
+  priorSameSubtype: WorkoutSession[]
 ): RunSuggestion {
   const subtype = session.runSubtype ?? "custom";
-  const prev = allSessions
-    .filter(s => s.id !== session.id && s.date < session.date && s.runSubtype === subtype)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null;
+  const prev = priorSameSubtype[0] ?? null;
 
   // ── Weekly running momentum (includes current session) ───────────────────
   const sessionDay = new Date(session.date);
@@ -415,8 +412,9 @@ export default function SummaryPage() {
       }
       setSession(s);
       const all = await getSessions();
-      setAllSessions(all);
-      const prev = all.find(
+      const sorted = [...all].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setAllSessions(sorted);
+      const prev = sorted.find(
         (x) => x.id !== s.id && x.workoutType === s.workoutType && x.date < s.date
       ) ?? null;
       setPreviousSession(prev);
@@ -435,7 +433,80 @@ export default function SummaryPage() {
     fetchCity();
   }, []);
 
-  if (!session) {
+  const summaryModel = useMemo(() => {
+    if (!session) return null;
+
+    const isRun  = session.workoutType === "Run";
+    const isYoga = session.workoutType === "Yoga";
+    const yogaStyleLabel = session.yogaStyle === "Custom"
+      ? (session.yogaCustomStyle || "Custom")
+      : (session.yogaStyle ?? "Yoga");
+
+    const exerciseCount = session.exercises.length;
+    const totalSets = session.exercises.reduce((s, ex) => s + ex.sets.length, 0);
+    const totalVolume = session.exercises.reduce(
+      (s, ex) => s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0
+    );
+
+    const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
+    const prExercises = detectPRs(session, allSessions);
+    const allPriorSessions = allSessions.filter((s) => s.date < session.date);
+
+    const { title: headlineRaw, subtitle: sessionSubtitle } = generateSessionMessages(
+      session, previousSession, allPriorSessions, prExercises.length, prExercises
+    );
+    const headline = capitalize(headlineRaw);
+
+    const { dateLabel, timeLabel } = formatDateTime(session.date);
+    const workoutDuration = session.started_at && session.ended_at
+      ? formatDuration(session.started_at, session.ended_at)
+      : null;
+
+    const topExercise = !isRun && totalVolume > 0
+      ? session.exercises.reduce<typeof session.exercises[0] | null>((best, ex) => {
+          const vol = ex.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+          if (vol === 0) return best;
+          if (!best) return ex;
+          const bestVol = best.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+          return vol > bestVol ? ex : best;
+        }, null)
+      : null;
+
+    const summaryInsight = topExercise
+      ? `Top volume: ${topExercise.name}`
+      : !isRun && exerciseCount > 0
+      ? `${exerciseCount} exercise${exerciseCount !== 1 ? "s" : ""} completed`
+      : null;
+
+    const sessionComparison = !isRun && previousSession
+      ? computeSessionComparison(session, previousSession)
+      : null;
+
+    const runSubtypeLabel: Record<string, string> = {
+      easy: "easy run", intervals: "intervals", incline: "incline walk",
+      tempo: "tempo", long: "long run", custom: "run",
+    };
+    const subtypeLabel = runSubtypeLabel[session.runSubtype ?? "custom"] ?? "run";
+
+    const subtype = session.runSubtype ?? "custom";
+    const priorSameSubtype = isRun
+      ? allSessions.filter(
+          (s) => s.id !== session.id && s.date < session.date && s.runSubtype === subtype
+        )
+      : [];
+
+    const runInsights = isRun ? computeRunInsights(session, allSessions, priorSameSubtype) : null;
+    const suggestion  = isRun ? computeSuggestedNextRun(session, allSessions, priorSameSubtype) : null;
+
+    return {
+      isRun, isYoga, yogaStyleLabel, exerciseCount, totalSets, totalVolume,
+      effort, prExercises, headline, sessionSubtitle, dateLabel, timeLabel,
+      workoutDuration, topExercise, summaryInsight, sessionComparison,
+      subtypeLabel, runInsights, suggestion,
+    };
+  }, [session, previousSession, allSessions]);
+
+  if (!session || !summaryModel) {
     return (
       <main className="flex flex-col flex-1 px-6 py-8 gap-6">
         <div className="h-8 w-40 rounded-lg bg-neutral-800/60 animate-pulse" />
@@ -443,55 +514,12 @@ export default function SummaryPage() {
     );
   }
 
-  const isRun = session.workoutType === "Run";
-  const isYoga = session.workoutType === "Yoga";
-  const yogaStyleLabel = session.yogaStyle === "Custom"
-    ? (session.yogaCustomStyle || "Custom")
-    : (session.yogaStyle ?? "Yoga");
-  const exerciseCount = session.exercises.length;
-  const totalSets = session.exercises.reduce((s, ex) => s + ex.sets.length, 0);
-  const totalVolume = session.exercises.reduce((s, ex) =>
-    s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
-
-  const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
-  const prExercises = detectPRs(session, allSessions);
-  const allPriorSessions = allSessions.filter((s) => s.date < session.date);
-  const { title: headlineRaw, subtitle: sessionSubtitle } = generateSessionMessages(
-    session,
-    previousSession,
-    allPriorSessions,
-    prExercises.length,
-    prExercises
-  );
-  const headline = capitalize(headlineRaw);
-  const { dateLabel, timeLabel } = formatDateTime(session.date);
-  const workoutDuration = session.started_at && session.ended_at
-    ? formatDuration(session.started_at, session.ended_at)
-    : null;
-
-  const topExercise = !isRun && totalVolume > 0
-    ? [...session.exercises].sort((a, b) => {
-        const vol = (ex: typeof a) => ex.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
-        return vol(b) - vol(a);
-      })[0]
-    : null;
-  const summaryInsight = topExercise
-    ? `Top volume: ${topExercise.name}`
-    : !isRun && exerciseCount > 0
-    ? `${exerciseCount} exercise${exerciseCount !== 1 ? "s" : ""} completed`
-    : null;
-
-  const sessionComparison = !isRun && previousSession
-    ? computeSessionComparison(session, previousSession)
-    : null;
-
-  const runSubtypeLabel: Record<string, string> = {
-    easy: "easy run", intervals: "intervals", incline: "incline walk",
-    tempo: "tempo", long: "long run", custom: "run",
-  };
-  const subtypeLabel = runSubtypeLabel[session.runSubtype ?? "custom"] ?? "run";
-  const runInsights = isRun ? computeRunInsights(session, allSessions) : null;
-  const suggestion = isRun ? computeSuggestedNextRun(session, allSessions) : null;
+  const {
+    isRun, isYoga, yogaStyleLabel, exerciseCount, totalSets, totalVolume,
+    effort, prExercises, headline, sessionSubtitle, dateLabel, timeLabel,
+    workoutDuration, topExercise, summaryInsight, sessionComparison,
+    subtypeLabel, runInsights, suggestion,
+  } = summaryModel;
 
   async function handleShareImage() {
     if (!posterRef.current) return;
