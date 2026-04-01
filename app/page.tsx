@@ -10,6 +10,7 @@ import { relativeDay } from "@/lib/dates";
 import { WorkoutSession } from "@/types/session";
 import { computeHomeMomentum, capitalize } from "@/lib/messaging";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
+import { getWeatherGuidance } from "@/lib/weatherGuidance";
 
 // In-memory cache for legacy city-name → coordinates lookups.
 // Prevents re-geocoding on every navigation for users without stored lat/lon.
@@ -326,6 +327,12 @@ export default function HomePage() {
               {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
             </p>
           )}
+          {weather && (() => {
+            const guidance = getWeatherGuidance(weather.temp, weather.label);
+            return guidance ? (
+              <p className="text-xs text-neutral-500 italic">{guidance}</p>
+            ) : null;
+          })()}
           <p className="text-sm text-neutral-400">
             {lastSession
               ? `Last session: ${lastSession.title} · ${relativeDay(lastSession.date)}`
