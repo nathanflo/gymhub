@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
-import { buildSessionIndex } from "@/lib/sessionIndex";
+import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
 import ShareCard from "@/components/share/ShareCard";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
@@ -27,42 +27,13 @@ function getEffortLabel(
   return { label: "Steady", color: "text-emerald-400", bgColor: "bg-emerald-950/60" };
 }
 
-type HistoricalBest = { weight: number; repsAtWeight: number };
-
 function detectPRs(
   session: WorkoutSession,
-  allSessions: WorkoutSession[]
+  historicalBest: Map<string, HistoricalBest>
 ): string[] {
-  const historicalSessions = allSessions.filter(
-    s => s.id !== session.id && s.date < session.date
-  );
-
-  // Build the all-time best per exercise across all prior sessions.
-  // Accumulates the highest weight seen; for sets at that weight, the highest reps seen.
-  const historicalMap = new Map<string, HistoricalBest>();
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
-  for (const s of historicalSessions) {
-    for (const ex of s.exercises) {
-      if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
-      if ((ex.unit ?? "kg") === "plates") continue;
-      const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
-      const key = ex.name.trim().toLowerCase();
-      for (const set of ex.sets) {
-        if (set.type === "warmup") continue;
-        if (!set.weight || set.weight <= 0) continue;
-        const wKg = round2(toKg(set.weight));
-        const existing = historicalMap.get(key);
-        if (!existing || wKg > existing.weight) {
-          historicalMap.set(key, { weight: wKg, repsAtWeight: set.reps ?? 0 });
-        } else if (existing && wKg === existing.weight && (set.reps ?? 0) > existing.repsAtWeight) {
-          existing.repsAtWeight = set.reps ?? 0;
-        }
-      }
-    }
-  }
-
-  // Compare current session against historical bests.
+  // Compare current session against pre-built historical bests.
   const prs: string[] = [];
   for (const ex of session.exercises) {
     if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
@@ -82,7 +53,7 @@ function detectPRs(
     }
     if (!curBest) continue;
 
-    const historical = historicalMap.get(key);
+    const historical = historicalBest.get(key);
     if (historical === undefined) continue; // first-ever log — not a PR
 
     const isWeightPR = curBest.weight > historical.weight;
@@ -450,8 +421,11 @@ export default function SummaryPage() {
     );
 
     const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
-    const prExercises = detectPRs(session, allSessions);
     const allPriorSessions = allSessions.filter((s) => s.date < session.date);
+    const historicalBest   = buildHistoricalBestMap(
+      allSessions.filter((s) => s.id !== session.id && s.date < session.date)
+    );
+    const prExercises = detectPRs(session, historicalBest);
 
     const { title: headlineRaw, subtitle: sessionSubtitle } = generateSessionMessages(
       session, previousSession, allPriorSessions, prExercises.length, prExercises

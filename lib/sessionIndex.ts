@@ -1,7 +1,8 @@
 import { WorkoutSession } from "@/types/session";
 
-export type LastSetEntry = { weight?: number; reps?: number; duration?: string };
-export type TopSetEntry  = { weight: number; reps: number };
+export type LastSetEntry   = { weight?: number; reps?: number; duration?: string };
+export type TopSetEntry    = { weight: number; reps: number };
+export type HistoricalBest = { weight: number; repsAtWeight: number };
 
 export type SessionIndex = {
   sortedSessions:   WorkoutSession[];
@@ -58,4 +59,37 @@ export function buildSessionIndex(allSessions: WorkoutSession[]): SessionIndex {
   }
 
   return { sortedSessions, lastSetByName, lastTopSetByName, runsBySubtype };
+}
+
+/**
+ * Build an all-time best map for weighted exercises from an already-filtered session array.
+ * Pass prior-only sessions (excluding the current session) so PR comparisons are correct.
+ */
+export function buildHistoricalBestMap(
+  priorSessions: WorkoutSession[]
+): Map<string, HistoricalBest> {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const map = new Map<string, HistoricalBest>();
+
+  for (const s of priorSessions) {
+    for (const ex of s.exercises) {
+      if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
+      if ((ex.unit ?? "kg") === "plates") continue;
+      const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
+      const key = ex.name.trim().toLowerCase();
+      for (const set of ex.sets) {
+        if (set.type === "warmup") continue;
+        if (!set.weight || set.weight <= 0) continue;
+        const wKg = round2(toKg(set.weight));
+        const existing = map.get(key);
+        if (!existing || wKg > existing.weight) {
+          map.set(key, { weight: wKg, repsAtWeight: set.reps ?? 0 });
+        } else if (wKg === existing.weight && (set.reps ?? 0) > existing.repsAtWeight) {
+          existing.repsAtWeight = set.reps ?? 0;
+        }
+      }
+    }
+  }
+
+  return map;
 }
