@@ -18,6 +18,7 @@ import { WorkoutTemplate } from "@/types/template";
 import { Field, inputClass, selectClass } from "@/components/Field";
 import { getExerciseLibrary } from "@/lib/exercises";
 import { getSessions } from "@/lib/sessions";
+import { buildSessionIndex } from "@/lib/sessionIndex";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 import { getRestTarget } from "@/lib/restTargets";
 import { parseIntervalTime } from "@/components/session/helpers";
@@ -215,42 +216,9 @@ export function SessionForm({
     getSessions().then(setPastSessions);
   }, []);
 
-  const lastSetByName = useMemo(() => {
-    const map = new Map<string, { weight?: number; reps?: number; duration?: string }>();
-    for (const session of pastSessions) {
-      for (const ex of session.exercises) {
-        const key = ex.name.trim().toLowerCase();
-        if (map.has(key)) continue;
-        const exMode = ex.mode ?? "weight_reps";
-        const firstValid = ex.sets.find((s) => {
-          if (exMode === "weight_reps") return s.weight !== undefined && s.reps !== undefined;
-          if (exMode === "reps_only") return s.reps !== undefined;
-          if (exMode === "duration_only") return !!s.duration;
-          return false;
-        });
-        if (firstValid) map.set(key, firstValid);
-      }
-    }
-    return map;
-  }, [pastSessions]);
-
-  const lastTopSetByName = useMemo(() => {
-    const map = new Map<string, { weight: number; reps: number }>();
-    for (const session of pastSessions) {
-      for (const ex of session.exercises) {
-        const key = ex.name.trim().toLowerCase();
-        if (map.has(key)) continue;
-        if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
-        const top = ex.sets.reduce<{ weight: number; reps: number } | null>((best, s) => {
-          if (s.weight === undefined || s.reps === undefined) return best;
-          if (!best || s.weight > best.weight) return s as { weight: number; reps: number };
-          return best;
-        }, null);
-        if (top) map.set(key, top);
-      }
-    }
-    return map;
-  }, [pastSessions]);
+  const sessionIndex     = useMemo(() => buildSessionIndex(pastSessions), [pastSessions]);
+  const lastSetByName    = sessionIndex.lastSetByName;
+  const lastTopSetByName = sessionIndex.lastTopSetByName;
 
   // Autosave draft to localStorage as soon as workout has started
   useEffect(() => {

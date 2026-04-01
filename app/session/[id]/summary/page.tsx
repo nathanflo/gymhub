@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
+import { buildSessionIndex } from "@/lib/sessionIndex";
 import ShareCard from "@/components/share/ShareCard";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
@@ -180,7 +181,8 @@ type RunInsights = {
 function computeRunInsights(
   session: WorkoutSession,
   allSessions: WorkoutSession[],
-  priorSameSubtype: WorkoutSession[]
+  priorSameSubtype: WorkoutSession[],
+  allSameSubtype: WorkoutSession[]
 ): RunInsights {
   const subtype = session.runSubtype ?? "custom";
 
@@ -222,7 +224,6 @@ function computeRunInsights(
   }
 
   const personalBests: { label: string; value: string }[] = [];
-  const allSameSubtype = allSessions.filter(s => s.runSubtype === subtype);
 
   if (subtype === "intervals") {
     const maxRep = Math.max(...allSameSubtype
@@ -488,14 +489,14 @@ export default function SummaryPage() {
     };
     const subtypeLabel = runSubtypeLabel[session.runSubtype ?? "custom"] ?? "run";
 
-    const subtype = session.runSubtype ?? "custom";
-    const priorSameSubtype = isRun
-      ? allSessions.filter(
-          (s) => s.id !== session.id && s.date < session.date && s.runSubtype === subtype
-        )
-      : [];
+    const subtype      = session.runSubtype ?? "custom";
+    const sessionIndex = buildSessionIndex(allSessions);
+    const allSameSubtype   = isRun ? (sessionIndex.runsBySubtype.get(subtype) ?? []) : [];
+    const priorSameSubtype = allSameSubtype.filter(
+      (s) => s.id !== session.id && s.date < session.date
+    );
 
-    const runInsights = isRun ? computeRunInsights(session, allSessions, priorSameSubtype) : null;
+    const runInsights = isRun ? computeRunInsights(session, allSessions, priorSameSubtype, allSameSubtype) : null;
     const suggestion  = isRun ? computeSuggestedNextRun(session, allSessions, priorSameSubtype) : null;
 
     return {
