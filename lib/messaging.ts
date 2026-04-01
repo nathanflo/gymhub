@@ -481,6 +481,36 @@ const HOME_POOLS: Record<HomeState, { titles: string[]; subtitles: (string | nul
   },
 };
 
+function buildWeeklySubtitle(last7: WorkoutSession[]): string | null {
+  const total = last7.length;
+  if (total === 0) return null;
+
+  const liftCount = last7.filter(s => s.workoutType !== "Run" && s.workoutType !== "Yoga").length;
+  const runCount  = last7.filter(s => s.workoutType === "Run").length;
+  const yogaCount = last7.filter(s => s.workoutType === "Yoga").length;
+
+  if (total === 1) return "1 session this week";
+
+  const isDominantLift = liftCount >= 2 && liftCount > runCount  && liftCount > yogaCount;
+  const isDominantRun  = runCount  >= 2 && runCount  > liftCount && runCount  > yogaCount;
+  const isDominantYoga = yogaCount >= 2 && yogaCount > liftCount && yogaCount > runCount;
+
+  if (isDominantLift) return `${liftCount} lifts this week — strong consistency`;
+  if (isDominantRun)  return `${runCount} runs this week — great rhythm`;
+  if (isDominantYoga) return `${yogaCount} yoga sessions this week — nice consistency`;
+
+  // Mixed training
+  if (total <= 3) {
+    const parts: string[] = [];
+    if (liftCount > 0) parts.push(`${liftCount} lift${liftCount > 1 ? "s" : ""}`);
+    if (runCount  > 0) parts.push(`${runCount} run${runCount > 1 ? "s" : ""}`);
+    if (yogaCount > 0) parts.push(`${yogaCount} yoga`);
+    return parts.join(" + ") + " this week";
+  }
+
+  return "Nice mix of training this week";
+}
+
 export function computeHomeMomentum(sessions: WorkoutSession[]): {
   title: string;
   subtitle: string | null;
@@ -544,9 +574,15 @@ export function computeHomeMomentum(sessions: WorkoutSession[]): {
 
   const title = pool.titles[idx];
 
-  // HOME_VERY_ACTIVE at idx 0 injects the live session count
+  // HOME_STREAK_ACTIVE at idx 0: inject modality-aware subtitle
+  if (state === "HOME_STREAK_ACTIVE" && idx === 0) {
+    const weeklySub = buildWeeklySubtitle(last7);
+    if (weeklySub) return { title, subtitle: weeklySub };
+  }
+
+  // HOME_VERY_ACTIVE at idx 0 injects the modality-aware weekly summary
   if (state === "HOME_VERY_ACTIVE" && idx === 0) {
-    return { title, subtitle: `${sessionsThisWeek} sessions this week` };
+    return { title, subtitle: buildWeeklySubtitle(last7) };
   }
 
   const subtitleIdx = Math.min(idx, pool.subtitles.length - 1);
