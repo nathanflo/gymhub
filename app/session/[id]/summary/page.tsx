@@ -274,6 +274,94 @@ function computeRunInsights(
   return { prevSameSubtype: prev, comparisonLines, personalBests };
 }
 
+type RunSuggestion = { title: string; detail?: string } | null;
+
+function computeSuggestedNextRun(
+  session: WorkoutSession,
+  allSessions: WorkoutSession[]
+): RunSuggestion {
+  const subtype = session.runSubtype ?? "custom";
+  const prev = allSessions
+    .filter(s => s.id !== session.id && s.date < session.date && s.runSubtype === subtype)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null;
+
+  // ── Intervals ────────────────────────────────────────────────────────────
+  if (subtype === "intervals") {
+    const curWorkSecs = parseDurationToSeconds(session.runIntervalWork);
+    const curRep = session.runIntervalRepeat;
+
+    if (prev && curWorkSecs !== null && curRep !== undefined) {
+      const prevWorkSecs = parseDurationToSeconds(prev.runIntervalWork);
+      const prevRep = prev.runIntervalRepeat;
+      if (prevWorkSecs !== null && prevRep !== undefined) {
+        const curTotal = curWorkSecs * curRep;
+        const prevTotal = prevWorkSecs * prevRep;
+        if (curTotal > prevTotal && curRep < 10) {
+          return {
+            title: `Try ${curRep + 1} intervals next time`,
+            detail: "You increased total work time today.",
+          };
+        }
+      }
+    }
+
+    if (prev && session.runIncline !== undefined && prev.runIncline !== undefined
+        && session.runIncline > prev.runIncline) {
+      return { title: "Repeat this structure and hold the incline" };
+    }
+
+    if (curRep !== undefined && curRep >= 8 && curWorkSecs !== null && curWorkSecs >= 120) {
+      return { title: "Repeat this session and aim for consistency" };
+    }
+
+    return { title: "Try adding 1 interval next time" };
+  }
+
+  // ── Incline walk ─────────────────────────────────────────────────────────
+  if (subtype === "incline") {
+    if (prev) {
+      if (session.runIncline !== undefined && prev.runIncline !== undefined
+          && session.runIncline > prev.runIncline) {
+        return {
+          title: "Keep this duration and add 1% incline next time",
+          detail: "You hit a new incline today.",
+        };
+      }
+      const curDurSecs = parseDurationToSeconds(session.duration);
+      const prevDurSecs = parseDurationToSeconds(prev.duration);
+      if (curDurSecs !== null && prevDurSecs !== null && curDurSecs > prevDurSecs) {
+        return { title: "Keep this incline and go a bit longer next time" };
+      }
+    }
+    return { title: "Repeat this incline walk and build consistency" };
+  }
+
+  // ── Tempo ────────────────────────────────────────────────────────────────
+  if (subtype === "tempo") {
+    if (prev && session.distance !== undefined && prev.distance !== undefined
+        && session.distance > prev.distance) {
+      return { title: "Repeat this distance before pushing further" };
+    }
+    return { title: "Hold this duration and refine the effort" };
+  }
+
+  // ── Distance-based (easy, long, custom) ──────────────────────────────────
+  if (prev) {
+    if (session.distance !== undefined && prev.distance !== undefined
+        && session.distance > prev.distance) {
+      return { title: "Repeat this distance before pushing further" };
+    }
+    const curDurSecs = parseDurationToSeconds(session.duration);
+    const prevDurSecs = parseDurationToSeconds(prev.duration);
+    if (curDurSecs !== null && prevDurSecs !== null && curDurSecs > prevDurSecs
+        && session.distance === prev.distance) {
+      return { title: "Try adding a little distance next time" };
+    }
+  }
+
+  return { title: "Repeat this run and keep it steady" };
+}
+
 function formatDuration(start: string, end: string): string {
   const diffMs = new Date(end).getTime() - new Date(start).getTime();
   const totalMinutes = Math.floor(diffMs / (1000 * 60));
@@ -388,6 +476,7 @@ export default function SummaryPage() {
   };
   const subtypeLabel = runSubtypeLabel[session.runSubtype ?? "custom"] ?? "run";
   const runInsights = isRun ? computeRunInsights(session, allSessions) : null;
+  const suggestion = isRun ? computeSuggestedNextRun(session, allSessions) : null;
 
   async function handleShareImage() {
     if (!posterRef.current) return;
@@ -721,6 +810,19 @@ export default function SummaryPage() {
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Suggested next run */}
+          {suggestion && (
+            <div className="rounded-2xl bg-indigo-500/10 border border-indigo-400/20 px-5 py-4 flex flex-col gap-1.5">
+              <span className="text-[11px] text-indigo-400/60 tracking-widest uppercase">
+                Suggested next run
+              </span>
+              <p className="text-base font-semibold text-white">{suggestion.title}</p>
+              {suggestion.detail && (
+                <p className="text-sm text-neutral-500">{suggestion.detail}</p>
               )}
             </div>
           )}
