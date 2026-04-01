@@ -144,6 +144,96 @@ function computeSessionComparison(
   return { volumeLine, exerciseLine };
 }
 
+/**
+ * Parse a duration string into total seconds.
+ * Supports "m:ss", "mm:ss", "h:mm:ss".
+ * Returns null for empty or unparseable input.
+ */
+function parseDurationToSeconds(str: string | undefined): number | null {
+  if (!str) return null;
+  const parts = str.trim().split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return null;
+}
+
+type RunInsights = {
+  prevSameSubtype: WorkoutSession | null;
+  comparisonLines: string[];
+  personalBests: { label: string; value: string }[];
+};
+
+function computeRunInsights(
+  session: WorkoutSession,
+  allSessions: WorkoutSession[]
+): RunInsights {
+  const subtype = session.runSubtype ?? "custom";
+  const priorSameSubtype = allSessions
+    .filter(s => s.id !== session.id && s.date < session.date && s.runSubtype === subtype)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const prev = priorSameSubtype[0] ?? null;
+  const comparisonLines: string[] = [];
+
+  if (prev) {
+    let generatedLine = false;
+
+    if (session.distance !== undefined && prev.distance !== undefined) {
+      const delta = Math.round((session.distance - prev.distance) * 100) / 100;
+      if (delta > 0) { comparisonLines.push(`+${delta} km vs previous`); generatedLine = true; }
+      else if (delta < 0) { comparisonLines.push(`${delta} km vs previous`); generatedLine = true; }
+    }
+    if (subtype === "intervals" && session.runIntervalRepeat !== undefined && prev.runIntervalRepeat !== undefined) {
+      const delta = session.runIntervalRepeat - prev.runIntervalRepeat;
+      if (delta > 0) { comparisonLines.push(`+${delta} interval${delta === 1 ? "" : "s"} vs previous`); generatedLine = true; }
+      else if (delta < 0) { comparisonLines.push(`${delta} intervals vs previous`); generatedLine = true; }
+    }
+
+    if (!generatedLine) {
+      const fallbackLabel: Record<string, string> = {
+        easy: "easy run", intervals: "intervals", incline: "incline walk",
+        tempo: "tempo", long: "long run", custom: "run",
+      };
+      comparisonLines.push(`Comparable to your last ${fallbackLabel[subtype] ?? "run"}`);
+    }
+  }
+
+  const personalBests: { label: string; value: string }[] = [];
+  const allSameSubtype = allSessions.filter(s => s.runSubtype === subtype);
+
+  if (subtype === "intervals") {
+    const maxRep = Math.max(...allSameSubtype
+      .filter(s => s.runIntervalRepeat !== undefined).map(s => s.runIntervalRepeat!));
+    if (isFinite(maxRep)) personalBests.push({ label: "Most intervals", value: String(maxRep) });
+    const maxIncline = Math.max(...allSameSubtype
+      .filter(s => s.runIncline !== undefined).map(s => s.runIncline!));
+    if (isFinite(maxIncline)) personalBests.push({ label: "Best incline", value: `${maxIncline}%` });
+  } else if (subtype === "incline") {
+    const maxIncline = Math.max(...allSameSubtype
+      .filter(s => s.runIncline !== undefined).map(s => s.runIncline!));
+    if (isFinite(maxIncline)) personalBests.push({ label: "Best incline", value: `${maxIncline}%` });
+    const longestDur = allSameSubtype
+      .filter(s => parseDurationToSeconds(s.duration) !== null)
+      .reduce<WorkoutSession | null>((best, s) =>
+        best === null || parseDurationToSeconds(s.duration)! > parseDurationToSeconds(best.duration)!
+          ? s : best, null);
+    if (longestDur?.duration) personalBests.push({ label: "Longest duration", value: longestDur.duration });
+  } else {
+    const maxDist = Math.max(...allSameSubtype
+      .filter(s => s.distance !== undefined).map(s => s.distance!));
+    if (isFinite(maxDist)) personalBests.push({ label: "Best distance", value: `${maxDist} km` });
+    const longestDur = allSameSubtype
+      .filter(s => parseDurationToSeconds(s.duration) !== null)
+      .reduce<WorkoutSession | null>((best, s) =>
+        best === null || parseDurationToSeconds(s.duration)! > parseDurationToSeconds(best.duration)!
+          ? s : best, null);
+    if (longestDur?.duration) personalBests.push({ label: "Longest duration", value: longestDur.duration });
+  }
+
+  return { prevSameSubtype: prev, comparisonLines, personalBests };
+}
+
 function formatDuration(start: string, end: string): string {
   const diffMs = new Date(end).getTime() - new Date(start).getTime();
   const totalMinutes = Math.floor(diffMs / (1000 * 60));
@@ -251,6 +341,13 @@ export default function SummaryPage() {
   const sessionComparison = !isRun && previousSession
     ? computeSessionComparison(session, previousSession)
     : null;
+
+  const runSubtypeLabel: Record<string, string> = {
+    easy: "easy run", intervals: "intervals", incline: "incline walk",
+    tempo: "tempo", long: "long run", custom: "run",
+  };
+  const subtypeLabel = runSubtypeLabel[session.runSubtype ?? "custom"] ?? "run";
+  const runInsights = isRun ? computeRunInsights(session, allSessions) : null;
 
   async function handleShareImage() {
     if (!posterRef.current) return;
@@ -521,6 +618,7 @@ export default function SummaryPage() {
             </div>
           </div>
         ) : isRun ? (
+          <>
           <div className="rounded-2xl bg-neutral-800 px-5 py-5">
             <div className="grid grid-cols-2 gap-4">
               {session.distance !== undefined && (
@@ -543,6 +641,50 @@ export default function SummaryPage() {
               )}
             </div>
           </div>
+
+          {/* Run Insights */}
+          {runInsights && (
+            <div className="flex flex-col gap-3">
+              <div className="rounded-2xl bg-neutral-800/50 border border-white/5 px-5 py-4 flex flex-col gap-1">
+                <span className="text-[11px] text-neutral-600 tracking-widest uppercase">
+                  Previous {subtypeLabel}
+                </span>
+                {runInsights.prevSameSubtype ? (
+                  <>
+                    <p className="text-xl font-semibold tracking-tight text-white">
+                      {runInsights.prevSameSubtype.distance !== undefined && runInsights.prevSameSubtype.duration
+                        ? `${runInsights.prevSameSubtype.distance} km · ${runInsights.prevSameSubtype.duration}`
+                        : runInsights.prevSameSubtype.distance !== undefined
+                        ? `${runInsights.prevSameSubtype.distance} km`
+                        : runInsights.prevSameSubtype.duration
+                        ? runInsights.prevSameSubtype.duration
+                        : runInsights.prevSameSubtype.intervals ?? "—"}
+                    </p>
+                    {runInsights.comparisonLines.map((line, i) => (
+                      <p key={i} className="text-sm text-neutral-400">{line}</p>
+                    ))}
+                  </>
+                ) : (
+                  <p className="text-sm text-neutral-500">First {subtypeLabel} logged</p>
+                )}
+              </div>
+
+              {runInsights.personalBests.length > 0 && (
+                <div className="rounded-2xl bg-neutral-800 px-5 py-4 flex flex-col gap-2">
+                  <span className="text-[11px] text-neutral-600 tracking-widest uppercase">Personal bests</span>
+                  <div className="flex gap-6 flex-wrap">
+                    {runInsights.personalBests.map(({ label, value }) => (
+                      <div key={label} className="flex flex-col">
+                        <span className="text-xs text-neutral-500">{label}</span>
+                        <span className="text-lg font-semibold text-white">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          </>
         ) : (
           <div className="rounded-2xl bg-neutral-800 px-5 py-5">
             <div className={`grid gap-4 ${totalVolume > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
