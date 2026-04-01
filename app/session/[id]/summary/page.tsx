@@ -158,6 +158,19 @@ function parseDurationToSeconds(str: string | undefined): number | null {
   return null;
 }
 
+/** Format total seconds to "m:ss" or "h:mm:ss". */
+function formatTotalSeconds(total: number): string {
+  if (total >= 3600) {
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 type RunInsights = {
   prevSameSubtype: WorkoutSession | null;
   comparisonLines: string[];
@@ -189,6 +202,17 @@ function computeRunInsights(
       if (delta > 0) { comparisonLines.push(`+${delta} interval${delta === 1 ? "" : "s"} vs previous`); generatedLine = true; }
       else if (delta < 0) { comparisonLines.push(`${delta} intervals vs previous`); generatedLine = true; }
     }
+    if (subtype === "intervals") {
+      const curWorkSecs = parseDurationToSeconds(session.runIntervalWork);
+      const prevWorkSecs = parseDurationToSeconds(prev.runIntervalWork);
+      if (curWorkSecs !== null && prevWorkSecs !== null &&
+          session.runIntervalRepeat !== undefined && prev.runIntervalRepeat !== undefined) {
+        const curTotal = curWorkSecs * session.runIntervalRepeat;
+        const prevTotal = prevWorkSecs * prev.runIntervalRepeat;
+        const delta = curTotal - prevTotal;
+        if (delta > 0) { comparisonLines.push(`+${formatTotalSeconds(delta)} work time vs previous`); generatedLine = true; }
+      }
+    }
 
     if (!generatedLine) {
       const fallbackLabel: Record<string, string> = {
@@ -206,6 +230,22 @@ function computeRunInsights(
     const maxRep = Math.max(...allSameSubtype
       .filter(s => s.runIntervalRepeat !== undefined).map(s => s.runIntervalRepeat!));
     if (isFinite(maxRep)) personalBests.push({ label: "Most intervals", value: String(maxRep) });
+
+    const maxWorkTotal = Math.max(...allSameSubtype
+      .filter(s => s.runIntervalWork !== undefined && s.runIntervalRepeat !== undefined)
+      .map(s => {
+        const secs = parseDurationToSeconds(s.runIntervalWork);
+        return secs !== null ? secs * s.runIntervalRepeat! : -Infinity;
+      }));
+    if (isFinite(maxWorkTotal) && maxWorkTotal > 0)
+      personalBests.push({ label: "Most work time", value: formatTotalSeconds(maxWorkTotal) });
+
+    const maxWorkInterval = Math.max(...allSameSubtype
+      .filter(s => s.runIntervalWork !== undefined)
+      .map(s => parseDurationToSeconds(s.runIntervalWork) ?? -Infinity));
+    if (isFinite(maxWorkInterval) && maxWorkInterval > 0)
+      personalBests.push({ label: "Longest interval", value: formatTotalSeconds(maxWorkInterval) });
+
     const maxIncline = Math.max(...allSameSubtype
       .filter(s => s.runIncline !== undefined).map(s => s.runIncline!));
     if (isFinite(maxIncline)) personalBests.push({ label: "Best incline", value: `${maxIncline}%` });
