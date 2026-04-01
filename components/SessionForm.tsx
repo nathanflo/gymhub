@@ -1958,12 +1958,12 @@ function LiveIntervalOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-neutral-950 flex flex-col"
+      className={`fixed inset-0 z-50 flex flex-col transition-colors duration-500 ${phase === "recover" ? "bg-indigo-950" : "bg-neutral-950"}`}
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* Top: label + summary */}
       <div className="px-6 pt-6 flex flex-col gap-0.5">
-        <p className="text-[11px] text-neutral-600 tracking-widest uppercase">Intervals</p>
+        <p className="text-[11px] text-indigo-400/50 tracking-widest uppercase">Intervals</p>
         <p className="text-sm text-neutral-500">{work} / {recover} × {repeat}</p>
       </div>
 

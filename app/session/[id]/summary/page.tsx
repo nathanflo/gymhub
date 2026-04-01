@@ -774,8 +774,8 @@ export default function SummaryPage() {
           {/* Run Insights */}
           {runInsights && (
             <div className="flex flex-col gap-3">
-              <div className="rounded-2xl bg-neutral-800/50 border border-white/5 px-5 py-4 flex flex-col gap-1">
-                <span className="text-[11px] text-neutral-600 tracking-widest uppercase">
+              <div className="rounded-2xl bg-neutral-800/50 border border-indigo-500/10 px-5 py-4 flex flex-col gap-1">
+                <span className="text-[11px] text-indigo-300/60 tracking-widest uppercase">
                   Previous {subtypeLabel}
                 </span>
                 {runInsights.prevSameSubtype ? (
@@ -799,8 +799,8 @@ export default function SummaryPage() {
               </div>
 
               {runInsights.personalBests.length > 0 && (
-                <div className="rounded-2xl bg-neutral-800 px-5 py-4 flex flex-col gap-2">
-                  <span className="text-[11px] text-neutral-600 tracking-widest uppercase">Personal bests</span>
+                <div className="rounded-2xl bg-neutral-800 border border-indigo-500/10 px-5 py-4 flex flex-col gap-2">
+                  <span className="text-[11px] text-indigo-300/60 tracking-widest uppercase">Personal bests</span>
                   <div className="flex gap-6 flex-wrap">
                     {runInsights.personalBests.map(({ label, value }) => (
                       <div key={label} className="flex flex-col">
@@ -817,12 +817,12 @@ export default function SummaryPage() {
           {/* Suggested next run */}
           {suggestion && (
             <div className="rounded-2xl bg-indigo-500/10 border border-indigo-400/20 px-5 py-4 flex flex-col gap-1.5">
-              <span className="text-[11px] text-indigo-400/60 tracking-widest uppercase">
+              <span className="text-[11px] text-indigo-300/70 tracking-widest uppercase">
                 Suggested next run
               </span>
               <p className="text-base font-semibold text-white">{suggestion.title}</p>
               {suggestion.detail && (
-                <p className="text-sm text-neutral-500">{suggestion.detail}</p>
+                <p className="text-sm text-neutral-400">{suggestion.detail}</p>
               )}
             </div>
           )}
