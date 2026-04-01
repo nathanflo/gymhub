@@ -285,6 +285,19 @@ function computeSuggestedNextRun(
     .filter(s => s.id !== session.id && s.date < session.date && s.runSubtype === subtype)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null;
 
+  // ── Weekly running momentum (includes current session) ───────────────────
+  const sessionDay = new Date(session.date);
+  const sessionDayStart = new Date(sessionDay.getFullYear(), sessionDay.getMonth(), sessionDay.getDate());
+  const runCountLast7 = allSessions.filter(s => {
+    if (s.workoutType !== "Run") return false;
+    const d = new Date(s.date);
+    const dStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diffDays = (sessionDayStart.getTime() - dStart.getTime()) / 86_400_000;
+    return diffDays >= 0 && diffDays < 7;
+  }).length;
+  const strongRunWeek = runCountLast7 >= 2; // at least one other run this week besides this session
+  const lightRunWeek  = runCountLast7 <= 1; // only this session ran this week
+
   // ── Intervals ────────────────────────────────────────────────────────────
   if (subtype === "intervals") {
     const curWorkSecs = parseDurationToSeconds(session.runIntervalWork);
@@ -297,6 +310,7 @@ function computeSuggestedNextRun(
         const curTotal = curWorkSecs * curRep;
         const prevTotal = prevWorkSecs * prevRep;
         if (curTotal > prevTotal && curRep < 10) {
+          if (lightRunWeek) return { title: "Repeat this structure once more" };
           return {
             title: `Try ${curRep + 1} intervals next time`,
             detail: "You increased total work time today.",
@@ -314,12 +328,13 @@ function computeSuggestedNextRun(
       return { title: "Repeat this session and aim for consistency" };
     }
 
+    if (lightRunWeek) return { title: "Repeat this structure once more" };
     return { title: "Try adding 1 interval next time" };
   }
 
   // ── Incline walk ─────────────────────────────────────────────────────────
   if (subtype === "incline") {
-    if (prev) {
+    if (prev && strongRunWeek) {
       if (session.runIncline !== undefined && prev.runIncline !== undefined
           && session.runIncline > prev.runIncline) {
         return {
@@ -338,7 +353,7 @@ function computeSuggestedNextRun(
 
   // ── Tempo ────────────────────────────────────────────────────────────────
   if (subtype === "tempo") {
-    if (prev && session.distance !== undefined && prev.distance !== undefined
+    if (prev && strongRunWeek && session.distance !== undefined && prev.distance !== undefined
         && session.distance > prev.distance) {
       return { title: "Repeat this distance before pushing further" };
     }
@@ -346,7 +361,7 @@ function computeSuggestedNextRun(
   }
 
   // ── Distance-based (easy, long, custom) ──────────────────────────────────
-  if (prev) {
+  if (prev && strongRunWeek) {
     if (session.distance !== undefined && prev.distance !== undefined
         && session.distance > prev.distance) {
       return { title: "Repeat this distance before pushing further" };
