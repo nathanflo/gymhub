@@ -5,11 +5,12 @@
 export const inputClass =
   "w-full rounded-xl bg-neutral-800 border border-neutral-700 text-white " +
   "px-4 py-3 text-base placeholder:text-neutral-500 focus:outline-none " +
-  "focus:ring-2 focus:ring-indigo-500 transition";
+  "focus-visible:ring-1 focus-visible:ring-neutral-600 transition-colors duration-150";
 
 export const selectClass =
   "w-full rounded-xl bg-neutral-800 border border-neutral-700 text-white " +
-  "px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+  "px-4 py-3 text-base focus:outline-none " +
+  "focus-visible:ring-1 focus-visible:ring-neutral-600 transition-colors duration-150";
 
 export function Field({
   label,

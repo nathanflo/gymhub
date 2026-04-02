@@ -315,8 +315,8 @@ export default function ProfilePage() {
               type="button"
               disabled={!locationSearch.trim() || locationSearching}
               onClick={handleLocationSearch}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 text-sm font-medium text-white
-                         disabled:opacity-50 active:scale-95 transition-all"
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-medium text-white
+                         disabled:opacity-50 active:scale-95 transition-all duration-150"
             >
               {locationSearching ? "…" : "Search"}
             </button>

@@ -321,7 +321,7 @@ export default function HomePage() {
           <p className="text-sm text-indigo-300/90">{insight}</p>
         )}
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           {city && (
             <p className="text-xs text-neutral-500">
               {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
@@ -330,7 +330,7 @@ export default function HomePage() {
           {weather && (() => {
             const guidance = getWeatherGuidance(weather.temp, weather.label);
             return guidance ? (
-              <p className="text-xs text-neutral-500 italic">{guidance}</p>
+              <p className="text-xs text-neutral-500 italic animate-[floFormFadeIn_500ms_ease-out_both]">{guidance}</p>
             ) : null;
           })()}
           <p className="text-sm text-neutral-400">
