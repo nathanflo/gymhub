@@ -279,9 +279,9 @@ function computeSuggestedNextRun(
         const curTotal = curWorkSecs * curRep;
         const prevTotal = prevWorkSecs * prevRep;
         if (curTotal > prevTotal && curRep < 10) {
-          if (lightRunWeek) return { title: "Repeat this structure once more" };
+          if (lightRunWeek) return { title: "This structure is worth repeating" };
           return {
-            title: `Try ${curRep + 1} intervals next time`,
+            title: `You could try ${curRep + 1} intervals next time`,
             detail: "You increased total work time today.",
           };
         }
@@ -290,15 +290,15 @@ function computeSuggestedNextRun(
 
     if (prev && session.runIncline !== undefined && prev.runIncline !== undefined
         && session.runIncline > prev.runIncline) {
-      return { title: "Repeat this structure and hold the incline" };
+      return { title: "You could run this structure again and hold the incline" };
     }
 
     if (curRep !== undefined && curRep >= 8 && curWorkSecs !== null && curWorkSecs >= 120) {
-      return { title: "Repeat this session and aim for consistency" };
+      return { title: "Another session like this would make sense" };
     }
 
-    if (lightRunWeek) return { title: "Repeat this structure once more" };
-    return { title: "Try adding 1 interval next time" };
+    if (lightRunWeek) return { title: "This structure is worth repeating" };
+    return { title: "You could add one more interval next time" };
   }
 
   // ── Incline walk ─────────────────────────────────────────────────────────
@@ -307,24 +307,24 @@ function computeSuggestedNextRun(
       if (session.runIncline !== undefined && prev.runIncline !== undefined
           && session.runIncline > prev.runIncline) {
         return {
-          title: "Keep this duration and add 1% incline next time",
+          title: "Hold this duration and try a little more incline next time",
           detail: "You hit a new incline today.",
         };
       }
       const curDurSecs = parseDurationToSeconds(session.duration);
       const prevDurSecs = parseDurationToSeconds(prev.duration);
       if (curDurSecs !== null && prevDurSecs !== null && curDurSecs > prevDurSecs) {
-        return { title: "Keep this incline and go a bit longer next time" };
+        return { title: "Hold this incline and try going a bit longer next time" };
       }
     }
-    return { title: "Repeat this incline walk and build consistency" };
+    return { title: "This incline walk is worth repeating" };
   }
 
   // ── Tempo ────────────────────────────────────────────────────────────────
   if (subtype === "tempo") {
     if (prev && strongRunWeek && session.distance !== undefined && prev.distance !== undefined
         && session.distance > prev.distance) {
-      return { title: "Repeat this distance before pushing further" };
+      return { title: "You could stay with this distance before pushing further" };
     }
     return { title: "Hold this duration and refine the effort" };
   }
@@ -333,17 +333,17 @@ function computeSuggestedNextRun(
   if (prev && strongRunWeek) {
     if (session.distance !== undefined && prev.distance !== undefined
         && session.distance > prev.distance) {
-      return { title: "Repeat this distance before pushing further" };
+      return { title: "You could stay with this distance before pushing further" };
     }
     const curDurSecs = parseDurationToSeconds(session.duration);
     const prevDurSecs = parseDurationToSeconds(prev.duration);
     if (curDurSecs !== null && prevDurSecs !== null && curDurSecs > prevDurSecs
         && session.distance === prev.distance) {
-      return { title: "Try adding a little distance next time" };
+      return { title: "You could add a little distance next time" };
     }
   }
 
-  return { title: "Repeat this run and keep it steady" };
+  return { title: "This run is worth repeating. Keep the effort steady." };
 }
 
 function formatDuration(start: string, end: string): string {

@@ -1,3 +1,5 @@
+// FloForm voice: short natural sentences, modality-neutral, calm tone. See lib/messaging.ts for full rules.
+
 export function getWeatherGuidance(temp: number, label: string): string | null {
   const isHot   = temp > 28;
   const isCool  = temp >= 5 && temp <= 15;

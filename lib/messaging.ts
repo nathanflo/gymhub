@@ -6,6 +6,15 @@
  * use a stable daily seed so they vary day-to-day but don't change on refresh.
  */
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOFORM VOICE RULES
+// - Short natural sentences. Periods and commas, not em dashes.
+// - Modality-neutral by default: "training", "session", "movement", "get outside"
+// - Running can be suggested, but should not be assumed as the default
+// - Calm and observant. No commands ("must", "you should", "optimal")
+// - Avoid hype or over-coached phrasing. Think: thoughtful companion, not poster
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { WorkoutSession } from "@/types/session";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +158,7 @@ const POOLS: Record<SessionState, { titles: string[]; subtitles: string[] }> = {
       "multiple lifts moved forward",
       "this was a step up",
       "you're building something here",
-      "not just one — everything improved",
+      "not just one. everything improved",
       "this one stands out",
       "the work is showing",
     ],
@@ -234,7 +243,7 @@ const POOLS: Record<SessionState, { titles: string[]; subtitles: string[] }> = {
       "you've been showing up",
       "this is a streak forming",
       "habit is taking shape",
-      "keep this cadence",
+      "the cadence is there",
       "momentum is real",
       "you're consistent now",
     ],
@@ -463,7 +472,7 @@ const HOME_POOLS: Record<HomeState, { titles: string[]; subtitles: (string | nul
       "it's been a few days",
       "ease back in, no rush",
       "first one back counts",
-      "the gym is still there",
+      "it's still there",
     ],
   },
   HOME_LONG_BREAK: {
@@ -495,9 +504,9 @@ function buildWeeklySubtitle(last7: WorkoutSession[]): string | null {
   const isDominantRun  = runCount  >= 2 && runCount  > liftCount && runCount  > yogaCount;
   const isDominantYoga = yogaCount >= 2 && yogaCount > liftCount && yogaCount > runCount;
 
-  if (isDominantLift) return `${liftCount} lifts this week — strong consistency`;
-  if (isDominantRun)  return `${runCount} runs this week — great rhythm`;
-  if (isDominantYoga) return `${yogaCount} yoga sessions this week — nice consistency`;
+  if (isDominantLift) return `${liftCount} lifts this week. Strong consistency.`;
+  if (isDominantRun)  return `${runCount} runs this week. Good rhythm.`;
+  if (isDominantYoga) return `${yogaCount} yoga sessions this week. Nice consistency.`;
 
   // Mixed training
   if (total <= 3) {
