@@ -74,7 +74,9 @@ function SessionRow({ session }: { session: WorkoutSession }) {
         <span className="text-sm font-medium text-neutral-300">{session.title}</span>
         <span className="text-xs text-neutral-500">{summary}</span>
       </div>
-      <p className="text-xs text-neutral-600">{session.workoutType}</p>
+      <span className="text-[10px] font-medium text-neutral-500 bg-neutral-700/50 rounded px-1.5 py-0.5">
+        {session.workoutType}
+      </span>
     </Link>
   );
 }
@@ -304,105 +306,106 @@ export default function HomePage() {
         <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-indigo-400 blur-3xl animate-[floFormGlowPulse_1600ms_ease-out_200ms_both]" />
       )}
 
-      {/* Hero + primary CTA — grouped tighter to read as one unit */}
-      <div className="flex flex-col gap-3">
-      {/* Header — fades up when data arrives */}
-      <div className={`flex flex-col gap-4 ${greeting ? 'animate-[floFormFadeUp_180ms_ease-out_both]' : 'opacity-0'}`}>
-        <div className="flex flex-col gap-1">
+      {/* Hero + context card + primary CTA */}
+      <div className="flex flex-col gap-4">
+
+        {/* Hero text — fades up when data arrives */}
+        <div className={`flex flex-col gap-2 ${greeting ? 'animate-[floFormFadeUp_180ms_ease-out_both]' : 'opacity-0'}`}>
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
             Today · {dateLabel}
           </p>
-          <h1 className={`text-xl font-semibold ${isAnniversaryDay ? "text-indigo-100" : "text-white"}`}>
+          <h1 className={`text-2xl font-bold ${isAnniversaryDay ? "text-indigo-100" : "text-white"}`}>
             {greeting}
           </h1>
+          {insight && (
+            <p className="text-sm text-indigo-300/90">{insight}</p>
+          )}
         </div>
 
-        {insight && (
-          <p className="text-sm text-indigo-300/90">{insight}</p>
+        {/* Today context card — weather, guidance, last session */}
+        {(city || lastSession || weeklyCount > 0) && (
+          <div className="rounded-2xl bg-neutral-800/50 border border-neutral-700/40 px-4 py-4 flex flex-col gap-2">
+            {city && (
+              <p className="text-xs text-neutral-400">
+                {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
+              </p>
+            )}
+            {weather && (() => {
+              const guidance = getWeatherGuidance(weather.temp, weather.label);
+              return guidance ? (
+                <p className="text-xs text-neutral-500 italic mt-0.5 animate-[floFormFadeIn_500ms_ease-out_both]">{guidance}</p>
+              ) : null;
+            })()}
+            <p className="text-xs text-neutral-400">
+              {lastSession
+                ? `Last session: ${lastSession.title} · ${relativeDay(lastSession.date)}`
+                : "No sessions logged yet"}
+            </p>
+            {weeklyCount > 0 && (
+              <p className="text-xs text-neutral-500">
+                {weeklyCount} session{weeklyCount !== 1 ? "s" : ""} this week
+              </p>
+            )}
+          </div>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          {city && (
-            <p className="text-xs text-neutral-500">
-              {city}{weather ? ` · ${weather.temp}°C · ${weather.label}` : ""}
-            </p>
-          )}
-          {weather && (() => {
-            const guidance = getWeatherGuidance(weather.temp, weather.label);
-            return guidance ? (
-              <p className="text-xs text-neutral-500 italic animate-[floFormFadeIn_500ms_ease-out_both]">{guidance}</p>
-            ) : null;
-          })()}
-          <p className="text-sm text-neutral-400">
-            {lastSession
-              ? `Last session: ${lastSession.title} · ${relativeDay(lastSession.date)}`
-              : "No workouts logged yet — start your first session"}
-          </p>
-          {weeklyCount > 0 && (
-            <p className="text-xs text-neutral-500">
-              You&apos;ve trained {weeklyCount} time{weeklyCount !== 1 ? "s" : ""} this week
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Primary CTA — in-progress card if draft exists, else normal button */}
-      {activeDraft ? (() => {
-        const homeElapsed = (() => {
-          const startMs = new Date(activeDraft.startTime).getTime();
-          if (isNaN(startMs)) return 0;
-          const base = activeDraft.isPaused && activeDraft.pauseStartedAt
-            ? Math.floor((activeDraft.pauseStartedAt - startMs) / 1000)
-            : Math.floor((Date.now() - startMs) / 1000);
-          return Math.max(0, base - (activeDraft.pausedOffset ?? 0));
-        })();
-        return (
-        <div className="w-full rounded-2xl bg-neutral-800 border border-indigo-500/30 px-5 py-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${activeDraft.isPaused ? "bg-amber-400/40" : "bg-indigo-400 animate-pulse"}`} />
-            <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
-              {activeDraft.isPaused ? "Workout paused" : "Workout in progress"} · {String(Math.floor(homeElapsed / 60)).padStart(2, "0")}:{String(homeElapsed % 60).padStart(2, "0")}
-            </span>
-          </div>
-          {activeDraft.session?.title && (
-            <p className="text-white font-semibold text-base">{activeDraft.session.title}</p>
-          )}
-          <div className="flex gap-2 mt-1">
-            <Link
-              href="/log?resume=1"
-              className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-center text-sm active:scale-[0.96] active:brightness-110 transition-all duration-75 ease-out"
-            >
-              Resume
-            </Link>
-            <Link
-              href="/log"
-              onClick={() => {
-                localStorage.removeItem("activeWorkoutDraft");
-                setActiveDraft(null);
-              }}
-              className="flex-1 py-3 rounded-xl bg-neutral-700 text-neutral-300 text-sm text-center active:scale-[0.96] active:brightness-110 transition-all duration-75 ease-out"
-            >
-              Start New
-            </Link>
-          </div>
-        </div>
-        );
-      })() : (
-        <Link
-          href="/log"
-          className={`w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 hover:brightness-105
-                     active:scale-[0.96] active:brightness-110
-                     transition-all duration-75 ease-out py-5 text-lg font-semibold text-white text-center
-                     border border-indigo-400/20 shadow-[0_6px_18px_rgba(99,102,241,0.25)]
-                     ${greeting ? 'animate-[floFormFadeUp_200ms_ease-out_80ms_both]' : 'opacity-0'}`}
-        >
-          Start Session
-        </Link>
-      )}
+        {/* Primary CTA — in-progress card if draft exists, else normal button */}
+        {activeDraft ? (() => {
+          const homeElapsed = (() => {
+            const startMs = new Date(activeDraft.startTime).getTime();
+            if (isNaN(startMs)) return 0;
+            const base = activeDraft.isPaused && activeDraft.pauseStartedAt
+              ? Math.floor((activeDraft.pauseStartedAt - startMs) / 1000)
+              : Math.floor((Date.now() - startMs) / 1000);
+            return Math.max(0, base - (activeDraft.pausedOffset ?? 0));
+          })();
+          return (
+            <div className="w-full rounded-2xl bg-neutral-800 border border-indigo-500/30 px-5 py-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${activeDraft.isPaused ? "bg-amber-400/40" : "bg-indigo-400 animate-pulse"}`} />
+                <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
+                  {activeDraft.isPaused ? "Workout paused" : "Workout in progress"} · {String(Math.floor(homeElapsed / 60)).padStart(2, "0")}:{String(homeElapsed % 60).padStart(2, "0")}
+                </span>
+              </div>
+              {activeDraft.session?.title && (
+                <p className="text-white font-semibold text-base">{activeDraft.session.title}</p>
+              )}
+              <div className="flex gap-2 mt-1">
+                <Link
+                  href="/log?resume=1"
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-center text-sm active:scale-[0.96] active:brightness-110 transition-all duration-75 ease-out"
+                >
+                  Resume
+                </Link>
+                <Link
+                  href="/log"
+                  onClick={() => {
+                    localStorage.removeItem("activeWorkoutDraft");
+                    setActiveDraft(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-neutral-700 text-neutral-300 text-sm text-center active:scale-[0.96] active:brightness-110 transition-all duration-75 ease-out"
+                >
+                  Start New
+                </Link>
+              </div>
+            </div>
+          );
+        })() : (
+          <Link
+            href="/log"
+            className={`w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 hover:brightness-105
+                       active:scale-[0.96] active:brightness-110
+                       transition-all duration-75 ease-out py-5 text-lg font-semibold text-white text-center
+                       border border-indigo-400/20 shadow-[0_6px_18px_rgba(99,102,241,0.25)]
+                       ${greeting ? 'animate-[floFormFadeUp_200ms_ease-out_80ms_both]' : 'opacity-0'}`}
+          >
+            Start Session
+          </Link>
+        )}
       </div>{/* end hero+CTA group */}
 
       {/* Quick Actions */}
-      <section className="flex flex-col gap-3 -mt-2">
+      <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
           Quick Actions
         </h2>
