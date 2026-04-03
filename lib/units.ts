@@ -14,3 +14,8 @@ export function toKg(weight: number, unit?: string): number | null {
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+/** Round volume to nearest whole kg and locale-format with commas. */
+export function formatVolumeKg(n: number): string {
+  return Math.round(n).toLocaleString();
+}

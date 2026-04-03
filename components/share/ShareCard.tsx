@@ -10,6 +10,7 @@
  */
 
 import { forwardRef } from "react";
+import { formatVolumeKg } from "@/lib/units";
 import { WorkoutSession } from "@/types/session";
 
 interface ShareCardProps {
@@ -111,7 +112,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
           {!isRun && !isYoga && prExercises.length === 0 && totalVolume > 0 && (
             <div style={{ textAlign: "center", marginTop: 12 }}>
               <p style={{ fontSize: 24, fontWeight: 700, color: "#d4d4d4", margin: 0 }}>
-                {totalVolume.toLocaleString()} kg
+                {formatVolumeKg(totalVolume)} kg
               </p>
               <p style={{ fontSize: 10, color: "#525252", marginTop: 2 }}>total volume</p>
             </div>
@@ -255,7 +256,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               {totalVolume > 0 && (
                 <div style={{ flex: 1, textAlign: "center", padding: "0 8px" }}>
                   <div style={{ fontSize: 30, fontWeight: 700, color: "#ffffff" }}>
-                    {totalVolume.toLocaleString()}
+                    {formatVolumeKg(totalVolume)}
                   </div>
                   <div style={{ fontSize: 10, color: "#525252" }}>kg volume</div>
                 </div>

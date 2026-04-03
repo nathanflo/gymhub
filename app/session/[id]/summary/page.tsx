@@ -9,7 +9,7 @@ import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
-import { toKg, round2 } from "@/lib/units";
+import { toKg, round2, formatVolumeKg } from "@/lib/units";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
 import ShareCard from "@/components/share/ShareCard";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
@@ -630,7 +630,7 @@ export default function SummaryPage() {
               )}
               {!isRun && prExercises.length === 0 && totalVolume > 0 && (
                 <div className="mt-4 text-center">
-                  <p className="text-2xl font-bold text-neutral-300">{totalVolume.toLocaleString()} kg</p>
+                  <p className="text-2xl font-bold text-neutral-300">{formatVolumeKg(totalVolume)} kg</p>
                   <p className="text-xs text-neutral-600 mt-0.5">total volume</p>
                 </div>
               )}
@@ -667,7 +667,7 @@ export default function SummaryPage() {
                     </div>
                     {totalVolume > 0 && (
                       <div className="flex flex-col items-center px-4 first:pl-0 last:pr-0">
-                        <span className="text-4xl font-bold text-white">{totalVolume.toLocaleString()}</span>
+                        <span className="text-4xl font-bold text-white">{formatVolumeKg(totalVolume)}</span>
                         <span className="text-xs text-neutral-600">kg volume</span>
                       </div>
                     )}
@@ -886,7 +886,7 @@ export default function SummaryPage() {
               {totalVolume > 0 && (
                 <div className="flex flex-col">
                   <span className="text-xs text-neutral-600">Volume (kg)</span>
-                  <span className="text-4xl font-semibold tracking-tight tabular-nums text-white">{totalVolume.toLocaleString()}</span>
+                  <span className="text-4xl font-semibold tracking-tight tabular-nums text-white">{formatVolumeKg(totalVolume)}</span>
                 </div>
               )}
             </div>
