@@ -30,6 +30,7 @@ export const LiftSection = memo(function LiftSection({
   onToggleComplete,
   onSwap,
   onInsights,
+  workingUnit,
 }: {
   exercises: DraftExercise[];
   activeExIdx: number;
@@ -37,6 +38,7 @@ export const LiftSection = memo(function LiftSection({
   exerciseLibrary: string[];
   lastSetByName: Map<string, { weight?: number; reps?: number; duration?: string }>;
   lastTopSetByName: Map<string, { weight: number; reps: number }>;
+  workingUnit: "kg" | "lbs";
   fromTemplate?: boolean;
   onExerciseName: (exIdx: number, value: string) => void;
   onModeChange: (exIdx: number, mode: TrackingMode) => void;
@@ -98,6 +100,7 @@ export const LiftSection = memo(function LiftSection({
             exerciseLibrary={exerciseLibrary}
             lastSet={lastSetByName.get(ex.name.trim().toLowerCase()) ?? null}
             lastTopSet={lastTopSetByName.get(ex.name.trim().toLowerCase()) ?? null}
+            workingUnit={workingUnit}
           />
         </div>
       ))}

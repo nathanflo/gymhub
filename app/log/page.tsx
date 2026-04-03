@@ -17,6 +17,7 @@ import { WorkoutTemplate } from "@/types/template";
 import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
 import { advanceActiveProgram, getActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState, emptySessionForm } from "@/components/SessionForm";
+import { resolveKg } from "@/lib/units";
 
 type DraftData = {
   session: SessionFormState;
@@ -96,6 +97,7 @@ function LogPageInner() {
       const key = ex.name.trim().toLowerCase();
       const mode = ex.mode ?? "weight_reps";
       let firstValidSet: WorkoutSession["exercises"][number]["sets"][number] | undefined;
+      let foundInExercise: WorkoutSession["exercises"][number] | undefined;
       for (const session of sessions) {
         const match = session.exercises.find(
           (se) => se.name.trim().toLowerCase() === key
@@ -107,15 +109,20 @@ function LogPageInner() {
           if (mode === "duration_only") return !!s.duration;
           return false;
         });
-        if (firstValidSet) break;
+        if (firstValidSet) { foundInExercise = match; break; }
       }
       if (!firstValidSet) return ex;
       anyPrefilled = true;
       const [first, ...rest] = ex.sets;
+      // Convert history weight to canonical kg before prefilling
+      const matchUnit = foundInExercise?.unit ?? "kg";
+      const canonicalW = firstValidSet.weight !== undefined
+        ? (resolveKg(firstValidSet.weight, matchUnit, foundInExercise?._canonicalKg) ?? undefined)
+        : undefined;
       return {
         ...ex,
         sets: [
-          { ...first, weight: firstValidSet.weight, reps: firstValidSet.reps, duration: firstValidSet.duration },
+          { ...first, weight: canonicalW, reps: firstValidSet.reps, duration: firstValidSet.duration },
           ...rest,
         ],
       };

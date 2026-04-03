@@ -28,6 +28,7 @@ export interface SessionFormState {
   energyLevel: EnergyLevel;
   notes: string;
   bodyweight: string;
+  workingUnit: "kg" | "lbs";
   exercises: DraftExercise[];
   // Run fields
   distance: string;
@@ -55,10 +56,10 @@ export interface SessionFormState {
 // ─── Factories ────────────────────────────────────────────────────────────────
 
 export const emptySet = (): DraftSet => ({ weight: "", reps: "", duration: "" });
-export const emptyExercise = (): DraftExercise => ({
+export const emptyExercise = (unit: WeightUnit = "kg"): DraftExercise => ({
   name: "",
   mode: "weight_reps",
-  unit: "kg",
+  unit,
   sets: [emptySet()],
   freeformNote: "",
 });
@@ -68,6 +69,7 @@ export const emptySessionForm = (): SessionFormState => ({
   energyLevel: "Medium",
   notes: "",
   bodyweight: "",
+  workingUnit: "kg",
   exercises: [emptyExercise()],
   distance: "",
   duration: "",

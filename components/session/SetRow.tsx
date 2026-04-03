@@ -1,12 +1,23 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useRef, useState, useEffect } from "react";
 import { DraftSet } from "./types";
-import { TrackingMode } from "@/types/session";
+import { TrackingMode, WeightUnit } from "@/types/session";
+import { round2 } from "@/lib/units";
+
+/** Convert a canonical-kg draft value to a display string in the given unit. */
+function toDisplayStr(canonicalKg: string, unit: WeightUnit): string {
+  if (!canonicalKg) return "";
+  const n = parseFloat(canonicalKg);
+  if (isNaN(n)) return canonicalKg; // pass through non-numeric (shouldn't happen)
+  if (unit === "lbs") return String(Math.round((n / 0.453592) * 10) / 10); // 1 decimal
+  return canonicalKg; // kg or plates: show canonical value as-is
+}
 
 export const SetRow = memo(function SetRow({
   set,
   mode,
+  displayUnit,
   canRemove,
   onFieldChange,
   onTypeChange,
@@ -14,6 +25,7 @@ export const SetRow = memo(function SetRow({
 }: {
   set: DraftSet;
   mode: TrackingMode;
+  displayUnit: WeightUnit;
   canRemove: boolean;
   onFieldChange: (field: keyof DraftSet, v: string) => void;
   onTypeChange: (type: "warmup" | "drop" | undefined) => void;
@@ -61,6 +73,33 @@ export const SetRow = memo(function SetRow({
     </button>
   );
 
+  // Local state for weight input — allows free typing without round-trip reformatting.
+  // Commits canonical kg to draft on blur.
+  const focusedRef = useRef(false);
+  const [localWeight, setLocalWeight] = useState(() =>
+    toDisplayStr(set.weight, displayUnit)
+  );
+
+  // Sync display when canonical draft value or display unit changes (e.g. toggle, template load).
+  useEffect(() => {
+    if (!focusedRef.current) {
+      setLocalWeight(toDisplayStr(set.weight, displayUnit));
+    }
+  }, [set.weight, displayUnit]);
+
+  const commitWeight = (raw: string) => {
+    if (raw === "") {
+      onFieldChange("weight", "");
+      return;
+    }
+    const n = parseFloat(raw);
+    if (!isNaN(n)) {
+      const kg = displayUnit === "lbs" ? round2(n * 0.453592) : n;
+      onFieldChange("weight", String(kg));
+    }
+    // Invalid string: no commit — leave draft unchanged
+  };
+
   if (mode === "weight_reps") {
     return (
       <div className="flex gap-2 items-center">
@@ -68,8 +107,13 @@ export const SetRow = memo(function SetRow({
           type="number"
           inputMode="decimal"
           placeholder="0"
-          value={set.weight}
-          onChange={(e) => onFieldChange("weight", e.target.value)}
+          value={localWeight}
+          onFocus={() => { focusedRef.current = true; }}
+          onBlur={(e) => {
+            focusedRef.current = false;
+            commitWeight(e.target.value);
+          }}
+          onChange={(e) => setLocalWeight(e.target.value)}
           className={setInputClass}
         />
         <input

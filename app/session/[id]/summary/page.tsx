@@ -9,7 +9,7 @@ import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
-import { toKg, round2, formatVolumeKg } from "@/lib/units";
+import { resolveKg, round2, formatVolumeKg } from "@/lib/units";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
 import ShareCard from "@/components/share/ShareCard";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
@@ -40,7 +40,6 @@ function detectPRs(
   for (const ex of session.exercises) {
     if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
     if ((ex.unit ?? "kg") === "plates") continue;
-    const toKg = (w: number) => (ex.unit ?? "kg") === "lbs" ? w * 0.453592 : w;
     const key = ex.name.trim().toLowerCase();
 
     // Current top: highest weight; among sets at that weight, highest reps.
@@ -48,7 +47,8 @@ function detectPRs(
     for (const set of ex.sets) {
       if (set.type === "warmup") continue;
       if (!set.weight || set.weight <= 0 || !set.reps || set.reps <= 0) continue;
-      const wKg = round2(toKg(set.weight));
+      const wKg = round2(resolveKg(set.weight, ex.unit, ex._canonicalKg) ?? -1);
+      if (wKg < 0) continue;
       if (!curBest || wKg > curBest.weight || (wKg === curBest.weight && set.reps > curBest.reps)) {
         curBest = { weight: wKg, reps: set.reps };
       }
@@ -76,7 +76,7 @@ function computeSessionComparison(
   const volKg = (s: WorkoutSession) =>
     s.exercises.reduce((acc, ex) =>
       acc + ex.sets.reduce((a, set) => {
-        const kg = toKg(set.weight ?? 0, ex.unit);
+        const kg = resolveKg(set.weight ?? 0, ex.unit, ex._canonicalKg);
         return kg !== null ? a + kg * (set.reps ?? 0) : a;
       }, 0), 0);
 
@@ -95,33 +95,29 @@ function computeSessionComparison(
   let exerciseLine: string | null = null;
   const topEx = [...current.exercises].sort((a, b) => {
     const v = (ex: typeof a) => ex.sets.reduce((s, set) => {
-      const kg = toKg(set.weight ?? 0, ex.unit);
+      const kg = resolveKg(set.weight ?? 0, ex.unit, ex._canonicalKg);
       return kg !== null ? s + kg * (set.reps ?? 0) : s;
     }, 0);
     return v(b) - v(a);
   })[0];
 
-  if (topEx && (topEx.mode ?? "weight_reps") === "weight_reps") {
-    const curUnit = topEx.unit ?? "kg";
-    const curKgCheck = toKg(1, curUnit);
-    if (curKgCheck !== null) { // skip plates
-      const prevEx = previous.exercises.find(
-        (e) => e.name.trim().toLowerCase() === topEx.name.trim().toLowerCase()
-      );
-      if (prevEx && (prevEx.mode ?? "weight_reps") === "weight_reps") {
-        const topWeight = (ex: typeof topEx) =>
-          Math.max(0, ...ex.sets.filter((s) => s.weight !== undefined).map((s) => s.weight!));
-        const curTop  = topWeight(topEx);
-        const prevTop = topWeight(prevEx);
-        if (curTop > 0 && prevTop > 0) {
-          const curTopKg  = toKg(curTop,  topEx.unit  ?? "kg");
-          const prevTopKg = toKg(prevTop, prevEx.unit ?? "kg");
-          if (curTopKg !== null && prevTopKg !== null) {
-            const dKg = round2(curTopKg - prevTopKg);
-            if (dKg !== 0) {
-              const sign = dKg > 0 ? "+" : "";
-              exerciseLine = `${topEx.name} ${sign}${dKg}kg top set`;
-            }
+  if (topEx && (topEx.mode ?? "weight_reps") === "weight_reps" && (topEx.unit ?? "kg") !== "plates") {
+    const prevEx = previous.exercises.find(
+      (e) => e.name.trim().toLowerCase() === topEx.name.trim().toLowerCase()
+    );
+    if (prevEx && (prevEx.mode ?? "weight_reps") === "weight_reps") {
+      const topWeight = (ex: typeof topEx) =>
+        Math.max(0, ...ex.sets.filter((s) => s.weight !== undefined).map((s) => s.weight!));
+      const curTop  = topWeight(topEx);
+      const prevTop = topWeight(prevEx);
+      if (curTop > 0 && prevTop > 0) {
+        const curTopKg  = resolveKg(curTop,  topEx.unit,  topEx._canonicalKg);
+        const prevTopKg = resolveKg(prevTop, prevEx.unit, prevEx._canonicalKg);
+        if (curTopKg !== null && prevTopKg !== null) {
+          const dKg = round2(curTopKg - prevTopKg);
+          if (dKg !== 0) {
+            const sign = dKg > 0 ? "+" : "";
+            exerciseLine = `${topEx.name} ${sign}${dKg}kg top set`;
           }
         }
       }
@@ -436,7 +432,7 @@ export default function SummaryPage() {
     const totalSets = session.exercises.reduce((s, ex) => s + ex.sets.length, 0);
     const totalVolume = session.exercises.reduce(
       (s, ex) => s + ex.sets.reduce((s2, set) => {
-        const kg = toKg(set.weight ?? 0, ex.unit);
+        const kg = resolveKg(set.weight ?? 0, ex.unit, ex._canonicalKg);
         return kg !== null ? s2 + kg * (set.reps ?? 0) : s2;
       }, 0), 0
     );
@@ -462,13 +458,13 @@ export default function SummaryPage() {
     const topExercise = !isRun && totalVolume > 0
       ? session.exercises.reduce<typeof session.exercises[0] | null>((best, ex) => {
           const vol = ex.sets.reduce((s, set) => {
-            const kg = toKg(set.weight ?? 0, ex.unit);
+            const kg = resolveKg(set.weight ?? 0, ex.unit, ex._canonicalKg);
             return kg !== null ? s + kg * (set.reps ?? 0) : s;
           }, 0);
           if (vol === 0) return best;
           if (!best) return ex;
           const bestVol = best.sets.reduce((s, set) => {
-            const kg = toKg(set.weight ?? 0, best.unit);
+            const kg = resolveKg(set.weight ?? 0, best.unit, best._canonicalKg);
             return kg !== null ? s + kg * (set.reps ?? 0) : s;
           }, 0);
           return vol > bestVol ? ex : best;

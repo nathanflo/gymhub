@@ -15,7 +15,7 @@ export type TrackingMode = "weight_reps" | "reps_only" | "duration_only" | "free
 export type WeightUnit = "kg" | "lbs" | "plates";
 
 export interface WorkoutSet {
-  weight?: number;    // weight_reps mode — stored in the unit specified by exercise.unit
+  weight?: number;    // canonical kg if exercise._canonicalKg; else in exercise.unit (legacy)
   reps?: number;      // weight_reps and reps_only modes
   duration?: string;  // duration_only mode (free text: "5 min", "45s")
   type?: "warmup" | "drop";  // undefined = normal set
@@ -25,6 +25,7 @@ export interface WorkoutExercise {
   name: string;
   mode?: TrackingMode;     // undefined → "weight_reps" for backwards compat
   unit?: WeightUnit;       // undefined → "kg" for backwards compat (weight_reps only)
+  _canonicalKg?: boolean;  // true = weight values are canonical kg; unit is display pref only (new sessions)
   sets: WorkoutSet[];
   freeformNote?: string;   // freeform mode only; sets is [] in this case
   note?: string;           // per-exercise note (all modes)

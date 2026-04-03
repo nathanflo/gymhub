@@ -19,3 +19,24 @@ export function round2(n: number): number {
 export function formatVolumeKg(n: number): string {
   return Math.round(n).toLocaleString();
 }
+
+/** Convert canonical kg to display unit. Returns null for plates (no conversion). */
+export function fromKg(weightKg: number, unit?: string): number | null {
+  if (!unit || unit === "kg") return weightKg;
+  if (unit === "lbs") return weightKg / 0.453592;
+  return null; // plates — caller shows raw value
+}
+
+/**
+ * Resolve a stored weight to canonical kg.
+ * New-format sessions (_canonicalKg=true) store weights already in kg.
+ * Legacy sessions store weights in exercise.unit — convert via toKg().
+ */
+export function resolveKg(
+  weight: number,
+  unit: string | undefined,
+  canonical?: boolean
+): number | null {
+  if (canonical) return weight;
+  return toKg(weight, unit);
+}

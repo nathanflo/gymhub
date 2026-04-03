@@ -5,7 +5,7 @@ import { TrackingMode, WeightUnit } from "@/types/session";
 import { inputClass } from "@/components/Field";
 import { DraftSet, DraftExercise } from "./types";
 import { SetRow } from "./SetRow";
-import { toKg, round2 } from "@/lib/units";
+import { fromKg, round2 } from "@/lib/units";
 
 const MODE_LABELS: Record<TrackingMode, string> = {
   weight_reps: "Wt + Reps",
@@ -14,11 +14,17 @@ const MODE_LABELS: Record<TrackingMode, string> = {
   freeform: "Freeform",
 };
 
+/**
+ * Compute next-set suggestion based on canonical kg comparison.
+ * Both sets[].weight and lastTopSet.weight are canonical kg for kg/lbs exercises.
+ * Plates exercises: pass them through — they use the guard `unit !== "plates"` at call site.
+ */
 function computeNextSetSuggestion(
   sets: DraftSet[],
   lastTopSet: { weight: number; reps: number; unit?: string },
-  unit: string
+  workingUnit: "kg" | "lbs"
 ): string | null {
+  // curTop.weight is canonical kg (from draft)
   const curTop = sets.reduce<{ weight: number; reps: number } | null>((best, s) => {
     const w = parseFloat(s.weight);
     const r = parseInt(s.reps, 10);
@@ -29,33 +35,21 @@ function computeNextSetSuggestion(
 
   if (!curTop) return null;
 
-  const prevUnit = lastTopSet.unit ?? "kg";
-
-  // Cross-unit comparison: convert to kg to decide direction, but suppress numeric suggestion
-  if (prevUnit !== unit) {
-    const curKg  = toKg(curTop.weight, unit);
-    const prevKg = toKg(lastTopSet.weight, prevUnit);
-    if (curKg === null || prevKg === null) return null;
-    if (curKg < prevKg) return `Suggested: match last top set`;
-    return null; // beating previous in kg terms — no increment suggestion across units
+  // Both canonical kg — compare directly
+  if (curTop.weight < lastTopSet.weight) return "Suggested: match last top set";
+  if (curTop.weight === lastTopSet.weight && curTop.reps < lastTopSet.reps)
+    return "Suggested: match last top set";
+  if (curTop.weight === lastTopSet.weight && curTop.reps === lastTopSet.reps) {
+    // Suggest next increment in working unit
+    const incKg = workingUnit === "lbs" ? round2(2.5 * 0.453592) : 2.5; // ~5lbs or 2.5kg
+    const nextKg = round2(curTop.weight + incKg);
+    const displayW = workingUnit === "lbs"
+      ? `${Math.round((nextKg / 0.453592) * 2) / 2}lbs`
+      : `${nextKg}kg`;
+    const repLow = Math.max(6, lastTopSet.reps - 1);
+    return `Suggested: ${displayW} × ${repLow}–${lastTopSet.reps}`;
   }
-
-  // Same unit — existing logic unchanged
-  const prevW = lastTopSet.weight;
-  const prevR = lastTopSet.reps;
-  const curW  = curTop.weight;
-  const curR  = curTop.reps;
-
-  if (curW < prevW) return `Suggested: match last top set`;
-  if (curW === prevW && curR < prevR) return `Suggested: match last top set`;
-  if (curW === prevW && curR === prevR) {
-    const inc = unit === "lbs" ? 5 : 2.5;
-    const nextW = curW + inc;
-    const repLow = Math.max(6, prevR - 1);
-    return `Suggested: ${nextW}${unit} × ${repLow}–${prevR}`;
-  }
-  // Already beating previous top — no suggestion needed
-  return null;
+  return null; // already beating previous top
 }
 
 export const ExerciseBlock = memo(function ExerciseBlock({
@@ -86,6 +80,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   exerciseLibrary,
   lastSet,
   lastTopSet,
+  workingUnit,
 }: {
   exercise: DraftExercise;
   exerciseIdx: number;
@@ -114,6 +109,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   exerciseLibrary: string[];
   lastSet: { weight?: number; reps?: number; duration?: string } | null;
   lastTopSet: { weight: number; reps: number; unit?: string } | null;
+  workingUnit: "kg" | "lbs";
 }) {
   const { mode, unit } = exercise;
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -138,6 +134,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     if (!firstSet) return;
     if (firstSet.weight !== "" || firstSet.reps !== "") return;
     appliedPrefillRef.current = normalized;
+    // lastSet.weight is canonical kg (for kg/lbs exercises) — store directly into draft
     if (lastSet.weight !== undefined) onSetField(0, "weight", String(lastSet.weight));
     if (lastSet.reps !== undefined) onSetField(0, "reps", String(lastSet.reps));
   }, [exercise.name, lastSet]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -290,6 +287,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
               key={setIdx}
               set={set}
               mode={mode}
+              displayUnit={unit}
               canRemove={exercise.sets.length > 1}
               onFieldChange={(field, v) => onSetField(setIdx, field, v)}
               onTypeChange={(type) => onSetType(setIdx, type)}
@@ -297,17 +295,30 @@ export const ExerciseBlock = memo(function ExerciseBlock({
             />
           ))}
 
+          {/* Previous / suggestion hints */}
           {(() => {
             if (!exercise.name.trim()) return null;
 
             if (mode === "weight_reps") {
-              // Previous hint: always shown when not completed (uses first valid set)
+              // Build "Previous" line — lastSet.weight is canonical kg for kg/lbs, raw for plates
+              const buildPrevLine = () => {
+                if (!lastSet || lastSet.weight === undefined || lastSet.reps === undefined) return null;
+                if (unit === "plates") {
+                  return `Previous: ${lastSet.weight} × ${lastSet.reps}`;
+                }
+                // Convert canonical kg to display unit
+                const dispW = fromKg(lastSet.weight, workingUnit);
+                if (dispW === null) return null;
+                const dispStr = workingUnit === "lbs"
+                  ? String(Math.round(dispW * 10) / 10)
+                  : String(dispW);
+                return `Previous: ${dispStr} × ${lastSet.reps}`;
+              };
+
               if (!exercise.completed) {
-                const prevLine = lastSet && lastSet.weight !== undefined && lastSet.reps !== undefined
-                  ? `Previous: ${lastSet.weight} × ${lastSet.reps}`
-                  : null;
+                const prevLine = buildPrevLine();
                 const suggestion = lastTopSet && unit !== "plates"
-                  ? computeNextSetSuggestion(exercise.sets, lastTopSet, unit)
+                  ? computeNextSetSuggestion(exercise.sets, lastTopSet, workingUnit)
                   : null;
                 if (!prevLine && !suggestion) return null;
                 return (
@@ -319,9 +330,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
               }
 
               // Completed: show first-valid "Previous" line + top-set delta
-              const prevLine = lastSet && lastSet.weight !== undefined && lastSet.reps !== undefined
-                ? `Previous: ${lastSet.weight} × ${lastSet.reps}`
-                : null;
+              const prevLine = buildPrevLine();
 
               let deltaLine: string | null = null;
               if (lastTopSet) {
@@ -333,34 +342,25 @@ export const ExerciseBlock = memo(function ExerciseBlock({
                 }, null);
                 const curTopW = curTop ? parseFloat(curTop.weight) : NaN;
                 if (!isNaN(curTopW)) {
-                  const prevUnit = lastTopSet.unit ?? "kg";
-                  if (unit === "plates" || prevUnit === "plates") {
-                    // Plates: only compare if same unit
-                    if (unit === prevUnit) {
+                  if (unit === "plates") {
+                    // Plates: lastTopSet.weight is raw plates count, curTopW is raw
+                    if (lastTopSet.unit === "plates") {
                       const dW = curTopW - lastTopSet.weight;
                       const sign = dW > 0 ? "+" : "";
                       deltaLine = dW === 0
                         ? "Top set: same as last time"
                         : `Top set: ${sign}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"} vs last time`;
                     }
-                  } else if (unit === prevUnit) {
-                    // Same unit — show raw delta in that unit
-                    const dW = curTopW - lastTopSet.weight;
-                    const sign = dW > 0 ? "+" : "";
-                    deltaLine = dW === 0
-                      ? "Top set: same as last time"
-                      : `Top set: ${sign}${dW}${unit} vs last time`;
                   } else {
-                    // Different units — convert both to kg, display delta in kg
-                    const curKg  = toKg(curTopW, unit);
-                    const prevKg = toKg(lastTopSet.weight, prevUnit);
-                    if (curKg !== null && prevKg !== null) {
-                      const dKg = round2(curKg - prevKg);
-                      const sign = dKg > 0 ? "+" : "";
-                      deltaLine = dKg === 0
-                        ? "Top set: same as last time"
-                        : `Top set: ${sign}${dKg}kg vs last time`;
-                    }
+                    // kg/lbs: both curTopW and lastTopSet.weight are canonical kg
+                    const dKg = round2(curTopW - lastTopSet.weight);
+                    const sign = dKg > 0 ? "+" : "";
+                    const dDisplay = workingUnit === "lbs"
+                      ? `${sign}${Math.round((dKg / 0.453592) * 10) / 10}lbs`
+                      : `${sign}${dKg}kg`;
+                    deltaLine = dKg === 0
+                      ? "Top set: same as last time"
+                      : `Top set: ${dDisplay} vs last time`;
                   }
                 }
               }

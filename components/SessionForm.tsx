@@ -19,6 +19,7 @@ import { Field, inputClass, selectClass } from "@/components/Field";
 import { getExerciseLibrary } from "@/lib/exercises";
 import { getSessions } from "@/lib/sessions";
 import { buildSessionIndex } from "@/lib/sessionIndex";
+import { toKg, round2, resolveKg } from "@/lib/units";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 import { getRestTarget } from "@/lib/restTargets";
 import { parseIntervalTime } from "@/components/session/helpers";
@@ -47,26 +48,36 @@ function toDateTimeLocal(iso: string): string {
 
 /** Convert a stored WorkoutSession back to a draft form state. */
 export function sessionToFormState(s: WorkoutSession): SessionFormState {
+  const workingUnit: "kg" | "lbs" =
+    s.exercises.some((ex) => ex.unit === "lbs") ? "lbs" : "kg";
+
   return {
     title: s.title,
     workoutType: s.workoutType,
     energyLevel: s.energyLevel,
     notes: s.notes,
     bodyweight: s.bodyweight !== undefined ? String(s.bodyweight) : "",
+    workingUnit,
     exercises:
       s.workoutType === "Run" || s.workoutType === "Yoga" || !s.exercises.length
-        ? [emptyExercise()]
+        ? [emptyExercise(workingUnit)]
         : s.exercises.map((ex) => ({
             name: ex.name,
             mode: ex.mode ?? "weight_reps",
-            unit: ex.unit ?? "kg",
+            unit: ex.unit === "plates" ? "plates" : workingUnit,
             freeformNote: ex.freeformNote ?? "",
-            sets: ex.sets.map((set) => ({
-              weight: set.weight !== undefined ? String(set.weight) : "",
-              reps: set.reps !== undefined ? String(set.reps) : "",
-              duration: set.duration ?? "",
-              type: set.type,
-            })),
+            sets: ex.sets.map((set) => {
+              // Normalize weight to canonical kg (handles both legacy lbs and new canonical)
+              const kg = set.weight !== undefined && (ex.unit ?? "kg") !== "plates"
+                ? resolveKg(set.weight, ex.unit, ex._canonicalKg)
+                : undefined;
+              return {
+                weight: kg != null ? String(round2(kg)) : (set.weight !== undefined ? String(set.weight) : ""),
+                reps: set.reps !== undefined ? String(set.reps) : "",
+                duration: set.duration ?? "",
+                type: set.type,
+              };
+            }),
           })),
     distance: s.distance !== undefined ? String(s.distance) : "",
     duration: s.duration ?? "",
@@ -91,26 +102,36 @@ export function sessionToFormState(s: WorkoutSession): SessionFormState {
 
 /** Convert a stored WorkoutTemplate to a draft form state for a new session. */
 export function templateToFormState(t: WorkoutTemplate): SessionFormState {
+  const workingUnit: "kg" | "lbs" =
+    t.exercises.some((ex) => ex.unit === "lbs") ? "lbs" : "kg";
+
   return {
     title: t.name,
     workoutType: t.workoutType,
     energyLevel: "Medium",
     notes: "",
     bodyweight: "",
+    workingUnit,
     exercises:
       t.workoutType === "Run" || t.workoutType === "Yoga" || !t.exercises.length
-        ? [emptyExercise()]
+        ? [emptyExercise(workingUnit)]
         : t.exercises.map((ex) => ({
             name: ex.name,
             mode: ex.mode ?? "weight_reps",
-            unit: ex.unit ?? "kg",
+            unit: ex.unit === "plates" ? "plates" : workingUnit,
             freeformNote: ex.freeformNote ?? "",
             target: ex.target,
-            sets: ex.sets.map((set) => ({
-              weight: set.weight !== undefined ? String(set.weight) : "",
-              reps: set.reps !== undefined ? String(set.reps) : "",
-              duration: set.duration ?? "",
-            })),
+            sets: ex.sets.map((set) => {
+              // Convert set weight to canonical kg
+              const kg = set.weight !== undefined && ex.unit !== "plates"
+                ? toKg(set.weight, ex.unit ?? "kg")
+                : undefined;
+              return {
+                weight: kg != null ? String(round2(kg)) : (set.weight !== undefined ? String(set.weight) : ""),
+                reps: set.reps !== undefined ? String(set.reps) : "",
+                duration: set.duration ?? "",
+              };
+            }),
           })),
     distance: t.distance !== undefined ? String(t.distance) : "",
     duration: t.duration ?? "",
@@ -293,8 +314,29 @@ export function SessionForm({
   const handleUnitChange = useCallback((exIdx: number, unit: WeightUnit) => {
     setForm((prev) => ({
       ...prev,
-      exercises: prev.exercises.map((ex, i) =>
-        i === exIdx ? { ...ex, unit } : ex
+      exercises: prev.exercises.map((ex, i) => {
+        if (i !== exIdx) return ex;
+        const wasPlates = ex.unit === "plates";
+        const toPlates  = unit === "plates";
+        // Clear weights when transitioning to/from plates — plates values are not canonical kg
+        return {
+          ...ex,
+          unit,
+          sets: (wasPlates || toPlates)
+            ? ex.sets.map((s) => ({ ...s, weight: "" }))
+            : ex.sets,
+        };
+      }),
+    }));
+  }, []);
+
+  const handleWorkingUnitChange = useCallback((newUnit: "kg" | "lbs") => {
+    setForm((prev) => ({
+      ...prev,
+      workingUnit: newUnit,
+      // Update display unit for all non-plates exercises; weights stay canonical kg
+      exercises: prev.exercises.map((ex) =>
+        ex.unit === "plates" ? ex : { ...ex, unit: newUnit }
       ),
     }));
   }, []);
@@ -311,7 +353,7 @@ export function SessionForm({
   const handleAddExercise = useCallback(() => {
     setForm((prev) => ({
       ...prev,
-      exercises: [...prev.exercises, emptyExercise()],
+      exercises: [...prev.exercises, emptyExercise(prev.workingUnit)],
     }));
   }, []);
 
@@ -334,7 +376,7 @@ export function SessionForm({
   const handleInsertExerciseBelow = useCallback((exIdx: number) => {
     setForm((prev) => {
       const exs = [...prev.exercises];
-      exs.splice(exIdx + 1, 0, emptyExercise());
+      exs.splice(exIdx + 1, 0, emptyExercise(prev.workingUnit));
       return { ...prev, exercises: exs };
     });
   }, []);
@@ -539,6 +581,8 @@ export function SessionForm({
             name: ex.name.trim(),
             mode,
             unit: mode === "weight_reps" ? ex.unit : undefined,
+            // Flag canonical kg storage — weights in draft are canonical kg for kg/lbs exercises
+            _canonicalKg: mode === "weight_reps" && ex.unit !== "plates" ? true : undefined,
             freeformNote: mode === "freeform" ? ex.freeformNote.trim() : undefined,
             sets: mode === "freeform" ? [] : ex.sets.map(buildSet),
             note: ex.note || undefined,
@@ -783,32 +827,54 @@ export function SessionForm({
             selectClass={selectClass}
           />
         ) : (
-          <LiftSection
-            exercises={form.exercises}
-            activeExIdx={activeExIdx}
-            setActiveExIdx={setActiveExIdx}
-            exerciseLibrary={exerciseLibrary}
-            lastSetByName={lastSetByName}
-            lastTopSetByName={lastTopSetByName}
-            fromTemplate={fromTemplate}
-            onExerciseName={handleExerciseName}
-            onModeChange={handleModeChange}
-            onUnitChange={handleUnitChange}
-            onFreeformNote={handleFreeformNote}
-            onAddExercise={handleAddExercise}
-            onRemoveExercise={handleRemoveExercise}
-            onMoveExercise={handleMoveExercise}
-            onInsertExerciseBelow={handleInsertExerciseBelow}
-            onSetField={handleSetField}
-            onSetType={handleSetType}
-            onAddSet={handleAddSet}
-            onRemoveSet={handleRemoveSet}
-            onExerciseNote={handleExerciseNote}
-            onOpenNote={handleOpenNote}
-            onToggleComplete={handleToggleComplete}
-            onSwap={setSwapIndex}
-            onInsights={handleInsights}
-          />
+          <>
+            {/* Unit toggle — kg / lbs */}
+            <div className="flex justify-end -mb-2">
+              <div className="flex rounded-lg overflow-hidden border border-neutral-700 text-xs">
+                {(["kg", "lbs"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => handleWorkingUnitChange(u)}
+                    className={`px-3 py-1.5 transition-colors ${
+                      form.workingUnit === u
+                        ? "bg-neutral-700 text-white"
+                        : "bg-neutral-800 text-neutral-400 hover:text-neutral-300"
+                    }`}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <LiftSection
+              exercises={form.exercises}
+              activeExIdx={activeExIdx}
+              setActiveExIdx={setActiveExIdx}
+              exerciseLibrary={exerciseLibrary}
+              lastSetByName={lastSetByName}
+              lastTopSetByName={lastTopSetByName}
+              fromTemplate={fromTemplate}
+              workingUnit={form.workingUnit}
+              onExerciseName={handleExerciseName}
+              onModeChange={handleModeChange}
+              onUnitChange={handleUnitChange}
+              onFreeformNote={handleFreeformNote}
+              onAddExercise={handleAddExercise}
+              onRemoveExercise={handleRemoveExercise}
+              onMoveExercise={handleMoveExercise}
+              onInsertExerciseBelow={handleInsertExerciseBelow}
+              onSetField={handleSetField}
+              onSetType={handleSetType}
+              onAddSet={handleAddSet}
+              onRemoveSet={handleRemoveSet}
+              onExerciseNote={handleExerciseNote}
+              onOpenNote={handleOpenNote}
+              onToggleComplete={handleToggleComplete}
+              onSwap={setSwapIndex}
+              onInsights={handleInsights}
+            />
+          </>
         )}
 
         {/* Notes */}

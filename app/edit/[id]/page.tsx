@@ -124,6 +124,7 @@ function legacyToFormState(w: Workout): SessionFormState {
     energyLevel: w.energyLevel ?? "Medium",
     notes: w.notes ?? "",
     bodyweight: "",
+    workingUnit: "kg",
     exercises: isRun
       ? [emptyExercise()]
       : [
