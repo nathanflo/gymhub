@@ -5,6 +5,7 @@ import { TrackingMode, WeightUnit } from "@/types/session";
 import { inputClass } from "@/components/Field";
 import { DraftSet, DraftExercise } from "./types";
 import { SetRow } from "./SetRow";
+import { toKg, round2 } from "@/lib/units";
 
 const MODE_LABELS: Record<TrackingMode, string> = {
   weight_reps: "Wt + Reps",
@@ -15,7 +16,7 @@ const MODE_LABELS: Record<TrackingMode, string> = {
 
 function computeNextSetSuggestion(
   sets: DraftSet[],
-  lastTopSet: { weight: number; reps: number },
+  lastTopSet: { weight: number; reps: number; unit?: string },
   unit: string
 ): string | null {
   const curTop = sets.reduce<{ weight: number; reps: number } | null>((best, s) => {
@@ -28,10 +29,22 @@ function computeNextSetSuggestion(
 
   if (!curTop) return null;
 
+  const prevUnit = lastTopSet.unit ?? "kg";
+
+  // Cross-unit comparison: convert to kg to decide direction, but suppress numeric suggestion
+  if (prevUnit !== unit) {
+    const curKg  = toKg(curTop.weight, unit);
+    const prevKg = toKg(lastTopSet.weight, prevUnit);
+    if (curKg === null || prevKg === null) return null;
+    if (curKg < prevKg) return `Suggested: match last top set`;
+    return null; // beating previous in kg terms — no increment suggestion across units
+  }
+
+  // Same unit — existing logic unchanged
   const prevW = lastTopSet.weight;
   const prevR = lastTopSet.reps;
-  const curW = curTop.weight;
-  const curR = curTop.reps;
+  const curW  = curTop.weight;
+  const curR  = curTop.reps;
 
   if (curW < prevW) return `Suggested: match last top set`;
   if (curW === prevW && curR < prevR) return `Suggested: match last top set`;
@@ -100,7 +113,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   onInsights: () => void;
   exerciseLibrary: string[];
   lastSet: { weight?: number; reps?: number; duration?: string } | null;
-  lastTopSet: { weight: number; reps: number } | null;
+  lastTopSet: { weight: number; reps: number; unit?: string } | null;
 }) {
   const { mode, unit } = exercise;
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -320,12 +333,35 @@ export const ExerciseBlock = memo(function ExerciseBlock({
                 }, null);
                 const curTopW = curTop ? parseFloat(curTop.weight) : NaN;
                 if (!isNaN(curTopW)) {
-                  const dW = curTopW - lastTopSet.weight;
-                  const sign = dW > 0 ? "+" : "";
-                  const label = unit === "plates"
-                    ? `${sign}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"}`
-                    : `${sign}${dW}${unit}`;
-                  deltaLine = dW === 0 ? "Top set: same as last time" : `Top set: ${label} vs last time`;
+                  const prevUnit = lastTopSet.unit ?? "kg";
+                  if (unit === "plates" || prevUnit === "plates") {
+                    // Plates: only compare if same unit
+                    if (unit === prevUnit) {
+                      const dW = curTopW - lastTopSet.weight;
+                      const sign = dW > 0 ? "+" : "";
+                      deltaLine = dW === 0
+                        ? "Top set: same as last time"
+                        : `Top set: ${sign}${dW} ${Math.abs(dW) === 1 ? "plate" : "plates"} vs last time`;
+                    }
+                  } else if (unit === prevUnit) {
+                    // Same unit — show raw delta in that unit
+                    const dW = curTopW - lastTopSet.weight;
+                    const sign = dW > 0 ? "+" : "";
+                    deltaLine = dW === 0
+                      ? "Top set: same as last time"
+                      : `Top set: ${sign}${dW}${unit} vs last time`;
+                  } else {
+                    // Different units — convert both to kg, display delta in kg
+                    const curKg  = toKg(curTopW, unit);
+                    const prevKg = toKg(lastTopSet.weight, prevUnit);
+                    if (curKg !== null && prevKg !== null) {
+                      const dKg = round2(curKg - prevKg);
+                      const sign = dKg > 0 ? "+" : "";
+                      deltaLine = dKg === 0
+                        ? "Top set: same as last time"
+                        : `Top set: ${sign}${dKg}kg vs last time`;
+                    }
+                  }
                 }
               }
 

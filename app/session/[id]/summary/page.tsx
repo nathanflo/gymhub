@@ -9,6 +9,8 @@ import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
+import { toKg, round2 } from "@/lib/units";
+import { parseLocation, formatLocationLabel } from "@/lib/location";
 import ShareCard from "@/components/share/ShareCard";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
@@ -71,43 +73,56 @@ function computeSessionComparison(
   current: WorkoutSession,
   previous: WorkoutSession
 ): { volumeLine: string | null; exerciseLine: string | null } {
-  const vol = (s: WorkoutSession) =>
+  const volKg = (s: WorkoutSession) =>
     s.exercises.reduce((acc, ex) =>
-      acc + ex.sets.reduce((a, set) => a + (set.weight ?? 0) * (set.reps ?? 0), 0), 0);
+      acc + ex.sets.reduce((a, set) => {
+        const kg = toKg(set.weight ?? 0, ex.unit);
+        return kg !== null ? a + kg * (set.reps ?? 0) : a;
+      }, 0), 0);
 
-  const curVol = vol(current);
-  const prevVol = vol(previous);
+  const curVol  = volKg(current);
+  const prevVol = volKg(previous);
 
   let volumeLine: string | null = null;
   if (curVol > 0 && prevVol > 0) {
-    const delta = curVol - prevVol;
+    const delta = Math.round(curVol - prevVol);
     if (delta > 0) volumeLine = `Up ${delta.toLocaleString()}kg from last session`;
     else if (delta < 0) volumeLine = `Down ${Math.abs(delta).toLocaleString()}kg from last session`;
     else volumeLine = "Matched last session";
   }
 
-  // Key exercise: highest-volume exercise in current session
+  // Key exercise: highest-volume exercise in current session (in kg)
   let exerciseLine: string | null = null;
   const topEx = [...current.exercises].sort((a, b) => {
-    const v = (ex: typeof a) => ex.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+    const v = (ex: typeof a) => ex.sets.reduce((s, set) => {
+      const kg = toKg(set.weight ?? 0, ex.unit);
+      return kg !== null ? s + kg * (set.reps ?? 0) : s;
+    }, 0);
     return v(b) - v(a);
   })[0];
 
-  if (topEx && (topEx.mode ?? "weight_reps") === "weight_reps" && (topEx.unit ?? "kg") !== "plates") {
-    const prevEx = previous.exercises.find(
-      (e) => e.name.trim().toLowerCase() === topEx.name.trim().toLowerCase()
-    );
-    if (prevEx && (prevEx.mode ?? "weight_reps") === "weight_reps") {
-      const topWeight = (ex: typeof topEx) =>
-        Math.max(0, ...ex.sets.filter((s) => s.weight !== undefined).map((s) => s.weight!));
-      const curTop = topWeight(topEx);
-      const prevTop = topWeight(prevEx);
-      if (curTop > 0 && prevTop > 0) {
-        const dW = curTop - prevTop;
-        if (dW !== 0) {
-          const unit = topEx.unit ?? "kg";
-          const sign = dW > 0 ? "+" : "";
-          exerciseLine = `${topEx.name} ${sign}${dW}${unit} top set`;
+  if (topEx && (topEx.mode ?? "weight_reps") === "weight_reps") {
+    const curUnit = topEx.unit ?? "kg";
+    const curKgCheck = toKg(1, curUnit);
+    if (curKgCheck !== null) { // skip plates
+      const prevEx = previous.exercises.find(
+        (e) => e.name.trim().toLowerCase() === topEx.name.trim().toLowerCase()
+      );
+      if (prevEx && (prevEx.mode ?? "weight_reps") === "weight_reps") {
+        const topWeight = (ex: typeof topEx) =>
+          Math.max(0, ...ex.sets.filter((s) => s.weight !== undefined).map((s) => s.weight!));
+        const curTop  = topWeight(topEx);
+        const prevTop = topWeight(prevEx);
+        if (curTop > 0 && prevTop > 0) {
+          const curTopKg  = toKg(curTop,  topEx.unit  ?? "kg");
+          const prevTopKg = toKg(prevTop, prevEx.unit ?? "kg");
+          if (curTopKg !== null && prevTopKg !== null) {
+            const dKg = round2(curTopKg - prevTopKg);
+            if (dKg !== 0) {
+              const sign = dKg > 0 ? "+" : "";
+              exerciseLine = `${topEx.name} ${sign}${dKg}kg top set`;
+            }
+          }
         }
       }
     }
@@ -400,7 +415,10 @@ export default function SummaryPage() {
       const user = authSession?.user ?? null;
       if (!user) return;
       const { data } = await supabase.from("profiles").select("city").eq("id", user.id).maybeSingle();
-      if (data?.city) setCity(data.city);
+      if (data?.city) {
+        const loc = parseLocation(data.city);
+        if (loc.label) setCity(formatLocationLabel(loc.label));
+      }
     }
     fetchCity();
   }, []);
@@ -417,7 +435,10 @@ export default function SummaryPage() {
     const exerciseCount = session.exercises.length;
     const totalSets = session.exercises.reduce((s, ex) => s + ex.sets.length, 0);
     const totalVolume = session.exercises.reduce(
-      (s, ex) => s + ex.sets.reduce((s2, set) => s2 + (set.weight ?? 0) * (set.reps ?? 0), 0), 0
+      (s, ex) => s + ex.sets.reduce((s2, set) => {
+        const kg = toKg(set.weight ?? 0, ex.unit);
+        return kg !== null ? s2 + kg * (set.reps ?? 0) : s2;
+      }, 0), 0
     );
 
     const effort = getEffortLabel(session.energyLevel, totalSets, totalVolume);
@@ -440,10 +461,16 @@ export default function SummaryPage() {
 
     const topExercise = !isRun && totalVolume > 0
       ? session.exercises.reduce<typeof session.exercises[0] | null>((best, ex) => {
-          const vol = ex.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+          const vol = ex.sets.reduce((s, set) => {
+            const kg = toKg(set.weight ?? 0, ex.unit);
+            return kg !== null ? s + kg * (set.reps ?? 0) : s;
+          }, 0);
           if (vol === 0) return best;
           if (!best) return ex;
-          const bestVol = best.sets.reduce((s, set) => s + (set.weight ?? 0) * (set.reps ?? 0), 0);
+          const bestVol = best.sets.reduce((s, set) => {
+            const kg = toKg(set.weight ?? 0, best.unit);
+            return kg !== null ? s + kg * (set.reps ?? 0) : s;
+          }, 0);
           return vol > bestVol ? ex : best;
         }, null)
       : null;

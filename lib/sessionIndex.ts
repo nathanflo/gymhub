@@ -1,7 +1,7 @@
 import { WorkoutSession } from "@/types/session";
 
 export type LastSetEntry   = { weight?: number; reps?: number; duration?: string };
-export type TopSetEntry    = { weight: number; reps: number };
+export type TopSetEntry    = { weight: number; reps: number; unit?: string };
 export type HistoricalBest = { weight: number; repsAtWeight: number };
 
 export type SessionIndex = {
@@ -43,7 +43,7 @@ export function buildSessionIndex(allSessions: WorkoutSession[]): SessionIndex {
       if (!lastTopSetByName.has(key) && exMode === "weight_reps") {
         const top = ex.sets.reduce<TopSetEntry | null>((best, s) => {
           if (s.weight === undefined || s.reps === undefined) return best;
-          if (!best || s.weight > best.weight) return { weight: s.weight, reps: s.reps };
+          if (!best || s.weight > best.weight) return { weight: s.weight, reps: s.reps, unit: ex.unit };
           return best;
         }, null);
         if (top) lastTopSetByName.set(key, top);
