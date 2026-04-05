@@ -200,9 +200,15 @@ export function SessionForm({
   onSave: (session: WorkoutSession) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState<SessionFormState>(
-    initialState ?? emptySessionForm()
-  );
+  const [form, setForm] = useState<SessionFormState>(() => {
+    if (initialState) return initialState;
+    const state = emptySessionForm();
+    const saved = typeof window !== "undefined"
+      ? localStorage.getItem("gymhub-workingUnit")
+      : null;
+    if (saved === "lbs") state.workingUnit = "lbs";
+    return state;
+  });
   const [error, setError] = useState<string | null>(null);
   const [actionsNearView, setActionsNearView] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -331,6 +337,7 @@ export function SessionForm({
   }, []);
 
   const handleWorkingUnitChange = useCallback((newUnit: "kg" | "lbs") => {
+    localStorage.setItem("gymhub-workingUnit", newUnit);
     setForm((prev) => ({
       ...prev,
       workingUnit: newUnit,
@@ -830,16 +837,16 @@ export function SessionForm({
           <>
             {/* Unit toggle — kg / lbs */}
             <div className="flex justify-end -mb-2">
-              <div className="flex rounded-lg overflow-hidden border border-neutral-700 text-xs">
+              <div className="flex gap-0.5 rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-0.5 text-xs">
                 {(["kg", "lbs"] as const).map((u) => (
                   <button
                     key={u}
                     type="button"
                     onClick={() => handleWorkingUnitChange(u)}
-                    className={`px-3 py-1.5 transition-colors ${
+                    className={`rounded-lg px-3 py-1 font-medium transition-all duration-150 ${
                       form.workingUnit === u
-                        ? "bg-neutral-700 text-white"
-                        : "bg-neutral-800 text-neutral-400 hover:text-neutral-300"
+                        ? "bg-neutral-700 text-white shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-300"
                     }`}
                   >
                     {u}

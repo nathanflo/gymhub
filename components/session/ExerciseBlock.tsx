@@ -44,8 +44,8 @@ function computeNextSetSuggestion(
     const incKg = workingUnit === "lbs" ? round2(2.5 * 0.453592) : 2.5; // ~5lbs or 2.5kg
     const nextKg = round2(curTop.weight + incKg);
     const displayW = workingUnit === "lbs"
-      ? `${Math.round((nextKg / 0.453592) * 2) / 2}lbs`
-      : `${nextKg}kg`;
+      ? `${Math.round((nextKg / 0.453592) * 2) / 2} lbs`
+      : `${nextKg} kg`;
     const repLow = Math.max(6, lastTopSet.reps - 1);
     return `Suggested: ${displayW} × ${repLow}–${lastTopSet.reps}`;
   }
@@ -356,8 +356,8 @@ export const ExerciseBlock = memo(function ExerciseBlock({
                     const dKg = round2(curTopW - lastTopSet.weight);
                     const sign = dKg > 0 ? "+" : "";
                     const dDisplay = workingUnit === "lbs"
-                      ? `${sign}${Math.round((dKg / 0.453592) * 10) / 10}lbs`
-                      : `${sign}${dKg}kg`;
+                      ? `${sign}${Math.round((dKg / 0.453592) * 10) / 10} lbs`
+                      : `${sign}${dKg} kg`;
                     deltaLine = dKg === 0
                       ? "Top set: same as last time"
                       : `Top set: ${dDisplay} vs last time`;
