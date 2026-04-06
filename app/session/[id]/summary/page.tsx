@@ -9,7 +9,7 @@ import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
-import { resolveKg, round2, formatVolumeKg } from "@/lib/units";
+import { resolveKg, round2, formatVolumeKg, fromKg } from "@/lib/units";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
 import ShareCard from "@/components/share/ShareCard";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
@@ -69,9 +69,19 @@ function detectPRs(
 
 
 
+/** Format a canonical-kg weight for display in the user's working unit. */
+function fmtW(kg: number, unit: "kg" | "lbs"): string {
+  if (unit === "lbs") {
+    const lbs = fromKg(kg, "lbs")!;
+    return `${Math.round(lbs * 10) / 10} lbs`;
+  }
+  return `${round2(kg)} kg`;
+}
+
 function computeSessionComparison(
   current: WorkoutSession,
-  previous: WorkoutSession
+  previous: WorkoutSession,
+  workingUnit: "kg" | "lbs"
 ): { volumeLine: string | null; exerciseLine: string | null } {
   const volKg = (s: WorkoutSession) =>
     s.exercises.reduce((acc, ex) =>
@@ -117,7 +127,8 @@ function computeSessionComparison(
           const dKg = round2(curTopKg - prevTopKg);
           if (dKg !== 0) {
             const sign = dKg > 0 ? "+" : "";
-            exerciseLine = `${topEx.name} ${sign}${dKg}kg top set`;
+            const dispDelta = fmtW(Math.abs(dKg), workingUnit);
+            exerciseLine = `${topEx.name} ${sign}${dispDelta} top set`;
           }
         }
       }
@@ -380,6 +391,10 @@ export default function SummaryPage() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [previousSession, setPreviousSession] = useState<WorkoutSession | null>(null);
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
+  const [workingUnit] = useState<"kg" | "lbs">(() => {
+    if (typeof window === "undefined") return "kg";
+    return (localStorage.getItem("gymhub-workingUnit") as "kg" | "lbs") ?? "kg";
+  });
   const [shareOpen, setShareOpen] = useState(false);
   const [insightExercise, setInsightExercise] = useState<string | null>(null);
   const [city, setCity] = useState<string | null>(null);
@@ -478,7 +493,7 @@ export default function SummaryPage() {
       : null;
 
     const sessionComparison = !isRun && previousSession
-      ? computeSessionComparison(session, previousSession)
+      ? computeSessionComparison(session, previousSession, workingUnit)
       : null;
 
     const runSubtypeLabel: Record<string, string> = {
@@ -959,7 +974,11 @@ export default function SummaryPage() {
                         <p key={si} className="text-sm text-neutral-400">
                           Set {si + 1}:{" "}
                           {mode === "weight_reps" && set.weight !== undefined && set.reps !== undefined
-                            ? `${set.weight} ${ex.unit ?? "kg"} × ${set.reps}`
+                            ? (() => {
+                                if ((ex.unit ?? "kg") === "plates") return `${set.weight} plates × ${set.reps}`;
+                                const kg = resolveKg(set.weight, ex.unit, ex._canonicalKg);
+                                return kg !== null ? `${fmtW(kg, workingUnit)} × ${set.reps}` : "—";
+                              })()
                             : mode === "reps_only" && set.reps !== undefined
                             ? `${set.reps} reps`
                             : mode === "duration_only" && set.duration
