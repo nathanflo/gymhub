@@ -15,7 +15,7 @@ import { getWeatherGuidance } from "@/lib/weatherGuidance";
 // In-memory cache for legacy city-name → coordinates lookups.
 // Prevents re-geocoding on every navigation for users without stored lat/lon.
 const legacyGeoCache = new Map<string, { lat: number; lon: number }>();
-import { getActiveProgram, getCurrentWorkoutInfo, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
+import { getActiveProgram, getCurrentWorkoutInfo, advanceActiveProgram, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
@@ -23,6 +23,11 @@ import { WellnessEntry } from "@/types/wellness";
 const today = new Date().toISOString().slice(0, 10);
 const ANNIVERSARY_DATE = "2026-03-25";
 const isAnniversaryDay = today === ANNIVERSARY_DATE;
+
+/** Normalize a workout/session title for fuzzy program-day matching. */
+function normalizeProgramTitle(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
 
 function workoutTimeAgo(isoString: string): string {
   const mins = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
@@ -120,12 +125,20 @@ export default function HomePage() {
     } catch { setActiveDraft(null); }
   }, []);
 
-  // Sync active program on mount and whenever the page becomes visible again
+  // Sync active program on mount and whenever the page becomes visible/focused again.
+  // visibilitychange catches tab switches; pageshow catches bfcache restores on mobile;
+  // focus catches in-app navigation back to home in some PWA environments.
   useEffect(() => {
     function sync() { setActiveProgramState(getActiveProgram()); }
     sync();
     document.addEventListener("visibilitychange", sync);
-    return () => document.removeEventListener("visibilitychange", sync);
+    window.addEventListener("focus", sync);
+    window.addEventListener("pageshow", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("pageshow", sync);
+    };
   }, []);
 
   useEffect(() => {
@@ -163,6 +176,26 @@ export default function HomePage() {
         setInsight("thanks for being here early :)");
       }
       setRecentSessions(sessions.slice(0, 2));
+
+      // Safety net: if the current program day was already completed recently but
+      // advanceActiveProgram() was never called (e.g. resume-path bug, pre-fix session),
+      // detect it via title normalization and auto-advance.
+      const currentActiveProgram = getActiveProgram();
+      if (currentActiveProgram) {
+        const info = getCurrentWorkoutInfo(currentActiveProgram);
+        if (info) {
+          const dayNorm = normalizeProgramTitle(info.name);
+          const cutoffDate = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const alreadyCompleted = sessions.some(
+            s => s.date.slice(0, 10) >= cutoffDate && normalizeProgramTitle(s.title) === dayNorm
+          );
+          if (alreadyCompleted) {
+            advanceActiveProgram();
+            setActiveProgramState(getActiveProgram());
+          }
+        }
+      }
+
       setTodayBw(bwEntries.find(e => e.date.slice(0, 10) === today));
       setTodayWellness(todayWellness);
       if (profileResult?.data?.city) {
