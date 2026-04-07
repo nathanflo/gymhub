@@ -75,13 +75,25 @@ function LogPageInner() {
           } else {
             setDraftData(parsed);  // show modal
           }
-          return;
+          return; // Draft exists — leave gymhub-active-session-program alone
         }
         localStorage.removeItem("activeWorkoutDraft");
       } catch {}
     }
+    // Fresh start: capture or clear program launch metadata based on URL
+    if (programParam === "1") {
+      const active = getActiveProgram();
+      if (active) {
+        localStorage.setItem(
+          "gymhub-active-session-program",
+          JSON.stringify({ programId: active.id, dayIndex: active.currentIndex })
+        );
+      }
+    } else {
+      localStorage.removeItem("gymhub-active-session-program");
+    }
     setDraftData(null);
-  }, [resumeParam]);
+  }, [resumeParam, programParam]);
 
   /**
    * Pure in-memory prefill — reads session history to seed the first set of each
@@ -196,7 +208,9 @@ function LogPageInner() {
 
       const summaryUrl = `/session/${session.id}/summary`;
 
-      if (programParam === "1") {
+      const programMetaRaw = localStorage.getItem("gymhub-active-session-program");
+      if (programMetaRaw) {
+        localStorage.removeItem("gymhub-active-session-program");
         const active = getActiveProgram();
         let nextWorkoutName: string | null = null;
         if (active) {
@@ -258,6 +272,7 @@ function LogPageInner() {
             <button
               onClick={() => {
                 localStorage.removeItem("activeWorkoutDraft");
+                localStorage.removeItem("gymhub-active-session-program");
                 setOverrideInitial(undefined);
                 setResumeStartTime(undefined);
                 setDraftData(null);
@@ -312,7 +327,7 @@ function LogPageInner() {
         initialPauseStartedAt={resumePauseStartedAt}
         submitLabel="Save Session"
         onSave={handleSave}
-        onCancel={() => router.back()}
+        onCancel={() => { localStorage.removeItem("gymhub-active-session-program"); router.back(); }}
       />
     </main>
   );
