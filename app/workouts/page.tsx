@@ -29,6 +29,10 @@ export default function WorkoutsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [workingUnit] = useState<"kg" | "lbs">(() => {
+    if (typeof window === "undefined") return "kg";
+    return (localStorage.getItem("gymhub-workingUnit") as "kg" | "lbs") ?? "kg";
+  });
 
   useEffect(() => {
     async function load() {
@@ -108,6 +112,7 @@ export default function WorkoutsPage() {
             <SessionCard
               key={item.data.id}
               session={item.data}
+              workingUnit={workingUnit}
               onDuplicate={() => router.push(`/log?from=${item.data.id}`)}
               onEdit={() => router.push(`/edit/${item.data.id}`)}
               onDelete={() => handleDeleteSession(item.data.id)}
@@ -132,6 +137,7 @@ export default function WorkoutsPage() {
 
 function SessionCard({
   session,
+  workingUnit,
   onDuplicate,
   onEdit,
   onDelete,
@@ -139,6 +145,7 @@ function SessionCard({
   onSummary,
 }: {
   session: WorkoutSession;
+  workingUnit: "kg" | "lbs";
   onDuplicate: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -212,7 +219,7 @@ function SessionCard({
               mode === "freeform"
                 ? ex.freeformNote?.trim() || ""
                 : ex.sets.length > 0
-                ? formatExerciseSummary(ex)
+                ? formatExerciseSummary(ex, workingUnit)
                 : "";
             return (
               <p key={i} className="text-sm text-neutral-300">
@@ -252,7 +259,7 @@ function SessionCard({
                   mode === "freeform"
                     ? ex.freeformNote?.trim() || ""
                     : ex.sets.length > 0
-                    ? formatExerciseSummary(ex)
+                    ? formatExerciseSummary(ex, workingUnit)
                     : "";
                 return (
                   <p key={i} className="text-sm text-neutral-300">
@@ -322,6 +329,7 @@ function SessionCard({
     {insightExercise && (
       <ExerciseInsightSheet
         exerciseName={insightExercise}
+        workingUnit={workingUnit}
         onClose={() => setInsightExercise(null)}
       />
     )}

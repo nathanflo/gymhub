@@ -1,16 +1,18 @@
 import { WorkoutSession, WorkoutSet } from "@/types/session";
+import { resolveKg, fmtW } from "@/lib/units";
 
 export interface ExerciseSessionSnap {
   date: string;
-  sets: WorkoutSet[];
+  sets: WorkoutSet[];  // weights normalized to canonical kg (plates kept raw)
 }
 
 export interface ExerciseInsightsData {
   sessions: ExerciseSessionSnap[];         // up to 8, newest first
   lastSession: ExerciseSessionSnap | null;
   previousSession: ExerciseSessionSnap | null;
-  bestWeight: number | null;               // heaviest weight ever lifted
-  bestSet: { weight: number; reps: number } | null;  // highest weight×reps product
+  bestWeight: number | null;               // canonical kg (or raw plates)
+  bestSet: { weight: number; reps: number } | null;  // canonical kg (or raw plates)
+  isPlates: boolean;                       // true = exercise uses plate counting
 }
 
 export function getExerciseInsights(
@@ -19,11 +21,23 @@ export function getExerciseInsights(
 ): ExerciseInsightsData {
   const key = exerciseName.trim().toLowerCase();
   const matched: ExerciseSessionSnap[] = [];
+  let isPlates = false;
 
   for (const session of allSessions) {  // already sorted desc by date
     const ex = session.exercises.find(e => e.name.trim().toLowerCase() === key);
     if (ex && ex.sets.length > 0) {
-      matched.push({ date: session.date, sets: ex.sets });
+      const exIsPlates = (ex.unit ?? "kg") === "plates";
+      isPlates = exIsPlates;
+
+      // Normalize set weights to canonical kg so display layer only needs workingUnit.
+      // Plates are left as-is (raw plate count has no kg equivalent).
+      const normalizedSets: WorkoutSet[] = ex.sets.map((set) => {
+        if (set.weight === undefined || exIsPlates) return set;
+        const kg = resolveKg(set.weight, ex.unit, ex._canonicalKg);
+        return kg !== null ? { ...set, weight: kg } : set;
+      });
+
+      matched.push({ date: session.date, sets: normalizedSets });
     }
   }
 
@@ -49,6 +63,7 @@ export function getExerciseInsights(
     previousSession: matched[1] ?? null,
     bestWeight,
     bestSet,
+    isPlates,
   };
 }
 
@@ -60,9 +75,19 @@ export function topSetOf(sets: WorkoutSet[]): WorkoutSet | null {
   }, null);
 }
 
-/** Format a single set for display. */
-export function formatSet(set: WorkoutSet): string {
-  if (set.weight !== undefined && set.reps !== undefined) return `${set.weight}kg × ${set.reps}`;
+/**
+ * Format a single set for display.
+ * Expects set.weight to be canonical kg (normalized by getExerciseInsights).
+ */
+export function formatSet(
+  set: WorkoutSet,
+  workingUnit: "kg" | "lbs" = "kg",
+  isPlates = false
+): string {
+  if (set.weight !== undefined && set.reps !== undefined) {
+    if (isPlates) return `${set.weight} plates × ${set.reps}`;
+    return `${fmtW(set.weight, workingUnit)} × ${set.reps}`;
+  }
   if (set.reps !== undefined) return `${set.reps} reps`;
   if (set.duration) return set.duration;
   return "—";

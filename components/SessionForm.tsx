@@ -991,6 +991,7 @@ export function SessionForm({
       {insightExercise !== null && (
         <ExerciseInsightSheet
           exerciseName={insightExercise}
+          workingUnit={form.workingUnit}
           onClose={() => setInsightExercise(null)}
         />
       )}

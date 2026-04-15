@@ -9,7 +9,7 @@ import { WorkoutSession } from "@/types/session";
 import { EnergyLevel, WorkoutType } from "@/types/workout";
 import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
-import { resolveKg, round2, formatVolumeKg, fromKg } from "@/lib/units";
+import { resolveKg, round2, formatVolumeKg, fmtW } from "@/lib/units";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
 import SummaryPoster from "@/components/share/SummaryPoster";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
@@ -69,14 +69,6 @@ function detectPRs(
 
 
 
-/** Format a canonical-kg weight for display in the user's working unit. */
-function fmtW(kg: number, unit: "kg" | "lbs"): string {
-  if (unit === "lbs") {
-    const lbs = fromKg(kg, "lbs")!;
-    return `${Math.round(lbs * 10) / 10} lbs`;
-  }
-  return `${round2(kg)} kg`;
-}
 
 function computeSessionComparison(
   current: WorkoutSession,
@@ -901,6 +893,7 @@ export default function SummaryPage() {
       {insightExercise && (
         <ExerciseInsightSheet
           exerciseName={insightExercise}
+          workingUnit={workingUnit}
           onClose={() => setInsightExercise(null)}
         />
       )}

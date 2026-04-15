@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSessions } from "@/lib/sessions";
+import { fmtW } from "@/lib/units";
 import {
   getExerciseInsights,
   topSetOf,
@@ -13,9 +14,11 @@ import {
 export function ExerciseInsightSheet({
   exerciseName,
   onClose,
+  workingUnit = "kg",
 }: {
   exerciseName: string;
   onClose: () => void;
+  workingUnit?: "kg" | "lbs";
 }) {
   const [insights, setInsights] = useState<ExerciseInsightsData | null>(null);
 
@@ -64,7 +67,7 @@ export function ExerciseInsightSheet({
               <div className="flex flex-col">
                 <span className="text-[11px] text-neutral-500 tracking-wide">Last session</span>
                 <span className="text-xl font-semibold tracking-tight text-white">
-                  {lastTop ? formatSet(lastTop) : "—"}
+                  {lastTop ? formatSet(lastTop, workingUnit, insights?.isPlates) : "—"}
                 </span>
               </div>
               {/* Secondary: best + heaviest inline */}
@@ -73,14 +76,16 @@ export function ExerciseInsightSheet({
                   Best:{" "}
                   <span className="text-neutral-300 font-medium">
                     {insights.bestSet
-                      ? `${insights.bestSet.weight}kg × ${insights.bestSet.reps}`
+                      ? `${insights.isPlates ? `${insights.bestSet.weight} plates` : fmtW(insights.bestSet.weight, workingUnit)} × ${insights.bestSet.reps}`
                       : "—"}
                   </span>
                 </span>
                 <span>
                   Heaviest:{" "}
                   <span className="text-neutral-300 font-medium">
-                    {insights.bestWeight !== null ? `${insights.bestWeight}kg` : "—"}
+                    {insights.bestWeight !== null
+                      ? insights.isPlates ? `${insights.bestWeight} plates` : fmtW(insights.bestWeight, workingUnit)
+                      : "—"}
                   </span>
                 </span>
               </div>
@@ -94,7 +99,7 @@ export function ExerciseInsightSheet({
                     key={i}
                     className={`text-sm ${set === lastTop ? "text-white font-medium" : "text-neutral-500"}`}
                   >
-                    {formatSet(set)}
+                    {formatSet(set, workingUnit, insights.isPlates)}
                   </p>
                 ))}
               </Section>
@@ -104,7 +109,7 @@ export function ExerciseInsightSheet({
             {insights.previousSession && (
               <Section label={`Previous — ${shortDate(insights.previousSession.date)}`}>
                 <p className="text-sm text-neutral-400">
-                  {prevTop ? formatSet(prevTop) : "—"}
+                  {prevTop ? formatSet(prevTop, workingUnit, insights.isPlates) : "—"}
                 </p>
               </Section>
             )}
@@ -116,7 +121,7 @@ export function ExerciseInsightSheet({
                 return (
                   <div key={i} className="flex items-center justify-between">
                     <span className="text-sm text-neutral-600">{shortDate(snap.date)}</span>
-                    <span className="text-sm text-neutral-400">{top ? formatSet(top) : "—"}</span>
+                    <span className="text-sm text-neutral-400">{top ? formatSet(top, workingUnit, insights.isPlates) : "—"}</span>
                   </div>
                 );
               })}

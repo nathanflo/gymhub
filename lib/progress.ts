@@ -9,6 +9,7 @@ import { BodyweightEntry } from "@/types/bodyweight";
 import { PersonalRecord } from "@/types/progress";
 import { TimelineEntry } from "@/types/timeline";
 import { WorkoutSession, WorkoutExercise } from "@/types/session";
+import { resolveKg, fmtW } from "@/lib/units";
 
 // ─── Personal Records ─────────────────────────────────────────────────────────
 
@@ -156,7 +157,10 @@ export function getTimeline(
  *   duration_only: "5 min" (single) or "3×2 min" (uniform) or "2 min, 3 min" (varied)
  *   freeform:      freeformNote text (caller prepends exercise name)
  */
-export function formatExerciseSummary(exercise: WorkoutExercise): string {
+export function formatExerciseSummary(
+  exercise: WorkoutExercise,
+  workingUnit: "kg" | "lbs" = "kg"
+): string {
   const { sets } = exercise;
   const mode = exercise.mode ?? "weight_reps";
 
@@ -186,21 +190,36 @@ export function formatExerciseSummary(exercise: WorkoutExercise): string {
 
   // weight_reps (default)
   if (!sets.length) return "";
-  const unit = exercise.unit ?? "kg";
+  const isPlates = (exercise.unit ?? "kg") === "plates";
 
   const repValues = sets.map((s) => s.reps ?? 0);
   const minReps = Math.min(...repValues);
   const maxReps = Math.max(...repValues);
   const repStr = minReps === maxReps ? String(minReps) : `${minReps}–${maxReps}`;
 
-  // Round weights to 1dp to avoid float noise, then deduplicate + sort
-  const roundedWeights = sets
-    .map((s) => (s.weight !== undefined ? Math.round(s.weight * 10) / 10 : null))
-    .filter((w): w is number => w !== null);
-  const uniqueWeights = [...new Set(roundedWeights)].sort((a, b) => a - b);
-  const weightStr = uniqueWeights
-    .map((w) => (w % 1 === 0 ? String(w) : w.toFixed(1)))
-    .join(",");
+  if (isPlates) {
+    // Keep raw plate counts unchanged
+    const roundedWeights = sets
+      .map((s) => (s.weight !== undefined ? Math.round(s.weight * 10) / 10 : null))
+      .filter((w): w is number => w !== null);
+    const uniqueWeights = [...new Set(roundedWeights)].sort((a, b) => a - b);
+    const weightStr = uniqueWeights
+      .map((w) => (w % 1 === 0 ? String(w) : w.toFixed(1)))
+      .join(",");
+    return `${sets.length}×${repStr} (${weightStr} plates)`;
+  }
 
-  return `${sets.length}×${repStr} (${weightStr} ${unit})`;
+  // Resolve to canonical kg then format with shared fmtW for consistent unit display
+  const resolvedKgs = sets
+    .map((s) => (s.weight !== undefined ? resolveKg(s.weight, exercise.unit, exercise._canonicalKg) : null))
+    .filter((kg): kg is number => kg !== null);
+
+  if (!resolvedKgs.length) return `${sets.length}×${repStr}`;
+
+  // Sort numerically, deduplicate, then format — dedup after formatting handles 2.5 lb rounding collisions
+  const sortedUnique = [...new Set(resolvedKgs.map((kg) => Math.round(kg * 1000) / 1000))].sort((a, b) => a - b);
+  const uniqueFormatted = [...new Set(sortedUnique.map((kg) => fmtW(kg, workingUnit)))];
+  const weightStr = uniqueFormatted.join(", ");
+
+  return `${sets.length}×${repStr} (${weightStr})`;
 }

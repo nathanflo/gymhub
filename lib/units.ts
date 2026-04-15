@@ -40,3 +40,18 @@ export function resolveKg(
   if (canonical) return weight;
   return toKg(weight, unit);
 }
+
+/**
+ * Format a canonical-kg value for display in the user's working unit.
+ * lbs values are rounded to the nearest 2.5 lbs (display-only; stored data unchanged).
+ * Use this everywhere individual weights are shown to the user.
+ */
+export function fmtW(kg: number, unit: "kg" | "lbs"): string {
+  if (unit === "lbs") {
+    const raw = fromKg(kg, "lbs")!;
+    const rounded = Math.round(raw / 2.5) * 2.5;
+    const display = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+    return `${display} lbs`;
+  }
+  return `${round2(kg)} kg`;
+}
