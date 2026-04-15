@@ -16,6 +16,8 @@ import { getWeatherGuidance } from "@/lib/weatherGuidance";
 // Prevents re-geocoding on every navigation for users without stored lat/lon.
 const legacyGeoCache = new Map<string, { lat: number; lon: number }>();
 import { getActiveProgram, getCurrentWorkoutInfo, advanceActiveProgram, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
+import { computeMilestone, getSeenMilestones, markMilestoneSeen, Milestone } from "@/lib/milestones";
+import MilestoneCard from "@/components/home/MilestoneCard";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
 import { WellnessEntry } from "@/types/wellness";
@@ -100,6 +102,7 @@ export default function HomePage() {
   const [insight, setInsight] = useState<string>("Ready when you are");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [activeProgram, setActiveProgramState] = useState<ActiveProgram | null>(null);
+  const [milestone, setMilestone] = useState<Milestone>(null);
   const [activeDraft, setActiveDraft] = useState<{ session: { title?: string }; startTime: string; isPaused?: boolean; pausedOffset?: number; pauseStartedAt?: number | null } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -176,6 +179,7 @@ export default function HomePage() {
         setInsight("thanks for being here early :)");
       }
       setRecentSessions(sessions.slice(0, 2));
+      setMilestone(computeMilestone(sessions, getSeenMilestones()));
 
       // Safety net: if the current program day was already completed recently but
       // advanceActiveProgram() was never called (e.g. resume-path bug, pre-fix session),
@@ -332,6 +336,11 @@ export default function HomePage() {
     return `/log?program=1&programTitle=${encodeURIComponent(info.name)}`;
   }
 
+  function handleDismissMilestone() {
+    if (milestone) markMilestoneSeen(milestone.id);
+    setMilestone(null);
+  }
+
   return (
     <main className="px-6 pt-6 flex flex-col gap-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
       {/* Anniversary glow — fixed to viewport top so it covers nav + hero with no gap */}
@@ -380,6 +389,15 @@ export default function HomePage() {
               </p>
             )}
           </div>
+        )}
+
+        {/* Milestone recognition card */}
+        {milestone && (
+          <MilestoneCard
+            title={milestone.title}
+            subtitle={milestone.subtitle}
+            onDismiss={handleDismissMilestone}
+          />
         )}
 
         {/* Primary CTA — in-progress card if draft exists, else normal button */}
