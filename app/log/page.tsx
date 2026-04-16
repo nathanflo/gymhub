@@ -148,13 +148,16 @@ function LogPageInner() {
         getTodayBodyweight(),
       ]);
 
+      // Fetch session history once — shared by templateId and recId branches for prefilling.
+      const sessions = (templateId || recId) ? await getSessions() : [];
+
       if (fromId) {
         const session = await getSessionById(fromId);
         if (session) {
           setInitialState({ ...sessionToFormState(session), notes: "", bodyweight: "" });
         }
       } else if (templateId) {
-        const [templates, sessions] = await Promise.all([getTemplates(), getSessions()]);
+        const templates = await getTemplates();
         const template = templates.find((t) => t.id === templateId);
         if (template) {
           if (template.workoutType === "Yoga") {
@@ -172,7 +175,6 @@ function LogPageInner() {
         const rec = RECOMMENDED_TEMPLATES.find((t) => t.id === recId);
         if (rec) {
           const template = recommendedToWorkoutTemplate(rec);
-          const sessions = await getSessions();
           const { exercises, anyPrefilled } = prefillTemplateFromHistory(template, sessions);
           setInitialState(templateToFormState({ ...template, exercises }));
           setLoadedFromTemplate(anyPrefilled);
