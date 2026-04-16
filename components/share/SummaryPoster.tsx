@@ -41,11 +41,12 @@ const SummaryPoster = forwardRef<HTMLDivElement, SummaryPosterProps>(
     },
     ref
   ) => {
+    // ── Yoga content ──────────────────────────────────────────────────────────
     if (isYoga) {
-      return (
+      const inner = (
         <div
-          ref={ref}
-          className={`flex flex-col items-center gap-0 w-full max-w-sm mb-20${shareMode ? " bg-stone-100" : ""}`}
+          className="flex flex-col items-center w-full"
+          style={shareMode ? { maxWidth: 320 } : undefined}
         >
           <p className="text-indigo-400 text-xs font-bold tracking-[0.2em] uppercase mb-8">FloForm</p>
           <h1 className="text-5xl font-black text-indigo-900 text-center">Yoga</h1>
@@ -76,12 +77,39 @@ const SummaryPoster = forwardRef<HTMLDivElement, SummaryPosterProps>(
           <p className="text-xs text-stone-400 text-center mt-8">floform.fit</p>
         </div>
       );
+
+      if (shareMode) {
+        return (
+          <div
+            ref={ref}
+            style={{
+              width: 360,
+              height: 640,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#f5f5f4",
+              overflow: "hidden",
+              boxSizing: "border-box",
+            }}
+          >
+            {inner}
+          </div>
+        );
+      }
+
+      return (
+        <div ref={ref} className="flex flex-col items-center gap-0 w-full max-w-sm mb-20">
+          {inner}
+        </div>
+      );
     }
 
-    return (
+    // ── Strength / Run content ────────────────────────────────────────────────
+    const inner = (
       <div
-        ref={ref}
-        className={`flex flex-col items-center gap-0 w-full max-w-sm my-auto py-10${shareMode ? " bg-neutral-950" : ""}`}
+        className="flex flex-col items-center w-full py-10"
+        style={shareMode ? { maxWidth: 320 } : undefined}
       >
         <p className="text-indigo-400/60 text-xs font-bold tracking-[0.2em] uppercase mb-6">FloForm</p>
         <h1 className="text-5xl font-black text-white text-center">{session.title}</h1>
@@ -162,6 +190,32 @@ const SummaryPoster = forwardRef<HTMLDivElement, SummaryPosterProps>(
           </div>
         )}
         <p className="text-xs text-neutral-500 text-center mt-10">floform.fit</p>
+      </div>
+    );
+
+    if (shareMode) {
+      return (
+        <div
+          ref={ref}
+          style={{
+            width: 360,
+            height: 640,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#0a0a0a",
+            overflow: "hidden",
+            boxSizing: "border-box",
+          }}
+        >
+          {inner}
+        </div>
+      );
+    }
+
+    return (
+      <div ref={ref} className="flex flex-col items-center gap-0 w-full max-w-sm my-auto py-10">
+        {inner}
       </div>
     );
   }
