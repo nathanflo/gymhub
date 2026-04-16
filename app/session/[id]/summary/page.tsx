@@ -598,7 +598,7 @@ export default function SummaryPage() {
       )}
 
       {/* ── Normal Page ────────────────────────────────────────────────── */}
-      <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+      <main className="flex flex-col flex-1 px-6 pt-8 gap-6 animate-[floFormFadeUp_150ms_ease-out_both]" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         {/* Top bar */}
         <div className="flex items-center justify-between">
           <button

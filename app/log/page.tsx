@@ -237,8 +237,22 @@ function LogPageInner() {
 
   // Show skeleton while checking draft or loading initial state
   if (!loaded || draftData === "unchecked") return (
-    <main className="flex flex-col flex-1 px-6 py-8 gap-6">
-      <div className="h-8 w-40 rounded-lg bg-neutral-800/60 animate-pulse" />
+    <main className="flex flex-col flex-1 px-6 pt-8 gap-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+      <div className="h-8 w-52 rounded-lg bg-neutral-800/60 animate-pulse" />
+      <div className="flex flex-col gap-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rounded-xl bg-neutral-800/60 border border-neutral-700/40 p-3 flex flex-col gap-3 animate-pulse">
+            <div className="h-4 w-36 rounded bg-neutral-700/60" />
+            <div className="flex gap-2">
+              <div className="h-9 flex-1 rounded-lg bg-neutral-700/40" />
+              <div className="h-9 flex-1 rounded-lg bg-neutral-700/40" />
+              <div className="h-9 w-9 rounded-lg bg-neutral-700/30" />
+            </div>
+            <div className="h-7 w-16 rounded-lg bg-neutral-700/30" />
+          </div>
+        ))}
+      </div>
+      <div className="h-14 w-full rounded-2xl bg-neutral-800/50 animate-pulse mt-auto" />
     </main>
   );
 

@@ -25,10 +25,29 @@ type ListItem =
   | { kind: "session"; data: WorkoutSession }
   | { kind: "legacy"; data: Workout };
 
+function WorkoutSkeletonCard() {
+  return (
+    <div className="rounded-2xl bg-neutral-800/60 border border-neutral-700/40 p-4 flex flex-col gap-3 animate-pulse">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col gap-2 flex-1">
+          <div className="h-4 w-36 rounded bg-neutral-700/60" />
+          <div className="h-3 w-24 rounded bg-neutral-700/40" />
+        </div>
+        <div className="h-3 w-14 rounded bg-neutral-700/40" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="h-3 w-48 rounded bg-neutral-700/40" />
+        <div className="h-3 w-40 rounded bg-neutral-700/30" />
+      </div>
+    </div>
+  );
+}
+
 export default function WorkoutsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [loading, setLoading] = useState(true);
   const [workingUnit] = useState<"kg" | "lbs">(() => {
     if (typeof window === "undefined") return "kg";
     return (localStorage.getItem("gymhub-workingUnit") as "kg" | "lbs") ?? "kg";
@@ -39,6 +58,7 @@ export default function WorkoutsPage() {
       const [sessions, workouts] = await Promise.all([getSessions(), getWorkouts()]);
       setSessions(sessions);
       setWorkouts(workouts);
+      setLoading(false);
     }
     load();
   }, []);
@@ -87,13 +107,23 @@ export default function WorkoutsPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Workouts</h1>
         <p className="text-sm text-neutral-400 mt-1">
-          {totalCount === 0
+          {loading
+            ? <span className="inline-block h-3 w-24 rounded bg-neutral-700/50 animate-pulse align-middle" />
+            : totalCount === 0
             ? "No workouts logged yet."
             : `${totalCount} entr${totalCount > 1 ? "ies" : "y"} logged`}
         </p>
       </div>
 
-      {items.length === 0 && (
+      {loading && (
+        <div className="flex flex-col gap-4">
+          <WorkoutSkeletonCard />
+          <WorkoutSkeletonCard />
+          <WorkoutSkeletonCard />
+        </div>
+      )}
+
+      {!loading && items.length === 0 && (
         <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center">
           <p className="text-neutral-500">Start by logging your first session.</p>
           <button
@@ -106,29 +136,31 @@ export default function WorkoutsPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 pb-8">
-        {items.map((item) =>
-          item.kind === "session" ? (
-            <SessionCard
-              key={item.data.id}
-              session={item.data}
-              workingUnit={workingUnit}
-              onDuplicate={() => router.push(`/log?from=${item.data.id}`)}
-              onEdit={() => router.push(`/edit/${item.data.id}`)}
-              onDelete={() => handleDeleteSession(item.data.id)}
-              onSaveAsTemplate={() => handleSaveAsTemplate(item.data)}
-              onSummary={() => router.push(`/session/${item.data.id}/summary`)}
-            />
-          ) : (
-            <LegacyWorkoutCard
-              key={item.data.id}
-              workout={item.data}
-              onEdit={() => router.push(`/edit/${item.data.id}`)}
-              onDelete={() => handleDeleteLegacy(item.data.id)}
-            />
-          )
-        )}
-      </div>
+      {!loading && items.length > 0 && (
+        <div className="flex flex-col gap-4 pb-8 animate-[floFormFadeUp_200ms_ease-out_both]">
+          {items.map((item) =>
+            item.kind === "session" ? (
+              <SessionCard
+                key={item.data.id}
+                session={item.data}
+                workingUnit={workingUnit}
+                onDuplicate={() => router.push(`/log?from=${item.data.id}`)}
+                onEdit={() => router.push(`/edit/${item.data.id}`)}
+                onDelete={() => handleDeleteSession(item.data.id)}
+                onSaveAsTemplate={() => handleSaveAsTemplate(item.data)}
+                onSummary={() => router.push(`/session/${item.data.id}/summary`)}
+              />
+            ) : (
+              <LegacyWorkoutCard
+                key={item.data.id}
+                workout={item.data}
+                onEdit={() => router.push(`/edit/${item.data.id}`)}
+                onDelete={() => handleDeleteLegacy(item.data.id)}
+              />
+            )
+          )}
+        </div>
+      )}
     </main>
   );
 }
