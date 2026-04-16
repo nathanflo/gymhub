@@ -16,18 +16,20 @@ function toDisplayStr(canonicalKg: string, unit: WeightUnit): string {
 
 export const SetRow = memo(function SetRow({
   set,
+  setIdx,
   mode,
   displayUnit,
   canRemove,
-  onFieldChange,
+  onSetField,
   onTypeChange,
   onRemove,
 }: {
   set: DraftSet;
+  setIdx: number;
   mode: TrackingMode;
   displayUnit: WeightUnit;
   canRemove: boolean;
-  onFieldChange: (field: keyof DraftSet, v: string) => void;
+  onSetField: (setIdx: number, field: keyof DraftSet, v: string) => void;
   onTypeChange: (type: "warmup" | "drop" | undefined) => void;
   onRemove: () => void;
 }) {
@@ -89,13 +91,13 @@ export const SetRow = memo(function SetRow({
 
   const commitWeight = (raw: string) => {
     if (raw === "") {
-      onFieldChange("weight", "");
+      onSetField(setIdx, "weight", "");
       return;
     }
     const n = parseFloat(raw);
     if (!isNaN(n)) {
       const kg = displayUnit === "lbs" ? round2(n * 0.453592) : n;
-      onFieldChange("weight", String(kg));
+      onSetField(setIdx, "weight", String(kg));
     }
     // Invalid string: no commit — leave draft unchanged
   };
@@ -121,7 +123,7 @@ export const SetRow = memo(function SetRow({
           inputMode="numeric"
           placeholder="0"
           value={set.reps}
-          onChange={(e) => onFieldChange("reps", e.target.value)}
+          onChange={(e) => onSetField(setIdx, "reps", e.target.value)}
           className={setInputClass}
         />
         {typeBtn}
@@ -138,7 +140,7 @@ export const SetRow = memo(function SetRow({
           inputMode="numeric"
           placeholder="0"
           value={set.reps}
-          onChange={(e) => onFieldChange("reps", e.target.value)}
+          onChange={(e) => onSetField(setIdx, "reps", e.target.value)}
           className={setInputClass}
         />
         {typeBtn}
@@ -154,7 +156,7 @@ export const SetRow = memo(function SetRow({
         type="text"
         placeholder="e.g. 5 min or 45s"
         value={set.duration}
-        onChange={(e) => onFieldChange("duration", e.target.value)}
+        onChange={(e) => onSetField(setIdx, "duration", e.target.value)}
         className={setInputClass}
       />
       {removeBtn}

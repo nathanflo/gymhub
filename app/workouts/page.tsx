@@ -10,7 +10,7 @@
  * - AI insights button ("Show squat trend")
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSessions, deleteSession } from "@/lib/sessions";
 import { getWorkouts, deleteWorkout } from "@/lib/storage";
@@ -135,7 +135,7 @@ export default function WorkoutsPage() {
 
 // ─── Session card ─────────────────────────────────────────────────────────────
 
-function SessionCard({
+const SessionCard = memo(function SessionCard({
   session,
   workingUnit,
   onDuplicate,
@@ -335,7 +335,7 @@ function SessionCard({
     )}
     </>
   );
-}
+});
 
 // ─── Legacy workout card ──────────────────────────────────────────────────────
 

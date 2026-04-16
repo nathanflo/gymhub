@@ -234,6 +234,7 @@ export function SessionForm({
   const [swapIndex, setSwapIndex] = useState<number | null>(null);
   const [insightExercise, setInsightExercise] = useState<string | null>(null);
   const [liveIntervalActive, setLiveIntervalActive] = useState(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getExerciseLibrary().then(setExerciseLibrary);
@@ -247,13 +248,18 @@ export function SessionForm({
   const lastSetByName    = sessionIndex.lastSetByName;
   const lastTopSetByName = sessionIndex.lastTopSetByName;
 
-  // Autosave draft to localStorage as soon as workout has started
+  // Autosave draft to localStorage — debounced 500 ms to avoid a write on every keystroke.
   useEffect(() => {
     if (!startTime) return;
-    localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime, activeExIdx, isPaused, pausedOffset, pauseStartedAt }));
-    setSavedPulse(true);
-    const t = setTimeout(() => setSavedPulse(false), 2000);
-    return () => clearTimeout(t);
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      localStorage.setItem("activeWorkoutDraft", JSON.stringify({ version: 1, session: form, startTime, activeExIdx, isPaused, pausedOffset, pauseStartedAt }));
+      setSavedPulse(true);
+      setTimeout(() => setSavedPulse(false), 2000);
+    }, 500);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
   }, [form, startTime, isPaused, pausedOffset, pauseStartedAt]);
 
   // Live timer

@@ -286,10 +286,11 @@ export const ExerciseBlock = memo(function ExerciseBlock({
             <SetRow
               key={setIdx}
               set={set}
+              setIdx={setIdx}
               mode={mode}
               displayUnit={unit}
               canRemove={exercise.sets.length > 1}
-              onFieldChange={(field, v) => onSetField(setIdx, field, v)}
+              onSetField={onSetField}
               onTypeChange={(type) => onSetType(setIdx, type)}
               onRemove={() => onRemoveSet(setIdx)}
             />

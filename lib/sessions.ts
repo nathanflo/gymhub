@@ -6,6 +6,18 @@
 import { WorkoutSession } from "@/types/session";
 import { supabase } from "./supabase";
 
+// ── In-memory session cache ───────────────────────────────────────────────────
+// Avoids redundant Supabase round-trips within a single page session.
+// Invalidated whenever a session is written or deleted.
+let _cache: WorkoutSession[] | null = null;
+let _cacheAt = 0;
+const CACHE_TTL = 30_000; // 30 s
+
+export function invalidateSessions(): void {
+  _cache = null;
+  _cacheAt = 0;
+}
+
 function toSession(row: any): WorkoutSession {
   const isYoga = row.workout_type === "Yoga";
   const isRun = row.workout_type === "Run";
@@ -44,8 +56,11 @@ function toSession(row: any): WorkoutSession {
   };
 }
 
-/** Read all sessions, newest first. */
+/** Read all sessions, newest first. Results cached for 30 s; call invalidateSessions() after writes. */
 export async function getSessions(): Promise<WorkoutSession[]> {
+  const now = Date.now();
+  if (_cache && now - _cacheAt < CACHE_TTL) return _cache;
+
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return [];
@@ -57,7 +72,9 @@ export async function getSessions(): Promise<WorkoutSession[]> {
     .order("date", { ascending: false });
 
   if (error || !data) return [];
-  return data.map(toSession);
+  _cache = data.map(toSession);
+  _cacheAt = now;
+  return _cache;
 }
 
 /** Read a single session by id. */
@@ -115,11 +132,13 @@ export async function saveSession(session: WorkoutSession): Promise<void> {
       : session.exercises,
   });
   if (error) throw new Error(`Failed to save session: ${error.message}`);
+  invalidateSessions();
 }
 
 /** Remove a session by id. */
 export async function deleteSession(id: string): Promise<void> {
   await supabase.from("workout_sessions").delete().eq("id", id);
+  invalidateSessions();
 }
 
 /** Replace an existing session by id (preserves original date). */
@@ -159,4 +178,5 @@ export async function updateSession(updated: WorkoutSession): Promise<void> {
     })
     .eq("id", updated.id);
   if (error) throw new Error(`Failed to update session: ${error.message}`);
+  invalidateSessions();
 }
