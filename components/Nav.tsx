@@ -19,6 +19,7 @@ const links = [
       p.startsWith("/edit") ||
       p.startsWith("/session"),
   },
+  { href: "/performance", label: "Perf", match: (p: string) => p.startsWith("/performance") },
   { href: "/wellness", label: "Wellness", match: (p: string) => p.startsWith("/wellness") },
   { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") },
 ];
