@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { getSessions } from "@/lib/sessions";
 import { WorkoutSession } from "@/types/session";
 import { resolveKg, fmtW } from "@/lib/units";
@@ -259,9 +259,9 @@ function Skeleton() {
 export default function ExerciseDrilldownPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug } = params;
+  const { slug } = use(params);
   const exerciseKey = slug.replace(/-/g, " ");
 
   const [loading, setLoading] = useState(true);
