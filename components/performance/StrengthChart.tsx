@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { StrengthSeries } from "@/lib/performance";
 import { fmtW } from "@/lib/units";
@@ -259,12 +260,17 @@ export default function StrengthChart({
         </div>
       )}
 
-      {/* Stat rows */}
+      {/* Stat rows — tap to drill down into that exercise */}
       <div className="flex flex-col gap-3 pt-1 border-t border-neutral-800/70">
         {series.map((s, idx) => {
           const isPrimary = idx === exIdx;
+          const slug = s.name.trim().toLowerCase().replace(/\s+/g, "-");
           return (
-            <div key={s.name} className="flex items-center justify-between">
+            <Link
+              key={s.name}
+              href={`/performance/exercise/${slug}`}
+              className="flex items-center justify-between active:opacity-60 transition-opacity"
+            >
               <span className={`text-sm ${isPrimary ? "text-white" : "text-neutral-400"}`}>
                 {s.name}
               </span>
@@ -286,7 +292,7 @@ export default function StrengthChart({
               ) : (
                 <span className="text-sm text-neutral-700">—</span>
               )}
-            </div>
+            </Link>
           );
         })}
       </div>
