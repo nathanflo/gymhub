@@ -13,6 +13,8 @@ export type MonthlyGain = {
   name: string;
   isCompound: boolean;
   pctChange: number;
+  /** Prior-window max kg — used as guardrail to suppress tiny-baseline % gains. */
+  startKg: number;
 };
 
 export type StrengthSeries = {
@@ -37,7 +39,7 @@ function isCompound(name: string): boolean {
   return COMPOUND_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-function isoDateStr(date: Date): string {
+export function isoDateStr(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
@@ -176,7 +178,7 @@ export function deriveMonthlyGains(sessions: WorkoutSession[]): MonthlyGain[] {
     if (!pri) continue;
     const pct = Math.round(((rec.maxKg - pri.maxKg) / pri.maxKg) * 100);
     if (pct <= 0) continue;
-    gains.push({ name: rec.displayName, isCompound: isCompound(rec.displayName), pctChange: pct });
+    gains.push({ name: rec.displayName, isCompound: isCompound(rec.displayName), pctChange: pct, startKg: pri.maxKg });
   }
   return gains;
 }
@@ -197,9 +199,12 @@ export function deriveHeroInsight(
     return name.split(" ").slice(0, 2).join(" ").toLowerCase();
   }
 
-  // 1. Compound monthly gain ≥ 5%
+  // Guardrail: suppress % gains on exercises with tiny starting weight (< 20 kg)
+  const MIN_START_KG = 20;
+
+  // 1. Compound monthly gain ≥ 5%, min start weight
   const bestCompoundMonthly = monthlyGains
-    .filter((g) => g.isCompound && g.pctChange >= 5)
+    .filter((g) => g.isCompound && g.pctChange >= 5 && g.startKg >= MIN_START_KG)
     .sort((a, b) => b.pctChange - a.pctChange)[0] ?? null;
   if (bestCompoundMonthly) {
     return {
@@ -208,9 +213,9 @@ export function deriveHeroInsight(
     };
   }
 
-  // 2. Any monthly gain ≥ 5%
+  // 2. Any monthly gain ≥ 5%, min start weight
   const bestMonthly = monthlyGains
-    .filter((g) => g.pctChange >= 5)
+    .filter((g) => g.pctChange >= 5 && g.startKg >= MIN_START_KG)
     .sort((a, b) => b.pctChange - a.pctChange)[0] ?? null;
   if (bestMonthly) {
     return {
@@ -219,9 +224,9 @@ export function deriveHeroInsight(
     };
   }
 
-  // 3. Compound all-time gain > 0
+  // 3. Compound all-time gain > 0, min start weight
   const bestCompoundAllTime = strengthSeries
-    .filter((s) => isCompound(s.name) && (s.pctChange ?? 0) > 0)
+    .filter((s) => isCompound(s.name) && (s.pctChange ?? 0) > 0 && s.points[0].valueKg >= MIN_START_KG)
     .sort((a, b) => (b.pctChange ?? 0) - (a.pctChange ?? 0))[0] ?? null;
   if (bestCompoundAllTime) {
     return {
@@ -230,9 +235,9 @@ export function deriveHeroInsight(
     };
   }
 
-  // 4. Any all-time gain > 0
+  // 4. Any all-time gain > 0, min start weight
   const bestAllTime = strengthSeries
-    .filter((s) => (s.pctChange ?? 0) > 0)
+    .filter((s) => (s.pctChange ?? 0) > 0 && s.points[0].valueKg >= MIN_START_KG)
     .sort((a, b) => (b.pctChange ?? 0) - (a.pctChange ?? 0))[0] ?? null;
   if (bestAllTime) {
     return {
@@ -279,4 +284,81 @@ export function deriveHeroInsight(
   if (total >= 10) return { headline: `${total} sessions logged`, subtext: null };
 
   return { headline: "building your foundation", subtext: null };
+}
+
+// ─── Recent PRs ───────────────────────────────────────────────────────────────
+
+export type PREvent = {
+  exerciseName: string;
+  valueKg: number;
+  date: string;
+};
+
+/**
+ * Walk sessions oldest-first, tracking the running max weight per exercise.
+ * Emit a PREvent each time a new max is set (after the exercise's first appearance).
+ * Returns the most recent `limit` PRs, newest first.
+ */
+export function deriveRecentPRs(sessions: WorkoutSession[], limit = 5): PREvent[] {
+  const sorted = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
+  const runningMax = new Map<string, number>();
+  const prs: PREvent[] = [];
+
+  for (const session of sorted) {
+    for (const ex of session.exercises) {
+      if ((ex.mode ?? "weight_reps") !== "weight_reps") continue;
+      if ((ex.unit ?? "kg") === "plates") continue;
+      const key = ex.name.trim().toLowerCase();
+      let maxKg = 0;
+      for (const set of ex.sets) {
+        if (set.type === "warmup" || set.weight === undefined) continue;
+        const kg = resolveKg(set.weight, ex.unit, ex._canonicalKg);
+        if (kg !== null && kg > maxKg) maxKg = kg;
+      }
+      if (maxKg <= 0) continue;
+      const prev = runningMax.get(key) ?? 0;
+      if (maxKg > prev) {
+        if (prev > 0) {
+          prs.push({ exerciseName: ex.name.trim(), valueKg: maxKg, date: session.date.slice(0, 10) });
+        }
+        runningMax.set(key, maxKg);
+      }
+    }
+  }
+
+  return prs.reverse().slice(0, limit);
+}
+
+// ─── Pattern insights ─────────────────────────────────────────────────────────
+
+/**
+ * Derive 1–3 short behavioral insight strings from session history.
+ * Returns empty array if insufficient data (< 5 sessions).
+ */
+export function derivePatternInsights(sessions: WorkoutSession[]): string[] {
+  if (sessions.length < 5) return [];
+  const insights: string[] = [];
+
+  // 1. Most common training day of week
+  const dayCounts = new Array(7).fill(0);
+  for (const s of sessions) {
+    dayCounts[new Date(s.date).getDay()]++;
+  }
+  const maxCount = Math.max(...dayCounts);
+  const maxDay = dayCounts.indexOf(maxCount);
+  const DAY_NAMES = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+  insights.push(`most active on ${DAY_NAMES[maxDay]}`);
+
+  // 2. This week vs monthly average
+  const today = new Date();
+  const weekStart = isoDateStr(weekMonday(today));
+  const d30 = isoDateStr(new Date(today.getTime() - 30 * 86400000));
+  const thisWeek = sessions.filter((s) => s.date.slice(0, 10) >= weekStart).length;
+  const monthCount = sessions.filter((s) => s.date.slice(0, 10) >= d30).length;
+  const weeklyAvg = monthCount / 4;
+  if (thisWeek > 0 && thisWeek > Math.ceil(weeklyAvg)) {
+    insights.push(`${thisWeek} sessions this week — above your average`);
+  }
+
+  return insights.slice(0, 3);
 }

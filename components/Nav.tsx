@@ -67,7 +67,7 @@ export default function Nav() {
                 <Link
                   key={href}
                   href="/login"
-                  className="px-1.5 py-2 rounded-lg text-xs transition-colors text-indigo-400 hover:text-indigo-300"
+                  className="px-1 py-2 rounded-lg text-sm transition-colors text-indigo-400 hover:text-indigo-300"
                 >
                   {label}
                 </Link>
@@ -77,7 +77,7 @@ export default function Nav() {
               <Link
                 key={href}
                 href={href}
-                className={`px-1.5 py-2 rounded-lg text-xs transition-colors ${
+                className={`px-1 py-2 rounded-lg text-sm transition-colors ${
                   isActive
                     ? "text-white font-semibold"
                     : "text-neutral-400 hover:text-neutral-200"

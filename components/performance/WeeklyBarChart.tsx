@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { WorkoutSession } from "@/types/session";
 
 const NUM_WEEKS = 12;
@@ -25,6 +26,9 @@ function weekMonday(date: Date): string {
 }
 
 export default function WeeklyBarChart({ sessions }: { sessions: WorkoutSession[] }) {
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
   // Build last NUM_WEEKS week-start dates (Mon), oldest first
   const today = new Date();
   const weekStarts: string[] = [];
@@ -46,9 +50,37 @@ export default function WeeklyBarChart({ sessions }: { sessions: WorkoutSession[
   const counts = weekStarts.map((wk) => countMap.get(wk) ?? 0);
   const maxCount = Math.max(...counts, 1);
   const currentWeek = weekMonday(today);
-
   const barW = (SVG_W - (NUM_WEEKS - 1) * BAR_GAP) / NUM_WEEKS;
   const maxBarH = SVG_H - PAD_TOP - PAD_BOT;
+
+  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * SVG_W;
+    // Find nearest bar center
+    const nearest = weekStarts.reduce((best, _, i) => {
+      const barCenterX = i * (barW + BAR_GAP) + barW / 2;
+      const bestCenterX = best * (barW + BAR_GAP) + barW / 2;
+      return Math.abs(barCenterX - svgX) < Math.abs(bestCenterX - svgX) ? i : best;
+    }, 0);
+    setActiveIdx(nearest);
+  }
+
+  function handlePointerLeave() {
+    setActiveIdx(null);
+  }
+
+  // Tooltip position
+  const activeCenterX =
+    activeIdx !== null
+      ? ((activeIdx * (barW + BAR_GAP) + barW / 2) / SVG_W) * 100
+      : null;
+
+  const activeCount = activeIdx !== null ? counts[activeIdx] : null;
+  const activeWeek = activeIdx !== null ? weekStarts[activeIdx] : null;
+  const activeWeekLabel = activeWeek
+    ? new Date(activeWeek).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
 
   return (
     <div className="rounded-2xl bg-neutral-900 border border-neutral-800 px-5 py-5 flex flex-col gap-4">
@@ -57,38 +89,61 @@ export default function WeeklyBarChart({ sessions }: { sessions: WorkoutSession[
         <p className="text-xs text-neutral-600">weekly sessions</p>
       </div>
 
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        width="100%"
-        aria-hidden="true"
-        style={{ display: "block" }}
-      >
-        {weekStarts.map((wk, i) => {
-          const count = counts[i];
-          const barH = count === 0 ? 2 : Math.max(4, (count / maxCount) * maxBarH);
-          const x = i * (barW + BAR_GAP);
-          const y = SVG_H - PAD_BOT - barH;
-          const isCurrentWeek = wk === currentWeek;
-          const fill = count === 0
-            ? "#1c1c1c"
-            : isCurrentWeek
-            ? "#6366f1"
-            : "#404040";
+      <div className="relative" style={{ paddingTop: activeIdx !== null ? 44 : 0, transition: "padding-top 120ms ease" }}>
+        {/* Tooltip */}
+        {activeIdx !== null && activeCenterX !== null && (
+          <div
+            className="absolute pointer-events-none z-10 rounded-lg bg-neutral-800 border border-neutral-700/60 px-2.5 py-1.5 text-center"
+            style={{ left: `${activeCenterX}%`, top: 0, transform: "translateX(-50%)" }}
+          >
+            <p className="text-xs font-semibold text-white">
+              {activeCount} session{activeCount !== 1 ? "s" : ""}
+            </p>
+            {activeWeekLabel && (
+              <p className="text-[9px] text-neutral-500">{activeWeekLabel}</p>
+            )}
+          </div>
+        )}
 
-          return (
-            <rect
-              key={wk}
-              x={x.toFixed(1)}
-              y={y.toFixed(1)}
-              width={barW.toFixed(1)}
-              height={barH.toFixed(1)}
-              rx="2"
-              fill={fill}
-              opacity={count === 0 ? 0.6 : 1}
-            />
-          );
-        })}
-      </svg>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+          width="100%"
+          aria-hidden="true"
+          style={{ display: "block", touchAction: "none" }}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+        >
+          {weekStarts.map((wk, i) => {
+            const count = counts[i];
+            const barH = count === 0 ? 2 : Math.max(4, (count / maxCount) * maxBarH);
+            const x = i * (barW + BAR_GAP);
+            const y = SVG_H - PAD_BOT - barH;
+            const isCurrentWeek = wk === currentWeek;
+            const isActive = activeIdx === i;
+
+            const fill =
+              count === 0
+                ? "#1c1c1c"
+                : isCurrentWeek || isActive
+                ? "#6366f1"
+                : "#404040";
+
+            return (
+              <rect
+                key={wk}
+                x={x.toFixed(1)}
+                y={y.toFixed(1)}
+                width={barW.toFixed(1)}
+                height={barH.toFixed(1)}
+                rx="2"
+                fill={fill}
+                opacity={count === 0 ? 0.6 : isActive && !isCurrentWeek ? 0.7 : 1}
+              />
+            );
+          })}
+        </svg>
+      </div>
 
       {/* Minimal x-axis hint */}
       <div className="flex justify-between px-0.5">
