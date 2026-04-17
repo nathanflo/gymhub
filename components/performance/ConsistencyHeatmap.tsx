@@ -68,11 +68,14 @@ export default function ConsistencyHeatmap({ sessions }: { sessions: WorkoutSess
         <p className="text-[10px] font-semibold tracking-[0.25em] uppercase text-neutral-600">
           Consistency
         </p>
-        {totalThisWeek > 0 && (
-          <span className="text-xs text-neutral-500">
-            {totalThisWeek} this week
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] text-neutral-600">Last 16 weeks</span>
+          {totalThisWeek > 0 && (
+            <span className="text-xs text-neutral-500">
+              {totalThisWeek} this week
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Heatmap grid — 7 rows (Mon–Sun), NUM_WEEKS columns */}

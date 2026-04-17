@@ -113,29 +113,38 @@ export default function StrengthChart({ series }: { series: StrengthSeries[] }) 
             );
           })()}
 
+          {/* Time anchors */}
+          <div className="flex justify-between px-0.5 -mt-2">
+            <span className="text-[9px] text-neutral-700">
+              {new Date(primary.points[0].date).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}
+            </span>
+            <span className="text-[9px] text-neutral-700">Now</span>
+          </div>
+
           {/* Stat row per exercise */}
           <div className="flex flex-col gap-2.5 pt-1 border-t border-neutral-800/70">
-            {series.map((s) => (
-              <div key={s.name} className="flex items-center justify-between">
-                <span className="text-sm text-neutral-400">{s.name}</span>
-                {s.pctChange !== null ? (
-                  <span
-                    className={`text-sm font-semibold tabular-nums ${
-                      s.pctChange > 0
-                        ? "text-indigo-400"
-                        : s.pctChange < 0
-                        ? "text-red-400"
-                        : "text-neutral-500"
-                    }`}
-                  >
-                    {s.pctChange > 0 ? "+" : ""}
-                    {s.pctChange}%
-                  </span>
-                ) : (
-                  <span className="text-sm text-neutral-700">—</span>
-                )}
-              </div>
-            ))}
+            {series.map((s, idx) => {
+              const isPrimary = idx === 0;
+              return (
+                <div key={s.name} className="flex items-center justify-between">
+                  <span className={`text-sm ${isPrimary ? "text-white" : "text-neutral-400"}`}>{s.name}</span>
+                  {s.pctChange !== null ? (
+                    <span
+                      className={`text-sm font-semibold tabular-nums ${
+                        isPrimary
+                          ? s.pctChange > 0 ? "text-indigo-400" : s.pctChange < 0 ? "text-red-400" : "text-neutral-500"
+                          : "text-neutral-500"
+                      }`}
+                    >
+                      {s.pctChange > 0 ? "+" : ""}
+                      {s.pctChange}%
+                    </span>
+                  ) : (
+                    <span className="text-sm text-neutral-700">—</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

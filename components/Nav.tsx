@@ -17,10 +17,10 @@ const links = [
       p.startsWith("/templates") ||
       p.startsWith("/log") ||
       p.startsWith("/edit") ||
-      p.startsWith("/session"),
+      p.startsWith("/session") ||
+      p.startsWith("/wellness"),
   },
-  { href: "/performance", label: "Perf", match: (p: string) => p.startsWith("/performance") },
-  { href: "/wellness", label: "Wellness", match: (p: string) => p.startsWith("/wellness") },
+  { href: "/performance", label: "Performance", match: (p: string) => p.startsWith("/performance") },
   { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") },
 ];
 
@@ -67,7 +67,7 @@ export default function Nav() {
                 <Link
                   key={href}
                   href="/login"
-                  className="px-2 py-2 rounded-lg text-sm transition-colors text-indigo-400 hover:text-indigo-300"
+                  className="px-1.5 py-2 rounded-lg text-xs transition-colors text-indigo-400 hover:text-indigo-300"
                 >
                   {label}
                 </Link>
@@ -77,7 +77,7 @@ export default function Nav() {
               <Link
                 key={href}
                 href={href}
-                className={`px-2 py-2 rounded-lg text-sm transition-colors ${
+                className={`px-1.5 py-2 rounded-lg text-xs transition-colors ${
                   isActive
                     ? "text-white font-semibold"
                     : "text-neutral-400 hover:text-neutral-200"

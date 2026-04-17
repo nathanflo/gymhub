@@ -6,6 +6,7 @@ import { getBodyweightEntries } from "@/lib/bodyweight";
 import {
   deriveStrengthSeries,
   deriveHeroInsight,
+  deriveMonthlyGains,
 } from "@/lib/performance";
 import { WorkoutSession } from "@/types/session";
 import { BodyweightEntry } from "@/types/bodyweight";
@@ -20,7 +21,7 @@ import WeeklyBarChart from "@/components/performance/WeeklyBarChart";
 function LoadingSkeleton() {
   return (
     <main
-      className="flex flex-col flex-1 px-6 pt-8 gap-6"
+      className="flex flex-col flex-1 px-6 pt-8 gap-8"
       style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
     >
       {/* Hero */}
@@ -62,16 +63,20 @@ export default function PerformancePage() {
     () => deriveStrengthSeries(sessions),
     [sessions]
   );
+  const monthlyGains = useMemo(
+    () => deriveMonthlyGains(sessions),
+    [sessions]
+  );
   const heroInsight = useMemo(
-    () => deriveHeroInsight(sessions, bwEntries, strengthSeries),
-    [sessions, bwEntries, strengthSeries]
+    () => deriveHeroInsight(sessions, bwEntries, strengthSeries, monthlyGains),
+    [sessions, bwEntries, strengthSeries, monthlyGains]
   );
 
   if (loading) return <LoadingSkeleton />;
 
   return (
     <main
-      className="flex flex-col flex-1 px-6 pt-8 gap-6"
+      className="flex flex-col flex-1 px-6 pt-8 gap-8"
       style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
     >
       <div className="animate-[floFormFadeUp_200ms_ease-out_both]">

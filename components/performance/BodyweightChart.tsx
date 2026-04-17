@@ -50,16 +50,21 @@ export default function BodyweightChart({ entries }: { entries: BodyweightEntry[
         <p className="text-[10px] font-semibold tracking-[0.25em] uppercase text-neutral-600">
           Bodyweight
         </p>
-        {delta !== null && (
-          <span
-            className={`text-xs font-semibold tabular-nums ${
-              delta > 0 ? "text-neutral-400" : delta < 0 ? "text-indigo-400" : "text-neutral-600"
-            }`}
-          >
-            {delta > 0 ? "+" : ""}
-            {delta} kg
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {sorted.length >= 2 && (
+            <span className="text-[9px] text-neutral-600">past 30 days</span>
+          )}
+          {delta !== null && (
+            <span
+              className={`text-xs font-semibold tabular-nums ${
+                delta > 0 ? "text-neutral-400" : delta < 0 ? "text-indigo-400" : "text-neutral-600"
+              }`}
+            >
+              {delta > 0 ? "+" : ""}
+              {delta} kg
+            </span>
+          )}
+        </div>
       </div>
 
       {sorted.length < 2 ? (
@@ -75,6 +80,7 @@ export default function BodyweightChart({ entries }: { entries: BodyweightEntry[
           const areaClose = `L ${W} ${H} L 0 ${H} Z`;
 
           return (
+            <>
             <svg
               viewBox={`0 0 ${W} ${H}`}
               width="100%"
@@ -119,6 +125,13 @@ export default function BodyweightChart({ entries }: { entries: BodyweightEntry[
                 </>
               )}
             </svg>
+
+            {/* Time anchors */}
+            <div className="flex justify-between px-0.5 -mt-2">
+              <span className="text-[9px] text-neutral-700">Start</span>
+              <span className="text-[9px] text-neutral-700">Now</span>
+            </div>
+            </>
           );
         })()
       )}

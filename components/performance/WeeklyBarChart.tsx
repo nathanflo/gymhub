@@ -52,9 +52,10 @@ export default function WeeklyBarChart({ sessions }: { sessions: WorkoutSession[
 
   return (
     <div className="rounded-2xl bg-neutral-900 border border-neutral-800 px-5 py-5 flex flex-col gap-4">
-      <p className="text-[10px] font-semibold tracking-[0.25em] uppercase text-neutral-600">
-        Weekly
-      </p>
+      <div className="flex flex-col gap-1">
+        <p className="text-[10px] font-semibold tracking-[0.25em] uppercase text-neutral-600">Weekly</p>
+        <p className="text-xs text-neutral-600">weekly sessions</p>
+      </div>
 
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}

@@ -8,6 +8,7 @@ const subPages = [
   { href: "/progress",  label: "Progress",  subtitle: "Bodyweight & personal records" },
   { href: "/templates", label: "Templates", subtitle: "Saved workout templates" },
   { href: "/programs",  label: "Programs",  subtitle: "Follow a simple routine" },
+  { href: "/wellness",  label: "Wellness",  subtitle: "Sleep, mood, hydration" },
 ];
 
 function workoutTimeAgo(isoString: string): string {
