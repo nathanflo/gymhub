@@ -291,6 +291,7 @@ export function deriveHeroInsight(
 export type PREvent = {
   exerciseName: string;
   valueKg: number;
+  reps: number | null;
   date: string;
 };
 
@@ -310,16 +311,20 @@ export function deriveRecentPRs(sessions: WorkoutSession[], limit = 5): PREvent[
       if ((ex.unit ?? "kg") === "plates") continue;
       const key = ex.name.trim().toLowerCase();
       let maxKg = 0;
+      let maxReps: number | null = null;
       for (const set of ex.sets) {
         if (set.type === "warmup" || set.weight === undefined) continue;
         const kg = resolveKg(set.weight, ex.unit, ex._canonicalKg);
-        if (kg !== null && kg > maxKg) maxKg = kg;
+        if (kg !== null && kg > maxKg) {
+          maxKg = kg;
+          maxReps = set.reps ?? null;
+        }
       }
       if (maxKg <= 0) continue;
       const prev = runningMax.get(key) ?? 0;
       if (maxKg > prev) {
         if (prev > 0) {
-          prs.push({ exerciseName: ex.name.trim(), valueKg: maxKg, date: session.date.slice(0, 10) });
+          prs.push({ exerciseName: ex.name.trim(), valueKg: maxKg, reps: maxReps, date: session.date.slice(0, 10) });
         }
         runningMax.set(key, maxKg);
       }
