@@ -3,7 +3,7 @@ import { WorkoutSession } from "@/types/session";
 export type Milestone = {
   id: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
 } | null;
 
 const STORAGE_KEY = "gymhub-seen-milestones";
@@ -33,7 +33,6 @@ export function markMilestoneSeen(id: string): void {
 function computeStreakDays(sessions: WorkoutSession[]): number {
   if (sessions.length === 0) return 0;
   const dates = new Set(sessions.map((s) => s.date.slice(0, 10)));
-  // Start from the most recent session date and walk backwards
   const mostRecent = sessions[0].date.slice(0, 10); // sessions sorted desc
   let streak = 0;
   let cursor = new Date(mostRecent);
@@ -64,10 +63,14 @@ function computeWeekCount(sessions: WorkoutSession[]): number {
 /**
  * Return the highest-priority unseen milestone the user currently qualifies for.
  *
- * Priority: streak > weekly > session count.
+ * Priority: streak → weekly → return → session count.
  *
  * Session-count milestones use exact equality (sessions.length === N) so the
- * card only appears at the exact moment the threshold is reached, not indefinitely after.
+ * card only appears at the exact moment the threshold is reached.
+ *
+ * Return milestone fires when the most recent session is today and the gap
+ * from the previous session is ≥ 5 days. ID is date-scoped so a future
+ * return event produces a fresh unseen ID.
  */
 export function computeMilestone(
   sessions: WorkoutSession[],
@@ -80,42 +83,58 @@ export function computeMilestone(
   const weekCount = computeWeekCount(sessions);
 
   // ── 1. Streak milestones ─────────────────────────────────────────────────
-  const streakMilestones: Array<[number, string, string]> = [
-    [14, "14-day streak.", "This is real consistency."],
-    [7,  "7-day streak.",  "Locked in."],
-    [3,  "3-day streak.",  "Keep it flowing."],
+  const streakMilestones: Array<[number, string]> = [
+    [14, "14-day consistency"],
+    [7,  "7-day consistency"],
+    [3,  "3-day consistency"],
   ];
-  for (const [threshold, title, subtitle] of streakMilestones) {
+  for (const [threshold, title] of streakMilestones) {
     if (streak >= threshold) {
       const id = `streak-${threshold}`;
-      if (!seenIds.has(id)) return { id, title, subtitle };
+      if (!seenIds.has(id)) return { id, title };
     }
   }
 
   // ── 2. Weekly milestones ─────────────────────────────────────────────────
-  const weeklyMilestones: Array<[number, string, string]> = [
-    [5, "5 workouts this week.", "You showed up."],
-    [3, "3 workouts this week.", "Nice consistency."],
+  const weeklyMilestones: Array<[number, string]> = [
+    [5, "5 this week"],
+    [3, "3 this week"],
   ];
-  for (const [threshold, title, subtitle] of weeklyMilestones) {
+  for (const [threshold, title] of weeklyMilestones) {
     if (weekCount >= threshold) {
       const id = `week-${threshold}`;
-      if (!seenIds.has(id)) return { id, title, subtitle };
+      if (!seenIds.has(id)) return { id, title };
     }
   }
 
-  // ── 3. Session count milestones (exact match only — recency rule) ────────
-  const sessionMilestones: Array<[number, string, string]> = [
-    [50, "50 sessions.",    "This is becoming part of you."],
-    [25, "25 sessions.",    "You're building something real."],
-    [10, "10 sessions in.", "This rhythm is working."],
-    [5,  "5 sessions in.",  "You're building momentum."],
-    [3,  "3 sessions in.",  "A strong start."],
+  // ── 3. Return milestone ──────────────────────────────────────────────────
+  if (total >= 2) {
+    const today = new Date().toISOString().slice(0, 10);
+    const mostRecentDate = sessions[0].date.slice(0, 10);
+    if (mostRecentDate === today) {
+      const gapDays = Math.round(
+        (new Date(sessions[0].date).getTime() - new Date(sessions[1].date).getTime()) /
+        86400000
+      );
+      if (gapDays >= 5) {
+        const id = `return-${today}`;
+        if (!seenIds.has(id)) return { id, title: "Back again" };
+      }
+    }
+  }
+
+  // ── 4. Session count milestones (exact match only — recency rule) ────────
+  const sessionMilestones: Array<[number, string]> = [
+    [50, "50 sessions"],
+    [25, "25 sessions"],
+    [10, "10 sessions"],
+    [5,  "5 sessions"],
+    [3,  "3 sessions"],
   ];
-  for (const [threshold, title, subtitle] of sessionMilestones) {
+  for (const [threshold, title] of sessionMilestones) {
     if (total === threshold) {
       const id = `sessions-${threshold}`;
-      if (!seenIds.has(id)) return { id, title, subtitle };
+      if (!seenIds.has(id)) return { id, title };
     }
   }
 
