@@ -146,8 +146,26 @@ export default function HomePage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      let user = session?.user ?? null;
+
+      // Offline + expired token: getSession() returns null with a network error
+      // because it tried and failed to refresh. The session is still in
+      // localStorage — use it so the user isn't unexpectedly signed out when
+      // reopening the app without network. autoRefreshToken will retry on reconnect.
+      if (!user && sessionError) {
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
+              const raw = localStorage.getItem(key);
+              if (raw) user = (JSON.parse(raw) as { user?: typeof user }).user ?? null;
+              break;
+            }
+          }
+        } catch {}
+      }
+
       setSignedIn(!!user);
 
       const [sessions, bwEntries, todayWellness, profileResult] = await Promise.all([
