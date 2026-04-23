@@ -146,22 +146,23 @@ export default function HomePage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       let user = session?.user ?? null;
 
-      // Offline + expired token: getSession() returns null with a network error
-      // because it tried and failed to refresh. The session is still in
-      // localStorage — use it so the user isn't unexpectedly signed out when
-      // reopening the app without network. autoRefreshToken will retry on reconnect.
-      if (!user && sessionError) {
+      // Offline fallback: if getSession() returned no user (expired token, network
+      // error, or any transient failure), read the stored session from
+      // @capacitor/preferences directly. Supabase does NOT remove the token on a
+      // retryable network error, so if the user was signed in, the token is still
+      // there. On deliberate sign-out, Supabase calls removeItem() which deletes
+      // the key, so this fallback correctly returns null for signed-out users.
+      if (!user) {
         try {
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
-              const raw = localStorage.getItem(key);
-              if (raw) user = (JSON.parse(raw) as { user?: typeof user }).user ?? null;
-              break;
-            }
+          const { Preferences } = await import("@capacitor/preferences");
+          const { keys } = await Preferences.keys();
+          const authKey = keys.find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+          if (authKey) {
+            const { value } = await Preferences.get({ key: authKey });
+            if (value) user = (JSON.parse(value) as { user?: typeof user }).user ?? null;
           }
         } catch {}
       }
