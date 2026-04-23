@@ -167,6 +167,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
           onChange={(e) => onNameChange(e.target.value)}
           onFocus={() => { setShowSuggestions(true); onNameFocus(); }}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
           className={`${inputClass} py-2 text-sm font-medium`}
         />
         <button
