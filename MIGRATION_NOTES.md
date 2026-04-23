@@ -8,6 +8,14 @@
 
 ## What changed
 
+### lib/supabase.ts
+- Replaced bare `createClient` with a custom `authStorage` adapter backed by `@capacitor/preferences` (NSUserDefaults on iOS)
+- On web, `@capacitor/preferences` automatically falls back to localStorage — no behavior change for web/Vercel
+- `typeof window === "undefined"` guard prevents execution during Next.js static build
+
+### package.json
+- Added `@capacitor/preferences@^8.0.1`
+
 ### next.config.ts
 - Added `output: "export"` — tells Next.js to produce static HTML files in `out/`
 - Added `trailingSlash: true` — required for Capacitor file-based routing (e.g., `session/_/summary/index.html`)
@@ -76,6 +84,8 @@ None. `npx tsc --noEmit` passed with zero errors before and after the migration.
 4. **`@vercel/analytics`** — `app/layout.tsx` includes Vercel Analytics. In a static Capacitor bundle, these outbound requests may be blocked by App Transport Security or fail silently. The app will not crash, but analytics data from the iOS app will not be reported. Low priority — does not affect user experience.
 
 5. **Offline behavior** — The static bundle means all UI assets load from disk. Supabase data calls (sessions, profile) still require network. Verify that Supabase client gracefully handles offline scenarios (it should, as it uses browser-native fetch with localStorage fallback patterns).
+
+   **Force-kill session persistence is now handled by `@capacitor/preferences`.** Auth tokens are stored in NSUserDefaults (iOS), which is flushed synchronously before suspend/kill. Previously, WKWebView localStorage was used, which relies on an async SQLite WAL that may not flush on SIGKILL. Expected behavior: sign in → force-kill → reopen → still signed in. Test this explicitly on device.
 
 6. **`trailingSlash: true` and existing deep links** — Any external links or bookmarks to the Vercel deployment use non-trailing-slash URLs. These are unaffected (Vercel continues to serve the web version). Within the Capacitor app, all navigation uses `router.push()` so trailing slash routing is handled transparently.
 
