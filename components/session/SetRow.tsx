@@ -104,6 +104,13 @@ export const SetRow = memo(function SetRow({
     // Invalid string: no commit — leave draft unchanged
   };
 
+  // Dismiss the keyboard when the user presses Return/Done/Enter.
+  // iOS number pads show a "Done" key; this ensures it actually closes the keyboard
+  // across all keyboard types and resize modes.
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+  };
+
   if (mode === "weight_reps") {
     return (
       <div className="flex gap-2 items-center">
@@ -118,6 +125,7 @@ export const SetRow = memo(function SetRow({
             commitWeight(e.target.value);
           }}
           onChange={(e) => setLocalWeight(e.target.value)}
+          onKeyDown={blurOnEnter}
           className={setInputClass}
         />
         <input
@@ -126,6 +134,7 @@ export const SetRow = memo(function SetRow({
           placeholder="0"
           value={set.reps}
           onChange={(e) => onSetField(setIdx, "reps", e.target.value)}
+          onKeyDown={blurOnEnter}
           className={setInputClass}
         />
         {typeBtn}
@@ -143,6 +152,7 @@ export const SetRow = memo(function SetRow({
           placeholder="0"
           value={set.reps}
           onChange={(e) => onSetField(setIdx, "reps", e.target.value)}
+          onKeyDown={blurOnEnter}
           className={setInputClass}
         />
         {typeBtn}
@@ -159,6 +169,7 @@ export const SetRow = memo(function SetRow({
         placeholder="e.g. 5 min or 45s"
         value={set.duration}
         onChange={(e) => onSetField(setIdx, "duration", e.target.value)}
+        onKeyDown={blurOnEnter}
         className={setInputClass}
       />
       {removeBtn}

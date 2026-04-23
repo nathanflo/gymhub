@@ -1,51 +1,35 @@
-// Thin wrapper around @capacitor/haptics.
-// All functions are async, no-op silently on web or if the plugin is unavailable.
-// Dynamic imports defer the plugin bundle until first use.
+// Static imports — module is loaded once at bundle time.
+// Each function is synchronous from the call site (fire-and-forget).
+// The Capacitor bridge handles the native async call internally.
+// .catch(() => {}) suppresses unhandled rejections on web/unsupported devices.
+import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 
-export async function hapticLight() {
+export function hapticLight() {
   if (typeof window === "undefined") return;
-  try {
-    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-    await Haptics.impact({ style: ImpactStyle.Light });
-  } catch {}
+  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
 }
 
-export async function hapticMedium() {
+export function hapticMedium() {
   if (typeof window === "undefined") return;
-  try {
-    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-    await Haptics.impact({ style: ImpactStyle.Medium });
-  } catch {}
+  Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
 }
 
-export async function hapticHeavy() {
+export function hapticHeavy() {
   if (typeof window === "undefined") return;
-  try {
-    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-    await Haptics.impact({ style: ImpactStyle.Heavy });
-  } catch {}
+  Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
 }
 
-export async function hapticSuccess() {
+export function hapticSuccess() {
   if (typeof window === "undefined") return;
-  try {
-    const { Haptics, NotificationType } = await import("@capacitor/haptics");
-    await Haptics.notification({ type: NotificationType.Success });
-  } catch {}
+  Haptics.notification({ type: NotificationType.Success }).catch(() => {});
 }
 
-export async function hapticWarning() {
+export function hapticWarning() {
   if (typeof window === "undefined") return;
-  try {
-    const { Haptics, NotificationType } = await import("@capacitor/haptics");
-    await Haptics.notification({ type: NotificationType.Warning });
-  } catch {}
+  Haptics.notification({ type: NotificationType.Warning }).catch(() => {});
 }
 
-export async function hapticSelection() {
+export function hapticSelection() {
   if (typeof window === "undefined") return;
-  try {
-    const { Haptics } = await import("@capacitor/haptics");
-    await Haptics.selectionChanged();
-  } catch {}
+  Haptics.selectionChanged().catch(() => {});
 }

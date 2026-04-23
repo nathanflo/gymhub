@@ -1,15 +1,19 @@
 // Initialize keyboard behavior for the Capacitor iOS app.
-// KeyboardResize.Body: the <body> resizes when the keyboard appears, pushing
-// content up. Correct for a scrollable log form. The alternative (KeyboardResize.Native)
-// resizes the WKWebView itself, which causes jank with the fixed-position bottom nav.
-// setScroll({ isDisabled: false }): allows scrolling while the keyboard is visible,
-// so SetRow inputs at the bottom of the form remain reachable.
+//
+// KeyboardResize.Native — iOS natively resizes the WKWebView when the keyboard appears.
+// The app uses svh units and env(safe-area-inset-*) throughout, which respond correctly
+// to a resized viewport. KeyboardResize.Body (previous setting) shrank the <body> instead,
+// which conflicted with the min-h-[100svh] content wrapper and left the keyboard covering
+// inputs without scrolling them into view.
+//
+// setScroll({ isDisabled: false }) — allow scrolling while the keyboard is visible so
+// inputs at the bottom of a long form remain reachable.
+import { Keyboard, KeyboardResize } from "@capacitor/keyboard";
 
 export async function initKeyboard() {
   if (typeof window === "undefined") return;
   try {
-    const { Keyboard, KeyboardResize } = await import("@capacitor/keyboard");
-    await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
+    await Keyboard.setResizeMode({ mode: KeyboardResize.Native });
     await Keyboard.setScroll({ isDisabled: false });
   } catch {}
 }
