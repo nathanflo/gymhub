@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Future: add image domains, env vars, etc. here
+  output: "export",
+  trailingSlash: true,
+  images: {
+    // next/image optimization is incompatible with static export.
+    // Must be disabled; images served via <img> or external CDN.
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;

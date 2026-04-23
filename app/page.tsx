@@ -147,7 +147,22 @@ export default function HomePage() {
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+      let user = session?.user ?? null;
+
+      // Offline fallback: when getSession() returns null (typically because the
+      // access token expired and the refresh endpoint is unreachable), read the
+      // user object from the @capacitor/preferences backup written by the
+      // onAuthStateChange listener in lib/supabase.ts. This keeps the user
+      // visually signed in while offline. The backup key is removed on explicit
+      // sign-out, so this never shows a stale session after the user logs out.
+      if (!user) {
+        try {
+          const { Preferences } = await import("@capacitor/preferences");
+          const { value } = await Preferences.get({ key: "gymhub-auth-user" });
+          if (value) user = JSON.parse(value);
+        } catch {}
+      }
+
       setSignedIn(!!user);
 
       const [sessions, bwEntries, todayWellness, profileResult] = await Promise.all([
