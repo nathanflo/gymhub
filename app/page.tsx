@@ -17,6 +17,7 @@ import { getWeatherGuidance } from "@/lib/weatherGuidance";
 const legacyGeoCache = new Map<string, { lat: number; lon: number }>();
 import { getActiveProgram, getCurrentWorkoutInfo, advanceActiveProgram, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { computeMilestone, getSeenMilestones, markMilestoneSeen, Milestone } from "@/lib/milestones";
+import { hapticSuccess } from "@/lib/haptics";
 import MilestoneCard from "@/components/home/MilestoneCard";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
@@ -226,6 +227,11 @@ export default function HomePage() {
     }
     load();
   }, []);
+
+  // Fire once when a milestone first appears (null → truthy transition).
+  useEffect(() => {
+    if (milestone) hapticSuccess();
+  }, [milestone]);
 
   useEffect(() => {
     if (!city) return;

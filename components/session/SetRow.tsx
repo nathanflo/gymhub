@@ -4,6 +4,7 @@ import { memo, useRef, useState, useEffect } from "react";
 import { DraftSet } from "./types";
 import { TrackingMode, WeightUnit } from "@/types/session";
 import { round2 } from "@/lib/units";
+import { hapticLight } from "@/lib/haptics";
 
 /** Convert a canonical-kg draft value to a display string in the given unit. */
 function toDisplayStr(canonicalKg: string, unit: WeightUnit): string {
@@ -97,6 +98,7 @@ export const SetRow = memo(function SetRow({
     const n = parseFloat(raw);
     if (!isNaN(n)) {
       const kg = displayUnit === "lbs" ? round2(n * 0.453592) : n;
+      hapticLight();
       onSetField(setIdx, "weight", String(kg));
     }
     // Invalid string: no commit — leave draft unchanged

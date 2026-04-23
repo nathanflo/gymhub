@@ -11,6 +11,7 @@ import { generateSessionMessages, capitalize } from "@/lib/messaging";
 import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib/sessionIndex";
 import { resolveKg, round2, formatVolumeKg, fmtW } from "@/lib/units";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
+import { hapticSuccess } from "@/lib/haptics";
 import SummaryPoster from "@/components/share/SummaryPoster";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
@@ -451,6 +452,7 @@ export default function SummaryPage() {
       sessionIndex.sortedSessions.filter((s) => s.id !== session.id && s.date < session.date)
     );
     const prExercises = detectPRs(session, historicalBest);
+    if (prExercises.length > 0) hapticSuccess();
 
     const { title: headlineRaw, subtitle: sessionSubtitle } = generateSessionMessages(
       session, previousSession, allPriorSessions, prExercises.length, prExercises

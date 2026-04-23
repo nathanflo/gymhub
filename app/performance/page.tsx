@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSessions } from "@/lib/sessions";
+import { hapticSuccess } from "@/lib/haptics";
 import { getBodyweightEntries } from "@/lib/bodyweight";
 import {
   deriveStrengthSeries,
@@ -156,6 +157,7 @@ export default function PerformancePage() {
       const file = new File([blob], "floform-progress.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "My Progress — FloForm" });
+        hapticSuccess();
       } else {
         triggerDownload(dataUrl);
       }
