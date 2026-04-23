@@ -1,41 +1,40 @@
-import { createClient, SupportedStorage } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
-// Custom storage adapter backed by @capacitor/preferences (NSUserDefaults on iOS).
-// NSUserDefaults is flushed synchronously before the app is suspended/killed, so
-// session tokens survive WKWebView force-kills — unlike localStorage which relies
-// on an async SQLite WAL that may not flush before SIGKILL.
-//
-// On web (Next.js dev / Vercel), @capacitor/preferences falls back to localStorage
-// automatically, so this adapter is safe in all runtime contexts.
-//
-// The typeof window guard prevents execution during Next.js static build (SSR phase),
-// where neither localStorage nor Preferences is available.
-const authStorage: SupportedStorage = {
-  async getItem(key: string) {
-    if (typeof window === "undefined") return null;
-    const { Preferences } = await import("@capacitor/preferences");
-    const { value } = await Preferences.get({ key });
-    return value;
-  },
-  async setItem(key: string, value: string) {
-    if (typeof window === "undefined") return;
-    const { Preferences } = await import("@capacitor/preferences");
-    await Preferences.set({ key, value });
-  },
-  async removeItem(key: string) {
-    if (typeof window === "undefined") return;
-    const { Preferences } = await import("@capacitor/preferences");
-    await Preferences.remove({ key });
-  },
-};
-
-// createClient (from @supabase/supabase-js) uses localStorage by default in
-// browser environments. We override auth.storage with the Preferences adapter
-// so that auth tokens persist across force-kills on iOS.
+// createClient uses localStorage by default — works correctly in WKWebView/Capacitor
+// (capacitor:// scheme causes document.cookie writes to fail silently, so the
+// @supabase/ssr createBrowserClient is the wrong choice here).
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    auth: { storage: authStorage },
-  }
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// ─── Offline auth backup ───────────────────────────────────────────────────────
+//
+// localStorage-backed getSession() returns null when the access token has expired
+// and the device is offline (can't reach the Supabase token refresh endpoint).
+// In that case, app/page.tsx falls back to a copy of the user object stored in
+// @capacitor/preferences (NSUserDefaults on iOS) under "gymhub-auth-user".
+//
+// We keep this copy up to date via onAuthStateChange so it always reflects the
+// last known signed-in state. On deliberate sign-out the key is removed, so the
+// fallback correctly shows the login screen after an explicit logout.
+//
+// This runs only in the browser (typeof window check) so Next.js static build
+// is unaffected.
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    try {
+      const { Preferences } = await import("@capacitor/preferences");
+      if (session?.user) {
+        await Preferences.set({
+          key: "gymhub-auth-user",
+          value: JSON.stringify(session.user),
+        });
+      } else if (event === "SIGNED_OUT") {
+        await Preferences.remove({ key: "gymhub-auth-user" });
+      }
+    } catch {
+      // Preferences not available (plain web browser) — silent fail, not critical
+    }
+  });
+}

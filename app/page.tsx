@@ -149,21 +149,17 @@ export default function HomePage() {
       const { data: { session } } = await supabase.auth.getSession();
       let user = session?.user ?? null;
 
-      // Offline fallback: if getSession() returned no user (expired token, network
-      // error, or any transient failure), read the stored session from
-      // @capacitor/preferences directly. Supabase does NOT remove the token on a
-      // retryable network error, so if the user was signed in, the token is still
-      // there. On deliberate sign-out, Supabase calls removeItem() which deletes
-      // the key, so this fallback correctly returns null for signed-out users.
+      // Offline fallback: when getSession() returns null (typically because the
+      // access token expired and the refresh endpoint is unreachable), read the
+      // user object from the @capacitor/preferences backup written by the
+      // onAuthStateChange listener in lib/supabase.ts. This keeps the user
+      // visually signed in while offline. The backup key is removed on explicit
+      // sign-out, so this never shows a stale session after the user logs out.
       if (!user) {
         try {
           const { Preferences } = await import("@capacitor/preferences");
-          const { keys } = await Preferences.keys();
-          const authKey = keys.find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
-          if (authKey) {
-            const { value } = await Preferences.get({ key: authKey });
-            if (value) user = (JSON.parse(value) as { user?: typeof user }).user ?? null;
-          }
+          const { value } = await Preferences.get({ key: "gymhub-auth-user" });
+          if (value) user = JSON.parse(value);
         } catch {}
       }
 
