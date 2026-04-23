@@ -4,6 +4,7 @@ import { memo, useRef, useState, useEffect } from "react";
 import { DraftSet } from "./types";
 import { TrackingMode, WeightUnit } from "@/types/session";
 import { round2 } from "@/lib/units";
+import { hapticLight } from "@/lib/haptics";
 
 /** Convert a canonical-kg draft value to a display string in the given unit. */
 function toDisplayStr(canonicalKg: string, unit: WeightUnit): string {
@@ -97,9 +98,17 @@ export const SetRow = memo(function SetRow({
     const n = parseFloat(raw);
     if (!isNaN(n)) {
       const kg = displayUnit === "lbs" ? round2(n * 0.453592) : n;
+      hapticLight();
       onSetField(setIdx, "weight", String(kg));
     }
     // Invalid string: no commit — leave draft unchanged
+  };
+
+  // Dismiss the keyboard when the user presses Return/Done/Enter.
+  // iOS number pads show a "Done" key; this ensures it actually closes the keyboard
+  // across all keyboard types and resize modes.
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
   };
 
   if (mode === "weight_reps") {
@@ -116,6 +125,7 @@ export const SetRow = memo(function SetRow({
             commitWeight(e.target.value);
           }}
           onChange={(e) => setLocalWeight(e.target.value)}
+          onKeyDown={blurOnEnter}
           className={setInputClass}
         />
         <input
@@ -124,6 +134,7 @@ export const SetRow = memo(function SetRow({
           placeholder="0"
           value={set.reps}
           onChange={(e) => onSetField(setIdx, "reps", e.target.value)}
+          onKeyDown={blurOnEnter}
           className={setInputClass}
         />
         {typeBtn}
@@ -141,6 +152,7 @@ export const SetRow = memo(function SetRow({
           placeholder="0"
           value={set.reps}
           onChange={(e) => onSetField(setIdx, "reps", e.target.value)}
+          onKeyDown={blurOnEnter}
           className={setInputClass}
         />
         {typeBtn}
@@ -157,6 +169,7 @@ export const SetRow = memo(function SetRow({
         placeholder="e.g. 5 min or 45s"
         value={set.duration}
         onChange={(e) => onSetField(setIdx, "duration", e.target.value)}
+        onKeyDown={blurOnEnter}
         className={setInputClass}
       />
       {removeBtn}

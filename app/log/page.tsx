@@ -10,6 +10,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveSession, getSessionById, getSessions } from "@/lib/sessions";
+import { hapticMedium } from "@/lib/haptics";
 import { getTemplates } from "@/lib/templates";
 import { RECOMMENDED_TEMPLATES, recommendedToWorkoutTemplate } from "@/lib/recommendedTemplates";
 import { WorkoutSession, WorkoutExercise } from "@/types/session";
@@ -196,6 +197,7 @@ function LogPageInner() {
     isSaving.current = true;
     try {
       await saveSession(session);
+      hapticMedium();
       if (session.bodyweight !== undefined && session.bodyweight > 0) {
         const todayBw = await getTodayBodyweight();
         if (todayBw !== session.bodyweight) {

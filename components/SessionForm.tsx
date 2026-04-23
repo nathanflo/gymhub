@@ -765,6 +765,7 @@ export function SessionForm({
             placeholder={isYoga ? "e.g. Morning Flow" : isRun ? "e.g. Morning Run" : "e.g. Chest / Biceps"}
             value={form.title}
             onChange={handleTopLevel}
+            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
             className={inputClass}
           />
         </Field>
@@ -817,6 +818,7 @@ export function SessionForm({
               placeholder="—"
               value={form.bodyweight}
               onChange={handleTopLevel}
+              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
               className={inputClass}
             />
           </Field>
