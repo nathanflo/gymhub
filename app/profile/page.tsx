@@ -50,7 +50,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      // getUser() always makes a live network request — fails offline unconditionally.
+      // Use getSession() (reads from localStorage storage) with a Preferences backup
+      // so previously-authenticated users are not redirected to login while offline.
+      const { data: { session } } = await supabase.auth.getSession();
+      let user = session?.user ?? null;
+      if (!user) {
+        try {
+          const { Preferences } = await import("@capacitor/preferences");
+          const { value } = await Preferences.get({ key: "gymhub-auth-user" });
+          if (value) user = JSON.parse(value);
+        } catch {}
+      }
       if (!user) {
         router.push("/login");
         return;
