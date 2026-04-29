@@ -7,7 +7,9 @@ import { getProfile, saveProfile } from "@/lib/profiles";
 import { UserProfile } from "@/types/profile";
 import { inputClass, selectClass, Field } from "@/components/Field";
 import { parseLocation, stringifyLocation, searchLocations, formatLocationLabel, LocationSearchResult, getAliasQueries } from "@/lib/location";
+import { hapticLight } from "@/lib/haptics";
 import { track, reset } from "@/lib/analytics";
+import { buildSupportMailto } from "@/lib/support";
 
 const emptyForm: UserProfile = {
   name: "",
@@ -32,6 +34,7 @@ function parseNum(s: string): number | null {
 export default function ProfilePage() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
   const [form, setForm] = useState<UserProfile>(emptyForm);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loaded, setLoaded] = useState(false);
@@ -68,6 +71,7 @@ export default function ProfilePage() {
         return;
       }
       setEmail(user.email ?? null);
+      setUserId(user.id);
       const profile = await getProfile();
       if (profile) {
         setForm(profile);
@@ -372,7 +376,15 @@ export default function ProfilePage() {
         {saveLabel}
       </button>
 
-      {/* Sign out */}
+      {/* Contact + Sign out */}
+      <a
+        href={buildSupportMailto(userId)}
+        onClick={() => { hapticLight(); track("contact_opened"); }}
+        className="w-full rounded-2xl bg-neutral-800 hover:bg-neutral-700 active:scale-95
+                   transition-all py-4 text-sm font-semibold text-neutral-300 text-center block"
+      >
+        Contact Support
+      </a>
       <button
         onClick={handleSignOut}
         className="w-full rounded-2xl bg-neutral-800 hover:bg-red-900/40 active:scale-95
@@ -380,7 +392,6 @@ export default function ProfilePage() {
       >
         Sign Out
       </button>
-      <p className="text-xs text-neutral-600 text-center">FloForm v1.15.1</p>
     </main>
   );
 }

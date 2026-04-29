@@ -9,6 +9,7 @@ export type EventName =
   | "app_launched"
   | "auth_signin"
   | "auth_signout"
+  | "contact_opened"
   | "milestone_dismissed"
   | "milestone_shown"
   | "performance_exercise_drilldown"
