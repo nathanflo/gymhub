@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version } = require("./package.json") as { version: string };
 
 const nextConfig: NextConfig = {
   output: "export",
@@ -9,6 +11,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   env: {
+    NEXT_PUBLIC_APP_VERSION: version,
     // Baked in at build time so the Capacitor static bundle always has a valid
     // redirectTo URL for password reset, regardless of runtime environment.
     // Falls back to the production domain if the env var is not set (e.g. local

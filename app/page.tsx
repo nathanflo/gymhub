@@ -18,6 +18,7 @@ const legacyGeoCache = new Map<string, { lat: number; lon: number }>();
 import { getActiveProgram, getCurrentWorkoutInfo, advanceActiveProgram, ActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { computeMilestone, getSeenMilestones, markMilestoneSeen, Milestone } from "@/lib/milestones";
 import { hapticSuccess } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
 import MilestoneCard from "@/components/home/MilestoneCard";
 import { RECOMMENDED_TEMPLATES } from "@/lib/recommendedTemplates";
 import { BodyweightEntry } from "@/types/bodyweight";
@@ -230,7 +231,10 @@ export default function HomePage() {
 
   // Fire once when a milestone first appears (null → truthy transition).
   useEffect(() => {
-    if (milestone) hapticSuccess();
+    if (milestone) {
+      hapticSuccess();
+      track("milestone_shown", { milestone_id: milestone.id, milestone_title: milestone.title });
+    }
   }, [milestone]);
 
   useEffect(() => {
@@ -358,6 +362,7 @@ export default function HomePage() {
   }
 
   function handleDismissMilestone() {
+    track("milestone_dismissed");
     if (milestone) markMilestoneSeen(milestone.id);
     setMilestone(null);
   }
@@ -517,6 +522,10 @@ export default function HomePage() {
             </div>
             <Link
               href={getProgramSessionUrl(programWorkoutInfo)}
+              onClick={() => track("program_day_launched", {
+                program_id: activeProgram?.id,
+                day_number: (activeProgram?.currentIndex ?? 0) + 1,
+              })}
               className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.96] active:brightness-110
                          transition-all duration-75 ease-out py-3 text-sm font-semibold text-white text-center"
             >

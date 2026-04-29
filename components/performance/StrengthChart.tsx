@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { StrengthSeries } from "@/lib/performance";
 import { fmtW } from "@/lib/units";
+import { track } from "@/lib/analytics";
 
 // ─── SVG helpers ──────────────────────────────────────────────────────────────
 
@@ -269,6 +270,7 @@ export default function StrengthChart({
             <Link
               key={s.name}
               href={`/performance/exercise/${slug}`}
+              onClick={() => track("performance_exercise_drilldown", { exercise_slug: slug, source: "strength_chart" })}
               className="flex items-center justify-between active:opacity-60 transition-opacity"
             >
               <span className={`text-sm ${isPrimary ? "text-white" : "text-neutral-400"}`}>

@@ -19,6 +19,7 @@ import { getTodayBodyweight, saveBodyweightEntry } from "@/lib/bodyweight";
 import { advanceActiveProgram, getActiveProgram, PROGRAMS, getCustomPrograms } from "@/lib/programs";
 import { SessionForm, SessionFormState, sessionToFormState, templateToFormState, emptySessionForm } from "@/components/SessionForm";
 import { resolveKg } from "@/lib/units";
+import { track } from "@/lib/analytics";
 
 type DraftData = {
   session: SessionFormState;
@@ -188,6 +189,9 @@ function LogPageInner() {
       }
 
       setLoaded(true);
+      track("session_started", {
+        source: fromId ? "resume" : templateId ? "template" : recId ? "recommended" : programParam ? "program" : "blank",
+      });
     }
     load();
   }, [fromId, templateId, recId, programTitle]);
@@ -197,6 +201,11 @@ function LogPageInner() {
     isSaving.current = true;
     try {
       await saveSession(session);
+      track("session_saved", {
+        exercise_count: session.exercises.length,
+        set_count: session.exercises.reduce((n, e) => n + e.sets.length, 0),
+      });
+      track("session_completed");
       hapticMedium();
       if (session.bodyweight !== undefined && session.bodyweight > 0) {
         const todayBw = await getTodayBodyweight();
@@ -275,6 +284,7 @@ function LogPageInner() {
             </div>
             <button
               onClick={() => {
+                track("workout_resumed");
                 setOverrideInitial(draftData.session);
                 setResumeStartTime(draftData.startTime);
                 setResumeActiveExIdx(draftData.activeExIdx ?? 0);

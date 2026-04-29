@@ -7,6 +7,7 @@ import { getProfile, saveProfile } from "@/lib/profiles";
 import { UserProfile } from "@/types/profile";
 import { inputClass, selectClass, Field } from "@/components/Field";
 import { parseLocation, stringifyLocation, searchLocations, formatLocationLabel, LocationSearchResult, getAliasQueries } from "@/lib/location";
+import { track, reset } from "@/lib/analytics";
 
 const emptyForm: UserProfile = {
   name: "",
@@ -173,6 +174,8 @@ export default function ProfilePage() {
   }
 
   async function handleSignOut() {
+    track("auth_signout");
+    reset();
     await supabase.auth.signOut();
     router.push("/");
   }
