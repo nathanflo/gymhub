@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import StartupOverlay from "@/components/StartupOverlay";
+import RecoveryGuard from "@/components/RecoveryGuard";
 import { Analytics } from "@vercel/analytics/react";
 
 
@@ -46,6 +47,7 @@ export default function RootLayout({
       </head>
       <body className="bg-neutral-950 text-neutral-100 font-sans">
         <StartupOverlay />
+        <RecoveryGuard />
         {/*
          * Shell wrapper – keeps max width iPhone-sized and centered on desktop.
          * min-h-[100svh] uses the small viewport height (URL bar visible) to avoid
