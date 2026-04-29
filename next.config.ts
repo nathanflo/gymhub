@@ -8,6 +8,15 @@ const nextConfig: NextConfig = {
     // Must be disabled; images served via <img> or external CDN.
     unoptimized: true,
   },
+  env: {
+    // Baked in at build time so the Capacitor static bundle always has a valid
+    // redirectTo URL for password reset, regardless of runtime environment.
+    // Falls back to the production domain if the env var is not set (e.g. local
+    // dev or a CI build without .env.local). Override in Vercel env vars for the
+    // Vercel deployment.
+    NEXT_PUBLIC_SITE_URL:
+      process.env.NEXT_PUBLIC_SITE_URL ?? "https://floform.fit",
+  },
 };
 
 export default nextConfig;
