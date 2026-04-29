@@ -12,6 +12,7 @@ import { buildSessionIndex, buildHistoricalBestMap, HistoricalBest } from "@/lib
 import { resolveKg, round2, formatVolumeKg, fmtW } from "@/lib/units";
 import { parseLocation, formatLocationLabel } from "@/lib/location";
 import { hapticSuccess } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
 import SummaryPoster from "@/components/share/SummaryPoster";
 import { ExerciseInsightSheet } from "@/components/ExerciseInsightSheet";
 
@@ -393,6 +394,7 @@ export default function SummaryPage() {
   const [city, setCity] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
+  const prTrackedRef = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -513,6 +515,16 @@ export default function SummaryPage() {
     };
   }, [session, previousSession, allSessions]);
 
+  // Fire pr_hit once per session view when PRs are detected.
+  // Guard with a ref so it doesn't re-fire if summaryModel recomputes.
+  const prExercisesLength = summaryModel?.prExercises?.length ?? 0;
+  useEffect(() => {
+    if (prExercisesLength > 0 && !prTrackedRef.current) {
+      prTrackedRef.current = true;
+      track("pr_hit", { pr_count: prExercisesLength });
+    }
+  }, [prExercisesLength]);
+
   if (!session || !summaryModel) {
     return (
       <main className="flex flex-col flex-1 px-6 py-8 gap-6">
@@ -539,6 +551,7 @@ export default function SummaryPage() {
       const file = new File([blob], "floform-workout.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: session?.title });
+        track("share_completed", { context: "summary" });
       } else {
         // Fallback: download
         const a = document.createElement("a");
@@ -610,7 +623,7 @@ export default function SummaryPage() {
             ← Back to History
           </button>
           <button
-            onClick={() => setShareOpen(true)}
+            onClick={() => { setShareOpen(true); track("share_opened", { context: "summary" }); }}
             className="rounded-xl bg-neutral-800 px-4 py-2 text-sm font-semibold text-white active:scale-95 transition-all"
           >
             Share

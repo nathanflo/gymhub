@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { initStatusBar } from "@/lib/statusBar";
 import { initKeyboard } from "@/lib/keyboard";
+import { initSentry } from "@/lib/sentry";
+import { initAnalytics } from "@/lib/analytics";
 
 export default function StartupOverlay() {
   const [visible, setVisible] = useState(true);
@@ -13,10 +15,12 @@ export default function StartupOverlay() {
     const fadeTimer = setTimeout(() => setFading(true), 650);
     const hideTimer = setTimeout(() => setVisible(false), 1100);
 
-    // Initialize native plugins once on cold launch.
-    // Both calls are fire-and-forget; errors are caught internally.
+    // Initialize native plugins + observability once on cold launch.
+    // All calls are fire-and-forget; errors are caught internally.
+    initSentry();
     initStatusBar();
     initKeyboard();
+    initAnalytics();
 
     return () => {
       clearTimeout(fadeTimer);

@@ -11,6 +11,7 @@ import { getTemplates, deleteTemplate } from "@/lib/templates";
 import { formatExerciseSummary } from "@/lib/progress";
 import { WorkoutTemplate } from "@/types/template";
 import { RECOMMENDED_TEMPLATES, RecommendedTemplate } from "@/lib/recommendedTemplates";
+import { track } from "@/lib/analytics";
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function TemplatesPage() {
   }
 
   function handleStart(id: string) {
+    track("template_launched", { template_id: id, template_source: "custom" });
     router.push(`/log?template=${id}`);
   }
 

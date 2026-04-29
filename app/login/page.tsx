@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { runMigrationIfNeeded } from "@/lib/migrate";
+import { identify, track } from "@/lib/analytics";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,6 +46,8 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       setLoading(false);
       if (error) { setError(error.message); return; }
+      identify(data.session!.user.id, { email: data.session!.user.email });
+      track("auth_signin");
       await runMigrationIfNeeded(data.session!.user.id);
       router.push("/");
     } else {
@@ -62,6 +65,8 @@ export default function LoginPage() {
         return;
       }
       await supabase.from("profiles").insert({ id: data.session.user.id, name: name.trim() });
+      identify(data.session.user.id, { email: data.session.user.email });
+      track("auth_signin");
       await runMigrationIfNeeded(data.session.user.id);
       router.push("/");
     }

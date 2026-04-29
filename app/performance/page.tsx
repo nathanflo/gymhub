@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSessions } from "@/lib/sessions";
 import { hapticSuccess } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
 import { getBodyweightEntries } from "@/lib/bodyweight";
 import {
   deriveStrengthSeries,
@@ -94,6 +95,7 @@ export default function PerformancePage() {
     load();
     const stored = localStorage.getItem("gymhub-workingUnit");
     if (stored === "lbs" || stored === "kg") setDisplayUnit(stored);
+    track("performance_opened");
   }, []);
 
   // Fade-in animation for modal
@@ -158,6 +160,7 @@ export default function PerformancePage() {
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "My Progress — FloForm" });
         hapticSuccess();
+        track("share_completed", { context: "performance" });
       } else {
         triggerDownload(dataUrl);
       }
@@ -200,7 +203,7 @@ export default function PerformancePage() {
             />
           </div>
           <button
-            onClick={() => setShowShareModal(true)}
+            onClick={() => { setShowShareModal(true); track("share_opened", { context: "performance" }); }}
             aria-label="Share performance"
             className="mt-1 p-1.5 text-neutral-500 hover:text-neutral-300 transition-colors"
           >
@@ -210,7 +213,7 @@ export default function PerformancePage() {
 
         {/* Range toggle — right-aligned */}
         <div className="flex justify-end -mt-4 animate-[floFormFadeUp_200ms_ease-out_20ms_both]">
-          <RangeToggle value={range} onChange={setRange} />
+          <RangeToggle value={range} onChange={(r) => { setRange(r); track("performance_range_changed", { range: r }); }} />
         </div>
 
         <div className="animate-[floFormFadeUp_200ms_ease-out_40ms_both]">
